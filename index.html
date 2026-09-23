@@ -22,13 +22,11 @@
     <div class="contadores">
       <a class="contador" href="minecraft/#mods"><span class="numero" data-hasta="5">0</span><span class="que">mods</span></a>
       <a class="contador" href="minecraft/#datapacks"><span class="numero" data-hasta="5">0</span><span class="que">datapacks</span></a>
-      <a class="contador" href="programas/#juegos"><span class="numero" data-hasta="11">0</span><span class="que">juegos</span></a>
-      <a class="contador" href="#amongus"><span class="numero" data-hasta="4">0</span><span class="que">de Among Us</span></a>
+      <a class="contador" href="casa/#juegos"><span class="numero" data-hasta="11">0</span><span class="que">juegos</span></a>
+      <a class="contador" href="amongus/"><span class="numero" data-hasta="4">0</span><span class="que">de Among Us</span></a>
     </div>
     <nav class="menu">
       <a href="#novedades">Novedades</a>
-      <a href="#amongus">Among Us</a>
-      <a href="#favoritos">Favoritos</a>
       <button class="tema" id="tema" title="Cambiar entre modo claro y oscuro">🌙 Modo oscuro</button>
     </nav>
   </header>
@@ -49,11 +47,26 @@
     <span class="que">Guías de juegos</span>
     <span class="detalle">Huevos de Steal an Egg</span>
   </a>
-  <a class="portal programas" href="programas/">
-    <span class="icono">🎮</span>
-    <span class="nombre">Programas</span>
-    <span class="que">Mis juegos</span>
+  <a class="portal amongus" href="amongus/">
+    <span class="icono">🚀</span>
+    <span class="nombre">Among Us</span>
+    <span class="que">Mods para salas privadas</span>
+    <span class="detalle">4 mods · Steam · Windows</span>
+  </a>
+  </div>
+  <h2 class="fila-portales">🏡 Hecho en casa</h2>
+  <div class="portales">
+  <a class="portal casa" href="casa/">
+    <span class="icono">🏠</span>
+    <span class="nombre">Juegos de la casa</span>
+    <span class="que">Juegos hechos por mí</span>
     <span class="detalle">11 juegos · 11 se juegan en el navegador</span>
+  </a>
+  <a class="portal desarrollo" href="desarrollo/">
+    <span class="icono">🛠</span>
+    <span class="nombre">Desarrollo de juegos</span>
+    <span class="que">Haz tu propio nivel</span>
+    <span class="detalle">8 juegos con niveles para editar</span>
   </a>
   </div>
 </section>
@@ -100,422 +113,6 @@
   <a class="boton" href="descargas/todo.zip" download>⬇ Descargar todo (.zip con las 26 descargas, 366 KB)</a>
 </section>
 
-<section id="amongus">
-  <h2>Mods de Among Us</h2>
-  <p class="nota">Solo para Among Us 2026.6.5 en Steam (Windows). Son para salas privadas y todos los jugadores necesitan el mod.</p>
-  <div class="tarjetas">
-<article class="tarjeta amongus">
-  <div class="icono">🔫</div>
-  <h3>Sheriff</h3>
-  <p class="version">Among Us 2026.6.5 · Steam · Windows</p>
-<ul class="lista">
-  <li>Tripulante con botón <b>DISPARAR</b>.</li>
-  <li>Si le dispara a un impostor, muere el impostor.</li>
-  <li>Si le dispara a un inocente, muere el Sheriff.</li>
-</ul>
-  <p class="necesita">Necesita: BepInEx 6 + Reactor 2.5.1</p>
-<a class="boton" href="descargas/sheriff.zip" download>⬇ Descargar .zip (12 KB)</a>
-<details>
-  <summary>Cómo instalar</summary>
-  <ol>
-    <li>Baja <a href="https://builds.bepinex.dev/projects/bepinex_be" target="_blank" rel="noopener">BepInEx 6 IL2CPP be.735 win-x86</a> y descomprímelo en la carpeta del juego.</li>
-    <li>Abre y cierra Among Us una vez.</li>
-    <li>Baja <a href="https://github.com/NuclearPowered/Reactor/releases/tag/2.5.1" target="_blank" rel="noopener">Reactor 2.5.1</a>.</li>
-    <li>Copia <code>Reactor.dll</code> y <code>Sheriff.dll</code> a <code>Among Us/BepInEx/plugins/</code>.</li>
-    <li>El host activa el rol en Ajustes de Roles → pestaña tripulantes → Sheriff, probabilidad 100.</li>
-  </ol>
-</details>
-</article>
-<article class="tarjeta amongus">
-  <div class="icono">🦠</div>
-  <h3>Parásito</h3>
-  <p class="version">Among Us 2026.6.5 · Steam · Windows</p>
-<ul class="lista">
-  <li>Impostor que <b>infecta</b> a un tripulante.</li>
-  <li>Si lo echan en votación, se traspasa al cuerpo del infectado y sigue jugando.</li>
-</ul>
-  <p class="necesita">Necesita: BepInEx 6 + Reactor 2.5.1</p>
-<a class="boton" href="descargas/parasito.zip" download>⬇ Descargar .zip (12 KB)</a>
-<details>
-  <summary>Cómo instalar</summary>
-  <ol>
-    <li>Baja <a href="https://builds.bepinex.dev/projects/bepinex_be" target="_blank" rel="noopener">BepInEx 6 IL2CPP be.735 win-x86</a> y descomprímelo en la carpeta del juego.</li>
-    <li>Abre y cierra Among Us una vez.</li>
-    <li>Baja <a href="https://github.com/NuclearPowered/Reactor/releases/tag/2.5.1" target="_blank" rel="noopener">Reactor 2.5.1</a>.</li>
-    <li>Copia <code>Reactor.dll</code> y <code>Parasito.dll</code> a <code>Among Us/BepInEx/plugins/</code>.</li>
-    <li>El host activa el rol en Ajustes de Roles → pestaña impostores → Parásito, probabilidad 100.</li>
-  </ol>
-</details>
-</article>
-<article class="tarjeta amongus">
-  <div class="icono">🔧</div>
-  <h3>Ingeniero</h3>
-  <p class="version">Among Us 2026.6.5 · Steam · Windows</p>
-<ul class="lista">
-  <li>Tripulante que puede meterse a las <b>ventilaciones</b> como un impostor (le aparece el botón VENT).</li>
-  <li>Al salir de una, espera 20 s para volver a entrar.</li>
-</ul>
-  <p class="necesita">Necesita: BepInEx 6 + Reactor 2.5.1</p>
-<a class="boton" href="descargas/ingeniero.zip" download>⬇ Descargar .zip (9 KB)</a>
-<details>
-  <summary>Cómo instalar</summary>
-  <ol>
-    <li>Baja <a href="https://builds.bepinex.dev/projects/bepinex_be" target="_blank" rel="noopener">BepInEx 6 IL2CPP be.735 win-x86</a> y descomprímelo en la carpeta del juego.</li>
-    <li>Abre y cierra Among Us una vez.</li>
-    <li>Baja <a href="https://github.com/NuclearPowered/Reactor/releases/tag/2.5.1" target="_blank" rel="noopener">Reactor 2.5.1</a>.</li>
-    <li>Copia <code>Reactor.dll</code> y <code>Ingeniero.dll</code> a <code>Among Us/BepInEx/plugins/</code>.</li>
-    <li>El host activa el rol en Ajustes de Roles → pestaña tripulantes → Ingeniero, probabilidad 100.</li>
-  </ol>
-</details>
-</article>
-<article class="tarjeta amongus">
-  <div class="icono">🩺</div>
-  <h3>Doctor</h3>
-  <p class="version">Among Us 2026.6.5 · Steam · Windows</p>
-<ul class="lista">
-  <li>Tripulante que puede <b>REVIVIR</b> a un jugador muerto: se acerca al cuerpo y aprieta el botón.</li>
-  <li>Una vez por partida. El revivido vuelve con el rol que tenía (si era impostor, sigue siéndolo).</li>
-</ul>
-  <p class="necesita">Necesita: BepInEx 6 + Reactor 2.5.1</p>
-<a class="boton" href="descargas/doctor.zip" download>⬇ Descargar .zip (12 KB)</a>
-<details>
-  <summary>Cómo instalar</summary>
-  <ol>
-    <li>Baja <a href="https://builds.bepinex.dev/projects/bepinex_be" target="_blank" rel="noopener">BepInEx 6 IL2CPP be.735 win-x86</a> y descomprímelo en la carpeta del juego.</li>
-    <li>Abre y cierra Among Us una vez.</li>
-    <li>Baja <a href="https://github.com/NuclearPowered/Reactor/releases/tag/2.5.1" target="_blank" rel="noopener">Reactor 2.5.1</a>.</li>
-    <li>Copia <code>Reactor.dll</code> y <code>Doctor.dll</code> a <code>Among Us/BepInEx/plugins/</code>.</li>
-    <li>El host activa el rol en Ajustes de Roles → pestaña tripulantes → Doctor, probabilidad 100.</li>
-  </ol>
-</details>
-</article>
-  </div>
-</section>
-
-<section id="favoritos">
-  <h2>Juegos que me gustan</h2>
-  <p class="nota">Aquí no hay descargas: los enlaces van a la tienda o página oficial de cada juego.</p>
-  <div class="filtro">
-    <button class="activo" data-filtro="todos">Todos</button>
-    <button data-filtro="gratis">Gratis</button>
-    <button data-filtro="pago">De pago</button>
-  </div>
-  <div class="tarjetas">
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🗡️</div>
-  <h3>Hollow Knight: Silksong <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Aventura de Hornet en un reino lleno de bichos. Difícil y precioso.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/1030300/Hollow_Knight_Silksong/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🐛</div>
-  <h3>Hollow Knight <span class="etiqueta pago">juego de pago</span></h3>
-  <p>El primero: explora Hallownest como el Caballero.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/367520/Hollow_Knight/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🧸</div>
-  <h3>Poppy Playtime <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Terror en una fábrica de juguetes abandonada.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/1721470/Poppy_Playtime/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">🎪</div>
-  <h3>Project Playtime <span class="etiqueta gratis">gratis</span></h3>
-  <p>Multijugador: 6 sobrevivientes contra 1 monstruo.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/1607550/Project_Playtime/" target="_blank" rel="noopener">Juégalo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🚀</div>
-  <h3>Among Us <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Encuentra al impostor antes de que acabe con la tripulación.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/945360/Among_Us/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🟩</div>
-  <h3>Minecraft <span class="etiqueta pago">juego de pago</span></h3>
-  <p>El juego de bloques. Aquí es donde corren mis mods.</p>
-  <a class="boton enlace" href="https://www.minecraft.net/" target="_blank" rel="noopener">Cómpralo en minecraft.net ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">🟥</div>
-  <h3>Roblox <span class="etiqueta gratis">gratis</span></h3>
-  <p>Miles de juegos hechos por otros jugadores. En Linux se juega con Sober.</p>
-  <a class="boton enlace" href="https://www.roblox.com/" target="_blank" rel="noopener">Juégalo en roblox.com ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">🔴</div>
-  <h3>PokeMMO <span class="etiqueta gratis">gratis</span></h3>
-  <p>Pokémon online con otros entrenadores.</p>
-  <a class="boton enlace" href="https://pokemmo.com/" target="_blank" rel="noopener">Juégalo en pokemmo.com ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">⛏️</div>
-  <h3>Terraria <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Cava, construye y pelea contra jefes en 2D.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/105600/Terraria/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🌾</div>
-  <h3>Stardew Valley <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Cuida tu granja y hazte amigo del pueblo.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/413150/Stardew_Valley/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🔷</div>
-  <h3>Geometry Dash <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Salta al ritmo de la música. Un toque y a empezar de nuevo.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/322170/Geometry_Dash/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">🫘</div>
-  <h3>Fall Guys <span class="etiqueta gratis">gratis</span></h3>
-  <p>Carreras de obstáculos con 60 frijolitos.</p>
-  <a class="boton enlace" href="https://store.epicgames.com/p/fall-guys" target="_blank" rel="noopener">Juégalo en Epic Games ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">🚗</div>
-  <h3>Rocket League <span class="etiqueta gratis">gratis</span></h3>
-  <p>Fútbol con autos que vuelan.</p>
-  <a class="boton enlace" href="https://store.epicgames.com/p/rocket-league" target="_blank" rel="noopener">Juégalo en Epic Games ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">🪂</div>
-  <h3>Fortnite <span class="etiqueta gratis">gratis</span></h3>
-  <p>Battle royale: construye y sobrevive.</p>
-  <a class="boton enlace" href="https://store.epicgames.com/p/fortnite" target="_blank" rel="noopener">Juégalo en Epic Games ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">⭐</div>
-  <h3>Brawl Stars <span class="etiqueta gratis">gratis</span></h3>
-  <p>Peleas rápidas de 3 contra 3 en el celular.</p>
-  <a class="boton enlace" href="https://supercell.com/en/games/brawlstars/" target="_blank" rel="noopener">Juégalo en supercell.com ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🌙</div>
-  <h3>Lethal Company <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Junta chatarra en lunas abandonadas con tus amigos... si sobreviven.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/1966720/Lethal_Company/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🐻</div>
-  <h3>Five Nights at Freddy's <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Sobrevive 5 noches vigilando cámaras en la pizzería.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/319510/Five_Nights_at_Freddys/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">👵</div>
-  <h3>Granny <span class="etiqueta gratis">gratis</span></h3>
-  <p>Escapa de la casa en 5 días sin que Granny te escuche.</p>
-  <a class="boton enlace" href="https://play.google.com/store/apps/details?id=com.dvloper.granny" target="_blank" rel="noopener">Juégalo en Google Play ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">☕</div>
-  <h3>Cuphead <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Jefes dibujados como caricatura de los años 30.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/268910/Cuphead/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🏔️</div>
-  <h3>Celeste <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Sube la montaña con Madeline. Plataformas muy precisas.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/504230/Celeste/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🍕</div>
-  <h3>Pizza Tower <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Corre por una torre a toda velocidad para salvar tu pizzería.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/2231450/Pizza_Tower/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">❤️</div>
-  <h3>Undertale <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Un RPG donde no tienes que matar a nadie.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/391540/UNDERTALE/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🟣</div>
-  <h3>Slime Rancher <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Cría slimes en un rancho de otro planeta.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/433340/Slime_Rancher/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🌻</div>
-  <h3>Plants vs. Zombies GOTY <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Planta girasoles y lanzaguisantes para frenar a los zombis.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/3590/Plants_vs_Zombies_GOTY_Edition/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🌊</div>
-  <h3>Subnautica <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Sobrevive en un océano alienígena. Construye tu base bajo el agua.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/264710/Subnautica/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🌀</div>
-  <h3>Portal 2 <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Puzzles con portales y un robot muy sarcástico.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/620/Portal_2/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🤸</div>
-  <h3>Human: Fall Flat <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Puzzles con un muñeco torpe que se cae de todo.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/477160/Human_Fall_Flat/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🥊</div>
-  <h3>Gang Beasts <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Peleas de gelatina entre amigos.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/285900/Gang_Beasts/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🐐</div>
-  <h3>Goat Simulator 3 <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Eres una cabra y puedes romper todo.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/2159960/Goat_Simulator_3/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">🏃</div>
-  <h3>Stumble Guys <span class="etiqueta gratis">gratis</span></h3>
-  <p>Carreras de obstáculos con 32 jugadores.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/1677740/Stumble_Guys/" target="_blank" rel="noopener">Juégalo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🪿</div>
-  <h3>Untitled Goose Game <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Eres un ganso malvado que molesta a un pueblo.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/837470/Untitled_Goose_Game/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🎩</div>
-  <h3>A Hat in Time <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Plataformas 3D con una niña y su sombrero mágico.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/253230/A_Hat_in_Time/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">💨</div>
-  <h3>Sonic Mania <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Sonic clásico en 2D a toda velocidad.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/584400/Sonic_Mania/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🕯️</div>
-  <h3>Spelunky 2 <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Explora cuevas que cambian cada vez. Cada muerte enseña algo.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/418530/Spelunky_2/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🎵</div>
-  <h3>Rayman Legends <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Plataformas con niveles musicales geniales.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/242550/Rayman_Legends/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🍃</div>
-  <h3>Ori and the Blind Forest <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Un bosque mágico y un espíritu que salta por todos lados.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/387290/Ori_and_the_Blind_Forest_Definitive_Edition/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🕯️</div>
-  <h3>Little Nightmares <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Escapa de un barco lleno de gigantes horribles.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/424840/Little_Nightmares/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🖋️</div>
-  <h3>Bendy and the Ink Machine <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Terror en un estudio de dibujos animados.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/622650/Bendy_and_the_Ink_Machine/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🏠</div>
-  <h3>Hello Neighbor <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Entra a la casa del vecino sin que te atrape.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/521890/Hello_Neighbor/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">📏</div>
-  <h3>Baldi's Basics Classic <span class="etiqueta gratis">gratis</span></h3>
-  <p>Junta los cuadernos y escapa de la escuela de Baldi.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/1275890/Baldis_Basics_Classic_Remastered/" target="_blank" rel="noopener">Juégalo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">🟡</div>
-  <h3>Garten of Banban <span class="etiqueta gratis">gratis</span></h3>
-  <p>Explora un jardín infantil abandonado.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/2232840/Garten_of_Banban/" target="_blank" rel="noopener">Juégalo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🍳</div>
-  <h3>Overcooked! 2 <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Cocina con amigos en cocinas locas.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/728880/Overcooked_2/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">🦊</div>
-  <h3>Super Animal Royale <span class="etiqueta gratis">gratis</span></h3>
-  <p>Battle royale 2D con animalitos.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/843380/Super_Animal_Royale/" target="_blank" rel="noopener">Juégalo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🎈</div>
-  <h3>Bloons TD 6 <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Torres de monos que revientan globos.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/960090/Bloons_TD_6/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🧛</div>
-  <h3>Vampire Survivors <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Sobrevive a oleadas de monstruos. Muy adictivo.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/1794680/Vampire_Survivors/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🥔</div>
-  <h3>Brotato <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Una papa con 6 armas contra aliens.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/1942280/Brotato/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="pago">
-  <div class="icono">🎯</div>
-  <h3>Peggle Deluxe <span class="etiqueta pago">juego de pago</span></h3>
-  <p>Lanza bolitas y revienta clavijas.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/3480/Peggle_Deluxe/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">🏎️</div>
-  <h3>Trackmania <span class="etiqueta gratis">gratis</span></h3>
-  <p>Carreras de tiempo en pistas locas.</p>
-  <a class="boton enlace" href="https://store.steampowered.com/app/2225070/Trackmania/" target="_blank" rel="noopener">Juégalo en Steam ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">📱</div>
-  <h3>Rocket League Sideswipe <span class="etiqueta gratis">gratis</span></h3>
-  <p>Rocket League para el celular, en 2D.</p>
-  <a class="boton enlace" href="https://www.rocketleague.com/sideswipe" target="_blank" rel="noopener">Juégalo en rocketleague.com ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">👑</div>
-  <h3>Clash Royale <span class="etiqueta gratis">gratis</span></h3>
-  <p>Cartas y torres en partidas de 3 minutos.</p>
-  <a class="boton enlace" href="https://supercell.com/en/games/clashroyale/" target="_blank" rel="noopener">Juégalo en supercell.com ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">🃏</div>
-  <h3>Pokémon TCG Live <span class="etiqueta gratis">gratis</span></h3>
-  <p>El juego de cartas de Pokémon, oficial y digital.</p>
-  <a class="boton enlace" href="https://tcg.pokemon.com/" target="_blank" rel="noopener">Juégalo en pokemon.com ↗</a>
-</article>
-<article class="tarjeta favorito" data-tipo="gratis">
-  <div class="icono">🌟</div>
-  <h3>Genshin Impact <span class="etiqueta gratis">gratis</span></h3>
-  <p>Mundo abierto gigante con personajes elementales.</p>
-  <a class="boton enlace" href="https://genshin.hoyoverse.com/" target="_blank" rel="noopener">Juégalo en hoyoverse.com ↗</a>
-</article>
-  </div>
-</section>
-
   </main>
 
   <footer>
@@ -550,22 +147,6 @@
     }
     requestAnimationFrame(animarContadores);
 
-
-    // Filtro de "Juegos que me gustan": esconde las tarjetas que no son de ese tipo.
-    const botones = document.querySelectorAll('.filtro button');
-    const favoritos = document.querySelectorAll('.tarjeta.favorito');
-
-    botones.forEach(boton => {
-      boton.addEventListener('click', () => {
-        const filtro = boton.dataset.filtro;   // "todos", "gratis" o "pago"
-        botones.forEach(b => b.classList.remove('activo'));
-        boton.classList.add('activo');
-        favoritos.forEach(tarjeta => {
-          const seMuestra = filtro === 'todos' || tarjeta.dataset.tipo === filtro;
-          tarjeta.style.display = seMuestra ? '' : 'none';
-        });
-      });
-    });
   </script>
 </body>
 </html>

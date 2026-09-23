@@ -200,6 +200,10 @@ const SONIDOS = {
 };
 const sonar = (n) => SONIDOS[n]();
 
+// ---------- Progreso: lo lee la página de Juegos de la casa (localStorage) ----------
+function leerProgreso(clave) { try { return JSON.parse(localStorage.getItem(clave)) || {}; } catch (e) { return {}; } }
+function guardarProgreso(clave, r) { try { localStorage.setItem(clave, JSON.stringify(r)); } catch (e) {} }
+
 // ---------- Arena ----------
 class Arena {
   constructor(txt) {
@@ -713,7 +717,15 @@ class Juego {
         const g = vivos[0].num;
         this.rondas[g] += 1;
         this.mensaje = 'Ronda ' + this.numeroRonda + ' para ' + NOMBRE_J[g];
-        if (this.rondas[g] >= RONDAS_PARA_GANAR) { this.estado = 'fin_partida'; this.ganador = g; this.mensaje = '¡Gana ' + NOMBRE_J[g] + '!  ' + this.rondas[1] + ' - ' + this.rondas[2]; }
+        if (this.rondas[g] >= RONDAS_PARA_GANAR) {
+          this.estado = 'fin_partida'; this.ganador = g; this.mensaje = '¡Gana ' + NOMBRE_J[g] + '!  ' + this.rondas[1] + ' - ' + this.rondas[2];
+          // contra la IA, guarda cuántas veces le ganaste en cada dificultad
+          if (this.modo === 1 && g === 1) {
+            const r = leerProgreso('tanques-record');
+            r[this.dificultad] = (r[this.dificultad] || 0) + 1;
+            guardarProgreso('tanques-record', r);
+          }
+        }
       } else this.mensaje = '¡Empate! Se repite la ronda';
       sonar('ronda');
     }

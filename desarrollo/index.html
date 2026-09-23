@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Desarrollo de juegos — Manu</title>
+  <!-- Fuente pixelada: si no hay internet, el CSS usa una monoespaciada del computador -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+  <script>
+    // Aplica el tema guardado antes de dibujar la página, para que no parpadee.
+    try {
+      const tema = localStorage.getItem('tema');
+      if (tema) document.documentElement.dataset.tema = tema;
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="cabecera">
+    <h1>🛠 Desarrollo de juegos</h1>
+    <p class="sub">Cambia mis juegos y haz tus propios niveles</p>
+    <nav class="menu">
+      <a href="../">🏠 Portada</a>
+      <a href="../minecraft/">⛏ Minecraft</a>
+      <a href="../roblox/">🟥 Roblox</a>
+      <a href="../amongus/">🚀 Among Us</a>
+      <a href="../casa/">🏠 Juegos de la casa</a>
+      <a class="activo" href="../desarrollo/">🛠 Desarrollo de juegos</a>
+      <a href="#niveles">Haz tu propio nivel</a>
+      <button class="tema" id="tema" title="Cambiar entre modo claro y oscuro">🌙 Modo oscuro</button>
+    </nav>
+  </header>
+
+  <main>
+
+<section id="niveles">
+  <h2>Haz tu propio nivel</h2>
+  <p class="nota">Los niveles de estos juegos son dibujos de texto. Descarga el juego, abre el nivel con cualquier editor, cambia letras, guarda y juega.</p>
+  <div class="tarjetas">
+<article class="tarjeta juego nivel">
+  <div class="icono">🔦</div>
+  <h3>Escape de la Fábrica</h3>
+  <p>Archivos: laberinto1.txt, laberinto2.txt y laberinto3.txt. Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>pared</td></tr>
+  <tr><td><code>.</code></td><td>piso</td></tr>
+  <tr><td><code>P</code></td><td>tú</td></tr>
+  <tr><td><code>M</code></td><td>monstruo</td></tr>
+  <tr><td><code>E</code></td><td>espectro (se congela con la luz)</td></tr>
+  <tr><td><code>K</code></td><td>llave de salida</td></tr>
+  <tr><td><code>D</code></td><td>puerta de salida (se abre con todas las K)</td></tr>
+  <tr><td><code>B</code></td><td>pila</td></tr>
+  <tr><td><code>r v a</code></td><td>llave roja / verde / azul</td></tr>
+  <tr><td><code>R V A</code></td><td>puerta roja / verde / azul</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 escape.py mi_laberinto.txt</code></p>
+  <ul class="lista">
+  <li>Tiene que haber una <b>P</b> y una <b>D</b>. Lo demás es opcional.</li>
+  <li>Puedes pasar varios archivos y se juegan en orden: <code>python3 escape.py uno.txt dos.txt</code>.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🪡</div>
+  <h3>Silk</h3>
+  <p>Archivos: nivel1.txt a nivel5.txt (lista <code>NIVELES</code> arriba de <code>silk.py</code>). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>bloque</td></tr>
+  <tr><td><code>E</code></td><td>enemigo</td></tr>
+  <tr><td><code>^</code></td><td>pincho</td></tr>
+  <tr><td><code>C</code></td><td>checkpoint</td></tr>
+  <tr><td><code>M</code></td><td>meta</td></tr>
+  <tr><td><code>P</code></td><td>donde empiezas</td></tr>
+  <tr><td><code>J</code></td><td>jefe</td></tr>
+  <tr><td><code>.</code></td><td>nada</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 silk.py</code></p>
+  <ul class="lista">
+  <li>Los enemigos y el jugador necesitan un <code>#</code> debajo, si no se caen.</li>
+  <li>Con doble salto llegas a unos 5 cuadritos de alto y unos 8 de largo.</li>
+  <li>Con <b>J</b> la meta se abre solo al vencer al jefe.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🟨</div>
+  <h3>Salto</h3>
+  <p>Archivos: nivel1.txt y nivel2.txt (lista <code>NIVELES</code> arriba de <code>salto.py</code>). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>bloque (te paras encima; de frente te mata)</td></tr>
+  <tr><td><code>^</code></td><td>pincho (te mata)</td></tr>
+  <tr><td><code>.</code></td><td>nada</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 salto.py</code></p>
+  <ul class="lista">
+  <li><b>La última fila es la que va pegada al piso.</b> El nivel termina donde termina el texto.</li>
+  <li>Un salto pasa por encima de hasta 3 pinchos seguidos.</li>
+  <li>Puedes subirte a un bloque de 2 de alto, pero no a uno de 3 (salvo desde otro bloque).</li>
+  <li>Si un pincho va encima de un bloque, escríbelo en la fila de arriba.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🏰</div>
+  <h3>Torres</h3>
+  <p>Archivos: camino.txt. Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>.</code></td><td>pasto (aquí puedes construir)</td></tr>
+  <tr><td><code>=</code></td><td>camino</td></tr>
+  <tr><td><code>S</code></td><td>donde salen los enemigos</td></tr>
+  <tr><td><code>B</code></td><td>tu base</td></tr>
+  <tr><td><code>#</code></td><td>roca (no se puede construir)</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 torres.py mi_mapa.txt</code></p>
+  <ul class="lista">
+  <li>El camino <code>=</code> tiene que conectar la <b>S</b> con la <b>B</b>.</li>
+  <li>Mientras más largo el camino, más tiempo tienen tus torres para disparar.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🏎️</div>
+  <h3>Carreras</h3>
+  <p>Archivos: la lista <code>PISTAS</code> dentro de <code>carreras.py</code> (dibujos de 30 x 20 letras). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>muro</td></tr>
+  <tr><td><code>.</code></td><td>asfalto</td></tr>
+  <tr><td><code>g</code></td><td>pasto (frena)</td></tr>
+  <tr><td><code>1-9</code></td><td>checkpoints en orden</td></tr>
+  <tr><td><code>M</code></td><td>meta</td></tr>
+  <tr><td><code>S</code></td><td>largada (pon al menos 6)</td></tr>
+  <tr><td><code>T</code></td><td>turbo</td></tr>
+  <tr><td><code>O</code></td><td>aceite</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 carreras.py</code></p>
+  <ul class="lista">
+  <li>Copia una pista, cámbiale el dibujo y el nombre, y ponle los <code>puntos</code> por donde van a manejar los rivales (columna, fila; <code>.5</code> es el centro del cuadrito).</li>
+  <li>Los checkpoints tienen que cruzar la pista completa, si no los autos se los saltan.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🐍</div>
+  <h3>Serpiente</h3>
+  <p>Archivos: niveles.txt (5 dibujos de 32 x 24, separados por una línea vacía). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>.</code></td><td>casilla libre</td></tr>
+  <tr><td><code>#</code></td><td>obstáculo</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 serpiente.py</code></p>
+  <ul class="lista">
+  <li>Agrega un dibujo más al final del archivo (con su línea vacía antes) y tendrás un nivel 6.</li>
+  <li>Deja libre el centro: ahí salen las serpientes.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🛡️</div>
+  <h3>Tanques</h3>
+  <p>Archivos: arena1.txt a arena4.txt (14 filas de 20 letras). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>muro (las balas rebotan)</td></tr>
+  <tr><td><code>L</code></td><td>ladrillo (se rompe de un tiro)</td></tr>
+  <tr><td><code>A</code></td><td>agua (las balas pasan, los tanques no)</td></tr>
+  <tr><td><code>B</code></td><td>arbusto (esconde al tanque)</td></tr>
+  <tr><td><code>.</code></td><td>piso</td></tr>
+  <tr><td><code>1</code></td><td>donde empieza el jugador 1</td></tr>
+  <tr><td><code>2</code></td><td>donde empieza el jugador 2</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 tanques.py</code></p>
+  <ul class="lista">
+  <li>Copia <code>arena1.txt</code> a <code>arena5.txt</code>, edítalo, y el menú lo encuentra solo.</li>
+  <li>Las líneas que empiezan con <code># </code> (con espacio) son comentarios.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🐉</div>
+  <h3>Criaturas</h3>
+  <p>Archivos: mapa.txt (la leyenda está arriba del archivo). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>árbol (no se pasa)</td></tr>
+  <tr><td><code>~</code></td><td>agua (no se pasa)</td></tr>
+  <tr><td><code>H</code></td><td>casa (no se pasa)</td></tr>
+  <tr><td><code>.</code></td><td>camino</td></tr>
+  <tr><td><code>+</code></td><td>centro de curación</td></tr>
+  <tr><td><code>L</code></td><td>letrero (choca para leer)</td></tr>
+  <tr><td><code>,</code></td><td>pasto bajo (criaturas nivel 3-6)</td></tr>
+  <tr><td><code>;</code></td><td>pasto medio (8-12)</td></tr>
+  <tr><td><code>"</code></td><td>pasto alto (13-18)</td></tr>
+  <tr><td><code>P</code></td><td>donde empiezas</td></tr>
+  <tr><td><code>1 2 3</code></td><td>entrenadores</td></tr>
+  <tr><td><code>K</code></td><td>el campeón</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 criaturas.py</code></p>
+  <ul class="lista">
+  <li>Puedes mover a los entrenadores y al campeón a donde quieras.</li>
+  <li>Las criaturas, sus ataques y los equipos de los entrenadores están en <code>datos.py</code>; el dibujo de cada una es una función en <code>dibujos.py</code>.</li>
+  </ul>
+</article>
+  </div>
+</section>
+
+  </main>
+
+  <footer>
+    <p>Game Studio de Manu</p>
+  </footer>
+
+  <script>
+    // Botón de tema: cambia entre claro y oscuro y lo recuerda.
+    const botonTema = document.getElementById('tema');
+    function pintarBotonTema() {
+      const oscuro = document.documentElement.dataset.tema === 'oscuro';
+      botonTema.textContent = oscuro ? '☀️ Modo claro' : '🌙 Modo oscuro';
+    }
+    botonTema.addEventListener('click', () => {
+      const nuevo = document.documentElement.dataset.tema === 'oscuro' ? 'claro' : 'oscuro';
+      document.documentElement.dataset.tema = nuevo;
+      try { localStorage.setItem('tema', nuevo); } catch (e) {}
+      pintarBotonTema();
+    });
+    pintarBotonTema();
+  </script>
+</body>
+</html>

@@ -51,12 +51,12 @@ const ALTO_BARRA = 90;              // la barra de abajo con las torres
 const FPS = 60;
 const PASO = 1000 / FPS;
 const VIDAS = 10;
-const MONEDAS_INICIO = 150;
-const OLEADAS = 10;
-const BONO_OLEADA = 30;             // monedas de regalo al terminar una oleada
+const MONEDAS_INICIO = 120;
+const OLEADAS = 15;
+const BONO_OLEADA = 25;             // monedas de regalo al terminar una oleada
 const ESPERA_OLEADA = 15;           // segundos hasta que la siguiente oleada sale sola
-const VIDA_EXTRA_POR_OLEADA = 0.35; // cada oleada los enemigos tienen 35% más vida que la primera
-const FRAMES_ENTRE_ENEMIGOS = 20;   // cada cuánto sale un enemigo de la oleada (60 = 1 s)
+const VIDA_EXTRA_POR_OLEADA = 0.19; // cada oleada los enemigos tienen 19% más vida que la anterior (se multiplica)
+const FRAMES_ENTRE_ENEMIGOS = 20;   // cada cuánto sale un enemigo en la oleada 1 (60 = 1 s); después salen más seguido
 const VEL_BALA = 9;
 
 // Los 3 tipos de torre. Cambia números y prueba.
@@ -68,19 +68,38 @@ const TORRES = {
   3: { nombre: 'Bomba',  precio: 120, dano: 25, espera: 90, alcance: 120, area: 65, color: 'rgb(190,90,230)' },
 };
 
-// Los tipos de enemigo: vida, velocidad (píxeles por cuadro), monedas que dan, tamaño
+// Los tipos de enemigo: vida, velocidad (píxeles por cuadro), monedas que dan, tamaño,
+// armadura (se le resta a cada disparo), vidas que te quita si llega a tu base,
+// y el aviso que sale la primera vez que aparece.
 const ENEMIGOS = {
-  normal: { vida: 40,  vel: 1.6, monedas: 8,  radio: 12, color: 'rgb(220,70,70)' },
-  rapido: { vida: 25,  vel: 3.0, monedas: 10, radio: 9,  color: 'rgb(240,220,60)' },
-  tanque: { vida: 160, vel: 0.9, monedas: 25, radio: 17, color: 'rgb(90,90,110)' },
+  normal:    { vida: 40,   vel: 1.6, monedas: 5,  radio: 12, armadura: 0, quita: 1, color: 'rgb(220,70,70)' },
+  rapido:    { vida: 25,   vel: 3.0, monedas: 6,  radio: 9,  armadura: 0, quita: 1, color: 'rgb(240,220,60)',
+               aviso: '¡Nuevo: Rápido! Poca vida, pero corre mucho' },
+  blindado:  { vida: 70,   vel: 1.3, monedas: 10, radio: 13, armadura: 5, quita: 2, color: 'rgb(150,160,175)',
+               aviso: '¡Nuevo: Blindado! Su armadura le quita 5 a cada disparo: la torre Rápida casi no le hace nada' },
+  tanque:    { vida: 160,  vel: 0.9, monedas: 15, radio: 17, armadura: 0, quita: 2, color: 'rgb(90,90,110)',
+               aviso: '¡Nuevo: Tanque! Mucha vida y quita 2 vidas si llega' },
+  curandero: { vida: 60,   vel: 1.4, monedas: 15, radio: 11, armadura: 0, quita: 1, color: 'rgb(80,210,120)',
+               aviso: '¡Nuevo: Curandero! Cura a los enemigos cercanos: elimínalo primero' },
+  jefe:      { vida: 900,  vel: 0.6, monedas: 80, radio: 24, armadura: 3, quita: 5, color: 'rgb(150,40,160)',
+               aviso: '¡¡JEFE!! Si llega a tu base te quita 5 vidas' },
 };
 
 // Qué enemigos salen en la oleada n (1 a 10). Cada oleada es más dura.
 function armarOleada(n) {
   const lista = Array(4 + n * 2).fill('normal');
-  if (n >= 3) lista.push(...Array(n - 1).fill('rapido'));
+  if (n >= 2) lista.push(...Array(n).fill('rapido'));
+  if (n >= 4) lista.push(...Array(Math.floor(n / 2)).fill('blindado'));
   if (n >= 5) lista.push(...Array(Math.floor(n / 3)).fill('tanque'));
-  if (n === OLEADAS) lista.push(...Array(4).fill('tanque'), ...Array(6).fill('rapido'));
+  if (n >= 7) lista.push(...Array(Math.floor((n - 5) / 2)).fill('curandero'));
+  // se revuelven, para que no vengan todos los del mismo tipo juntos
+  for (let i = lista.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [lista[i], lista[j]] = [lista[j], lista[i]];
+  }
+  // los jefes salen al final de su oleada
+  if (n === 10) lista.push('jefe');
+  if (n === OLEADAS) lista.push('jefe', 'jefe');
   return lista;
 }
 
@@ -171,8 +190,11 @@ class Enemigo {
   constructor(tipo, camino, oleada) {
     const d = ENEMIGOS[tipo];
     this.tipo = tipo;
-    this.vidaMax = this.vida = Math.floor(d.vida * (1 + VIDA_EXTRA_POR_OLEADA * (oleada - 1)));
+    this.vidaMax = this.vida = Math.floor(d.vida * Math.pow(1 + VIDA_EXTRA_POR_OLEADA, oleada - 1));
     this.vel = d.vel;
+    this.armadura = d.armadura;
+    this.quita = d.quita;
+    this.curaEn = 30;               // (solo el curandero) cuadros hasta la próxima curación
     this.monedas = d.monedas;
     this.radio = d.radio;
     this.color = d.color;
@@ -195,11 +217,44 @@ class Enemigo {
 
   get vivo() { return this.vida > 0; }
 
+  // Recibir un disparo: la armadura le resta al daño, pero siempre quita al menos 1
+  herir(dano) { this.vida -= Math.max(1, dano - this.armadura); }
+
+  // El curandero, cada medio segundo, cura un 5% a los que están cerca (y a sí mismo)
+  curar(enemigos) {
+    if (this.tipo !== 'curandero' || --this.curaEn > 0) return;
+    this.curaEn = 30;
+    for (const e of enemigos) {
+      if (e.vivo && e.tipo !== 'jefe' && Math.hypot(e.x - this.x, e.y - this.y) <= 70) {
+        e.vida = Math.min(e.vidaMax, e.vida + Math.ceil(e.vidaMax * 0.05));
+      }
+    }
+    this.brillo = 10;               // cuadros que se dibuja el círculo de curación
+  }
+
   dibujar() {
     const x = Math.floor(this.x), y = Math.floor(this.y);
     ctx.fillStyle = this.color;
     ctx.beginPath(); ctx.arc(x, y, this.radio, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = NEGRO; ctx.lineWidth = 2; ctx.stroke();
+    if (this.armadura) {            // anillo de metal
+      ctx.strokeStyle = 'rgb(210,215,225)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(x, y, this.radio - 3, 0, Math.PI * 2); ctx.stroke();
+    }
+    if (this.tipo === 'curandero') { // cruz blanca y círculo cuando cura
+      ctx.fillStyle = BLANCO; ctx.fillRect(x - 2, y - 6, 4, 12); ctx.fillRect(x - 6, y - 2, 12, 4);
+      if (this.brillo > 0) {
+        this.brillo -= 1;
+        ctx.strokeStyle = 'rgba(80,230,120,0.6)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, 70, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+    if (this.tipo === 'jefe') {     // corona
+      ctx.fillStyle = 'rgb(255,210,60)';
+      ctx.beginPath(); ctx.moveTo(x - 12, y - 4); ctx.lineTo(x - 12, y - 14); ctx.lineTo(x - 6, y - 8);
+      ctx.lineTo(x, y - 16); ctx.lineTo(x + 6, y - 8); ctx.lineTo(x + 12, y - 14); ctx.lineTo(x + 12, y - 4);
+      ctx.closePath(); ctx.fill();
+    }
     // barrita de vida
     const ancho = this.radio * 2;
     ctx.fillStyle = 'rgb(60,20,20)';
@@ -276,9 +331,9 @@ class Bala {
       this.llego = true;
       if (this.area) {
         explosiones.push({ x: ox, y: oy, radio: this.area, frames: 12 });
-        for (const e of enemigos) if (Math.hypot(e.x - ox, e.y - oy) <= this.area) e.vida -= this.dano;
+        for (const e of enemigos) if (Math.hypot(e.x - ox, e.y - oy) <= this.area) e.herir(this.dano);
       } else if (this.objetivo.vivo) {
-        this.objetivo.vida -= this.dano;
+        this.objetivo.herir(this.dano);
       }
     } else {
       this.x += dx / dist * VEL_BALA;
@@ -299,7 +354,7 @@ const mapa = new Mapa(MAPA_TXT);
 const ANCHO = mapa.ancho * TILE, ALTO = mapa.alto * TILE + ALTO_BARRA;
 canvas.width = ANCHO; canvas.height = ALTO;
 
-let torres, enemigos, balas, explosiones, monedas, vidas, oleada, porSalir, esperaAparecer;
+let torres, enemigos, balas, explosiones, monedas, vidas, oleada, porSalir, esperaAparecer, vistos;
 let cuentaRegresiva, tipoElegido, estado, mensaje, mensajeHasta, tiempo;
 let mouse = [-100, -100];          // dónde está el mouse (en píxeles del canvas)
 let modoVender = false;            // para celular: el botón "Vender" de la barra
@@ -312,6 +367,7 @@ function reiniciar() {
   oleada = 0;                      // la última que salió
   porSalir = [];                   // enemigos que faltan por aparecer en esta oleada
   esperaAparecer = 0;
+  vistos = new Set();              // tipos de enemigo que ya aparecieron (para avisar los nuevos)
   cuentaRegresiva = ESPERA_OLEADA * FPS;
   tipoElegido = 1;
   modoVender = false;
@@ -324,11 +380,17 @@ reiniciar();
 
 function avisar(txt, segundos = 3) { mensaje = txt; mensajeHasta = tiempo + segundos * FPS; }
 
+// ---------- Progreso: lo lee la página de Juegos de la casa (localStorage) ----------
+function leerProgreso(clave) { try { return JSON.parse(localStorage.getItem(clave)) || {}; } catch (e) { return {}; } }
+function guardarProgreso(clave, r) { try { localStorage.setItem(clave, JSON.stringify(r)); } catch (e) {} }
+
 // ---------- Acciones del jugador ----------
 function lanzarOleada() {
   if (estado !== 'jugando' || oleada >= OLEADAS || porSalir.length) return;
   oleada += 1;
   porSalir = armarOleada(oleada);
+  const r = leerProgreso('torres-record');
+  if (oleada > (r.oleadaMax || 0)) { r.oleadaMax = oleada; guardarProgreso('torres-record', r); }
   esperaAparecer = 0;
   cuentaRegresiva = ESPERA_OLEADA * FPS;
   avisar('¡Oleada ' + oleada + '! Vienen ' + porSalir.length + ' enemigos');
@@ -409,8 +471,10 @@ function actualizar() {
   if (porSalir.length) {
     esperaAparecer -= 1;
     if (esperaAparecer <= 0) {
-      enemigos.push(new Enemigo(porSalir.shift(), mapa.camino, oleada));
-      esperaAparecer = FRAMES_ENTRE_ENEMIGOS;
+      const tipo = porSalir.shift();
+      enemigos.push(new Enemigo(tipo, mapa.camino, oleada));
+      if (!vistos.has(tipo)) { vistos.add(tipo); if (ENEMIGOS[tipo].aviso) avisar(ENEMIGOS[tipo].aviso, 5); }
+      esperaAparecer = Math.max(8, FRAMES_ENTRE_ENEMIGOS - oleada);
     }
   } else if (!enemigos.length && oleada > 0 && oleada < OLEADAS) {
     // oleada terminada: cuenta regresiva para la siguiente
@@ -422,7 +486,7 @@ function actualizar() {
     if (cuentaRegresiva <= 0) lanzarOleada();
   }
 
-  for (const e of enemigos) e.actualizar();
+  for (const e of enemigos) { e.actualizar(); e.curar(enemigos); }
   for (const t of torres.values()) t.actualizar(enemigos, balas);
   for (const b of balas) b.actualizar(enemigos, explosiones);
   balas = balas.filter(b => !b.llego);
@@ -433,13 +497,18 @@ function actualizar() {
   const quedan = [];
   for (const e of enemigos) {
     if (!e.vivo) monedas += e.monedas;
-    else if (e.llego) vidas -= 1;
+    else if (e.llego) vidas -= e.quita;
     else quedan.push(e);
   }
   enemigos = quedan;
 
   if (vidas <= 0) { vidas = 0; estado = 'perdiste'; }
-  else if (oleada === OLEADAS && !porSalir.length && !enemigos.length) estado = 'ganaste';
+  else if (oleada === OLEADAS && !porSalir.length && !enemigos.length) {
+    estado = 'ganaste';
+    const r = leerProgreso('torres-record');
+    r.ganadas = (r.ganadas || 0) + 1;
+    guardarProgreso('torres-record', r);
+  }
 }
 
 // ---------- Dibujar ----------

@@ -649,7 +649,35 @@ footer p {
 
 .portal.minecraft { background: var(--pasto); border-color: var(--pasto-oscuro); }
 .portal.roblox { background: #c0392b; border-color: #7b241c; }
-.portal.programas { background: #5a3d8a; border-color: #33224f; }
+.portal.amongus { background: #3b5998; border-color: #22365e; }
+.portal.casa { background: #5a3d8a; border-color: #33224f; }
+.portal.desarrollo { background: #b8651f; border-color: #6e3b10; }
+
+/* Progreso en cada tarjeta de Juegos de la casa */
+.progreso {
+  margin: 10px 0;
+  padding: 8px 10px;
+  background: var(--sombra);
+  border: 3px solid var(--tarjeta-borde);
+}
+.progreso .barra {
+  height: 10px;
+  margin-bottom: 6px;
+  background: var(--piedra-oscura);
+  border: 2px solid #000;
+}
+.progreso .barra[hidden] { display: none; }
+.progreso .barra span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--diamante);
+}
+.progreso-texto { margin: 0; font-size: 9px; opacity: 0.6; }
+.progreso.jugado .progreso-texto { color: var(--amarillo); opacity: 1; }
+
+/* Título de la segunda fila de la portada ("Hecho en casa") */
+.fila-portales { margin: 28px 0 12px; }
 
 .tarjeta.roblox {
   background: #c0392b;

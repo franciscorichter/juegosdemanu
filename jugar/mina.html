@@ -41,6 +41,21 @@
     box-shadow: 4px 4px 0 #000; touch-action: none; user-select: none;
   }
   .tactil button:active, .tactil button.activo { background: var(--piedra); }
+  /* Recuadro de instrucciones */
+  .instrucciones {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 10;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .instrucciones[hidden] { display: none; }
+  .instrucciones .caja {
+    background: #25252f; border: 4px solid var(--piedra); box-shadow: 6px 6px 0 #000;
+    max-width: 640px; max-height: 90vh; overflow-y: auto; padding: 16px 20px; font-size: 10px;
+  }
+  .instrucciones h2 { font-size: 14px; color: var(--diamante); margin: 0 0 10px; text-align: center; }
+  .instrucciones h3 { font-size: 11px; color: #ffd24a; margin: 14px 0 4px; }
+  .instrucciones ol, .instrucciones ul { margin: 0; padding-left: 20px; }
+  .instrucciones b { color: #7cff8c; }
+  .instrucciones .boton { font-family: inherit; cursor: pointer; display: block; margin: 16px auto 0; }
 </style>
 </head>
 <body>
@@ -50,8 +65,42 @@
   <div><button data-tecla="a">◀</button><button data-tecla="d">▶</button><button data-tecla=" ">▲</button></div>
   <div><button id="modoPoner">Poner</button><button data-tecla="c">C</button><button data-tecla="e">E</button><button data-tecla="[">◁</button><button data-tecla="]">▷</button></div>
 </div>
-<p class="ayuda">A / D o flechas: caminar &middot; ESPACIO: saltar &middot; clic izq: picar (mantén) / pegarle a un zombie &middot; clic der: poner bloque &middot; 1-9 o rueda: casilla &middot; C: crafteo &middot; E: comer &middot; G / L: guardar / cargar &middot; R: revivir</p>
+<p class="ayuda">A / D o flechas: caminar &middot; ESPACIO: saltar &middot; clic izq: picar (mantén) / pegarle a un zombie &middot; clic der: poner bloque &middot; 1-9 o rueda: casilla &middot; C: crafteo &middot; E: comer &middot; G / L: guardar / cargar &middot; R: revivir &middot; <b>H: instrucciones</b></p>
 <a class="boton" href="../index.html">&larr; Volver a la página</a>
+
+<div class="instrucciones" id="instrucciones">
+  <div class="caja">
+    <h2>¿Cómo se juega?</h2>
+    <p>Es como Minecraft en 2D: picas bloques, juntas cosas, crafteas herramientas y sobrevives a los zombies de noche.</p>
+    <h3>Controles</h3>
+    <ul>
+      <li><b>A / D</b> o flechas: caminar &middot; <b>ESPACIO</b>: saltar</li>
+      <li><b>Clic izquierdo (mantener)</b>: picar un bloque o pegarle a un zombie</li>
+      <li><b>Clic derecho</b>: poner el bloque que tienes en la mano</li>
+      <li><b>1-9</b> o rueda del mouse: elegir casilla del inventario</li>
+      <li><b>C</b>: abrir el crafteo (ahí los números 1-9 craftean)</li>
+      <li><b>E</b>: comer una manzana &middot; <b>R</b>: revivir</li>
+      <li><b>G</b>: guardar &middot; <b>L</b>: cargar &middot; <b>H</b>: ver esta ayuda</li>
+    </ul>
+    <h3>Tus primeros pasos</h3>
+    <ol>
+      <li>Pica la <b>madera</b> de un árbol (el tronco café).</li>
+      <li>Aprieta <b>C</b> y craftea <b>tablas</b>, después <b>palos</b> y una <b>mesa de crafteo</b>.</li>
+      <li>Pon la mesa en el suelo con clic derecho y quédate cerca.</li>
+      <li>Baja a picar <b>piedra</b> y haz un <b>pico de piedra</b>.</li>
+      <li>Con pico de piedra puedes sacar <b>hierro</b> y <b>oro</b>. Con pico de hierro, <b>diamante</b>.</li>
+      <li>El <b>carbón</b> + un palo = antorchas, para ver en las cuevas.</li>
+    </ol>
+    <h3>Para sobrevivir</h3>
+    <ul>
+      <li>Los cuadrados rojos son tu <b>vida</b>; los círculos, tu <b>comida</b>.</li>
+      <li>La comida baja sola. Rompe <b>hojas</b> de los árboles para sacar <b>manzanas</b> y cómelas con <b>E</b>.</li>
+      <li>De <b>noche</b> salen zombies. Pégales o escóndete en una casa de bloques.</li>
+      <li>Si te caes de muy alto, pierdes vida.</li>
+    </ul>
+    <button class="boton" id="cerrarInstrucciones">¡A jugar!</button>
+  </div>
+</div>
 
 <script>
 // ============================================================
@@ -609,7 +658,15 @@ function posCanvas(e) {
   const r = canvas.getBoundingClientRect();
   return [(e.clientX - r.left) * ANCHO / r.width, (e.clientY - r.top) * ALTO / r.height];
 }
+// ---------- Recuadro de instrucciones ----------
+const instrucciones = document.getElementById('instrucciones');
+const ayudaAbierta = () => !instrucciones.hidden;
+function mostrarAyuda(si) { instrucciones.hidden = !si; for (const k in teclas) teclas[k] = false; botonIzq = false; }
+document.getElementById('cerrarInstrucciones').addEventListener('click', () => mostrarAyuda(false));
+
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'h' || e.key === 'H') { mostrarAyuda(!ayudaAbierta()); return; }
+  if (ayudaAbierta()) { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); mostrarAyuda(false); } return; }
   if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault();
   if (!e.repeat) tecla(e.key);
   teclas[e.key] = true;
@@ -634,7 +691,7 @@ if (botonPoner) botonPoner.addEventListener('click', () => { modoPoner = !modoPo
 
 // ---------- Lógica (un cuadro) ----------
 function actualizar() {
-  if (j.estado !== 'jugando') return;
+  if (j.estado !== 'jugando' || ayudaAbierta()) return;
   const mundo = j.mundo, p = j.jugador;
   const dt = 1 / FPS;
   j.tiempo += dt;

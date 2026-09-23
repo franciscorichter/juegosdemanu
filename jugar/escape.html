@@ -446,6 +446,10 @@ function encenderAudio() {
 }
 function sonar(vol) { if (zumbido) zumbido.gain.setTargetAtTime(vol * 0.4, audio.currentTime, 0.05); }
 
+// ---------- Progreso: lo lee la página de Juegos de la casa (localStorage) ----------
+function leerProgreso(clave) { try { return JSON.parse(localStorage.getItem(clave)) || {}; } catch (e) { return {}; } }
+function guardarProgreso(clave, r) { try { localStorage.setItem(clave, JSON.stringify(r)); } catch (e) {} }
+
 // ---------- El juego ----------
 const canvas = document.getElementById('juego');
 const ctx = canvas.getContext('2d');
@@ -549,6 +553,15 @@ function actualizar() {
   if (mapa.puertaAbierta && puerta && miCelda[0] === puerta[0] && miCelda[1] === puerta[1]) {
     tiempoTotal += tiempo;
     estado = nivel === NIVELES.length - 1 ? 'escapaste' : 'nivel_completo';
+    // guarda el nivel más lejano y, si escapaste, el mejor tiempo en esta dificultad
+    const r = leerProgreso('escape-record');
+    r.nivelMax = Math.max(r.nivelMax || 0, nivel + 1);
+    if (estado === 'escapaste') {
+      const seg = Math.floor(tiempoTotal / FPS);
+      r.escapes = r.escapes || {};
+      if (!r.escapes[dificultad] || seg < r.escapes[dificultad]) r.escapes[dificultad] = seg;
+    }
+    guardarProgreso('escape-record', r);
     sonar(0);
     return;
   }

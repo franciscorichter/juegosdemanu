@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Among Us — Manu</title>
+  <!-- Fuente pixelada: si no hay internet, el CSS usa una monoespaciada del computador -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+  <script>
+    // Aplica el tema guardado antes de dibujar la página, para que no parpadee.
+    try {
+      const tema = localStorage.getItem('tema');
+      if (tema) document.documentElement.dataset.tema = tema;
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="cabecera">
+    <h1>🚀 Among Us</h1>
+    <p class="sub">Mis mods de Among Us</p>
+    <nav class="menu">
+      <a href="../">🏠 Portada</a>
+      <a href="../minecraft/">⛏ Minecraft</a>
+      <a href="../roblox/">🟥 Roblox</a>
+      <a class="activo" href="../amongus/">🚀 Among Us</a>
+      <a href="../casa/">🏠 Juegos de la casa</a>
+      <a href="../desarrollo/">🛠 Desarrollo de juegos</a>
+      <button class="tema" id="tema" title="Cambiar entre modo claro y oscuro">🌙 Modo oscuro</button>
+    </nav>
+  </header>
+
+  <main>
+
+<section id="mods">
+  <h2>Mods de Among Us</h2>
+  <p class="nota">Solo para Among Us 2026.6.5 en Steam (Windows). Son para salas privadas y todos los jugadores necesitan el mod.</p>
+  <div class="tarjetas">
+<article class="tarjeta amongus">
+  <div class="icono">🔫</div>
+  <h3>Sheriff</h3>
+  <p class="version">Among Us 2026.6.5 · Steam · Windows</p>
+<ul class="lista">
+  <li>Tripulante con botón <b>DISPARAR</b>.</li>
+  <li>Si le dispara a un impostor, muere el impostor.</li>
+  <li>Si le dispara a un inocente, muere el Sheriff.</li>
+</ul>
+  <p class="necesita">Necesita: BepInEx 6 + Reactor 2.5.1</p>
+<a class="boton" href="../descargas/sheriff.zip" download>⬇ Descargar .zip (12 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Baja <a href="https://builds.bepinex.dev/projects/bepinex_be" target="_blank" rel="noopener">BepInEx 6 IL2CPP be.735 win-x86</a> y descomprímelo en la carpeta del juego.</li>
+    <li>Abre y cierra Among Us una vez.</li>
+    <li>Baja <a href="https://github.com/NuclearPowered/Reactor/releases/tag/2.5.1" target="_blank" rel="noopener">Reactor 2.5.1</a>.</li>
+    <li>Copia <code>Reactor.dll</code> y <code>Sheriff.dll</code> a <code>Among Us/BepInEx/plugins/</code>.</li>
+    <li>El host activa el rol en Ajustes de Roles → pestaña tripulantes → Sheriff, probabilidad 100.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta amongus">
+  <div class="icono">🦠</div>
+  <h3>Parásito</h3>
+  <p class="version">Among Us 2026.6.5 · Steam · Windows</p>
+<ul class="lista">
+  <li>Impostor que <b>infecta</b> a un tripulante.</li>
+  <li>Si lo echan en votación, se traspasa al cuerpo del infectado y sigue jugando.</li>
+</ul>
+  <p class="necesita">Necesita: BepInEx 6 + Reactor 2.5.1</p>
+<a class="boton" href="../descargas/parasito.zip" download>⬇ Descargar .zip (12 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Baja <a href="https://builds.bepinex.dev/projects/bepinex_be" target="_blank" rel="noopener">BepInEx 6 IL2CPP be.735 win-x86</a> y descomprímelo en la carpeta del juego.</li>
+    <li>Abre y cierra Among Us una vez.</li>
+    <li>Baja <a href="https://github.com/NuclearPowered/Reactor/releases/tag/2.5.1" target="_blank" rel="noopener">Reactor 2.5.1</a>.</li>
+    <li>Copia <code>Reactor.dll</code> y <code>Parasito.dll</code> a <code>Among Us/BepInEx/plugins/</code>.</li>
+    <li>El host activa el rol en Ajustes de Roles → pestaña impostores → Parásito, probabilidad 100.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta amongus">
+  <div class="icono">🔧</div>
+  <h3>Ingeniero</h3>
+  <p class="version">Among Us 2026.6.5 · Steam · Windows</p>
+<ul class="lista">
+  <li>Tripulante que puede meterse a las <b>ventilaciones</b> como un impostor (le aparece el botón VENT).</li>
+  <li>Al salir de una, espera 20 s para volver a entrar.</li>
+</ul>
+  <p class="necesita">Necesita: BepInEx 6 + Reactor 2.5.1</p>
+<a class="boton" href="../descargas/ingeniero.zip" download>⬇ Descargar .zip (9 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Baja <a href="https://builds.bepinex.dev/projects/bepinex_be" target="_blank" rel="noopener">BepInEx 6 IL2CPP be.735 win-x86</a> y descomprímelo en la carpeta del juego.</li>
+    <li>Abre y cierra Among Us una vez.</li>
+    <li>Baja <a href="https://github.com/NuclearPowered/Reactor/releases/tag/2.5.1" target="_blank" rel="noopener">Reactor 2.5.1</a>.</li>
+    <li>Copia <code>Reactor.dll</code> y <code>Ingeniero.dll</code> a <code>Among Us/BepInEx/plugins/</code>.</li>
+    <li>El host activa el rol en Ajustes de Roles → pestaña tripulantes → Ingeniero, probabilidad 100.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta amongus">
+  <div class="icono">🩺</div>
+  <h3>Doctor</h3>
+  <p class="version">Among Us 2026.6.5 · Steam · Windows</p>
+<ul class="lista">
+  <li>Tripulante que puede <b>REVIVIR</b> a un jugador muerto: se acerca al cuerpo y aprieta el botón.</li>
+  <li>Una vez por partida. El revivido vuelve con el rol que tenía (si era impostor, sigue siéndolo).</li>
+</ul>
+  <p class="necesita">Necesita: BepInEx 6 + Reactor 2.5.1</p>
+<a class="boton" href="../descargas/doctor.zip" download>⬇ Descargar .zip (12 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Baja <a href="https://builds.bepinex.dev/projects/bepinex_be" target="_blank" rel="noopener">BepInEx 6 IL2CPP be.735 win-x86</a> y descomprímelo en la carpeta del juego.</li>
+    <li>Abre y cierra Among Us una vez.</li>
+    <li>Baja <a href="https://github.com/NuclearPowered/Reactor/releases/tag/2.5.1" target="_blank" rel="noopener">Reactor 2.5.1</a>.</li>
+    <li>Copia <code>Reactor.dll</code> y <code>Doctor.dll</code> a <code>Among Us/BepInEx/plugins/</code>.</li>
+    <li>El host activa el rol en Ajustes de Roles → pestaña tripulantes → Doctor, probabilidad 100.</li>
+  </ol>
+</details>
+</article>
+  </div>
+</section>
+
+  </main>
+
+  <footer>
+    <p>Game Studio de Manu</p>
+  </footer>
+
+  <script>
+    // Botón de tema: cambia entre claro y oscuro y lo recuerda.
+    const botonTema = document.getElementById('tema');
+    function pintarBotonTema() {
+      const oscuro = document.documentElement.dataset.tema === 'oscuro';
+      botonTema.textContent = oscuro ? '☀️ Modo claro' : '🌙 Modo oscuro';
+    }
+    botonTema.addEventListener('click', () => {
+      const nuevo = document.documentElement.dataset.tema === 'oscuro' ? 'claro' : 'oscuro';
+      document.documentElement.dataset.tema = nuevo;
+      try { localStorage.setItem('tema', nuevo); } catch (e) {}
+      pintarBotonTema();
+    });
+    pintarBotonTema();
+  </script>
+</body>
+</html>
