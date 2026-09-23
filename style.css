@@ -79,7 +79,8 @@ h1 {
 }
 
 .logo {
-  height: 1.4em;
+  height: 1.1em;
+  width: auto;
   vertical-align: middle;
   margin-right: 0.4em;
   filter: drop-shadow(3px 3px 0 var(--sombra));
