@@ -78,11 +78,21 @@ h1 {
   text-shadow: 4px 4px 0 var(--sombra);
 }
 
+h1:has(.logo) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .logo {
-  height: 1.1em;
+  height: 30px;
+  image-rendering: pixelated;
   width: auto;
-  vertical-align: middle;
-  margin-right: 0.4em;
+  flex-shrink: 0;
+  position: relative;
+  top: -3px;  /* la letra pixelada tiene el centro más arriba (por las colas de j y g) */
   filter: drop-shadow(3px 3px 0 var(--sombra));
 }
 
