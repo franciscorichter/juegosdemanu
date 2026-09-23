@@ -323,6 +323,13 @@ h3.grupo + .nota {
   margin: 10px 0 0 !important;
 }
 
+.origen {
+  font-size: 9px;
+  color: #aaaaaa;
+  font-style: italic;
+  margin: 10px 0 0 !important;
+}
+
 .lista {
   padding-left: 18px;
   margin: 0;
