@@ -608,3 +608,55 @@ footer p {
 }
 
 :root[data-tema="oscuro"] .tarjeta.rp { background: #1c545c; }
+
+/* ------------------------------------------------ secciones (portada y menú) */
+/* La sección en que estás se marca en el menú */
+.menu a.activo {
+  background: var(--pasto-oscuro);
+  color: var(--amarillo);
+}
+
+/* Los 3 botones grandes de la portada: Minecraft, Roblox, Programas */
+.portales {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.portal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 22px 16px;
+  text-align: center;
+  color: var(--texto);
+  text-decoration: none;
+  border: 4px solid var(--sombra);
+  box-shadow: 6px 6px 0 var(--sombra);
+  transition: transform 0.1s;
+}
+
+.portal:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--sombra);
+}
+
+.portal .icono { font-size: 40px; line-height: 1.2; }
+.portal .nombre { font-size: 16px; color: var(--amarillo); text-shadow: 3px 3px 0 var(--sombra); }
+.portal .que { font-size: 10px; }
+.portal .detalle { font-size: 8px; opacity: 0.9; }
+
+.portal.minecraft { background: var(--pasto); border-color: var(--pasto-oscuro); }
+.portal.roblox { background: #c0392b; border-color: #7b241c; }
+.portal.programas { background: #5a3d8a; border-color: #33224f; }
+
+.tarjeta.roblox {
+  background: #c0392b;
+  border-color: #7b241c;
+}
+
+/* El cartel de "en construcción" no tiene título arriba: le damos aire */
+.en-construccion {
+  margin-top: 30px;
+}

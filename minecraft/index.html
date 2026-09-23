@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft — Los mods de Manu</title>
+  <!-- Fuente pixelada: si no hay internet, el CSS usa una monoespaciada del computador -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+  <script>
+    // Aplica el tema guardado antes de dibujar la página, para que no parpadee.
+    try {
+      const tema = localStorage.getItem('tema');
+      if (tema) document.documentElement.dataset.tema = tema;
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="cabecera">
+    <h1>⛏ Minecraft</h1>
+    <p class="sub">Mods, texturas y datapacks hechos por Manu</p>
+    <nav class="menu">
+      <a href="../">🏠 Portada</a>
+      <a class="activo" href="../minecraft/">⛏ Minecraft</a>
+      <a href="../roblox/">🟥 Roblox</a>
+      <a href="../programas/">🎮 Programas</a>
+      <a href="#mods">Mods</a>
+      <a href="#packs">Texturas</a>
+      <a href="#datapacks">Datapacks</a>
+      <a href="#recomendados">Recomendados</a>
+      <a href="#instalar">Instalar</a>
+      <button class="tema" id="tema" title="Cambiar entre modo claro y oscuro">🌙 Modo oscuro</button>
+    </nav>
+    <div class="buscador">
+      <input type="search" id="buscar" placeholder="Buscar un mod o juego..." autocomplete="off">
+    </div>
+  </header>
+
+  <main>
+
+<section id="mods">
+  <h2>Mis mods</h2>
+  <div class="tarjetas">
+<article class="tarjeta">
+  <div class="icono">⚡</div>
+  <h3>Mod de Manu</h3>
+  <p class="version">Minecraft 1.21.4 · Fabric · Java 21</p>
+  <img class="captura" src="../img/mod-de-manu.png" alt="Texturas de Mod de Manu" loading="lazy">
+<p class="subtitulo">Ítems</p>
+<ul class="lista">
+  <li><b>Espada de Rayos:</b> clic derecho = rayo donde miras.</li>
+  <li><b>Poción de Lava:</b> 30 s de resistencia al fuego.</li>
+  <li><b>Jetpack:</b> pechera; mantén el salto para volar, con fuego y humo.</li>
+  <li><b>Botas Rápidas:</b> velocidad III y salto II al llevarlas.</li>
+  <li><b>Gancho:</b> clic derecho a un bloque y te lanza hacia allá (40 bloques).</li>
+  <li><b>Manzana Suprema:</b> regeneración IV, resistencia, fuerza, absorción y anti-fuego por 5 min.</li>
+</ul>
+<p class="subtitulo">Bloques</p>
+<ul class="lista">
+  <li><b>Trampolín:</b> te lanza al aire, sin daño de caída.</li>
+  <li><b>Bloque Bomba:</b> explota con redstone, radio 12.</li>
+  <li><b>Bloque Sorpresa:</b> al romperlo suelta 1 cosa al azar (de cobblestone a netherita o tótem).</li>
+</ul>
+<p class="subtitulo">Mobs</p>
+<ul class="lista">
+  <li><b>Zombie de Diamante:</b> suelta 1-3 diamantes y no se quema de día.</li>
+  <li><b>Esqueleto Rey:</b> 60 de vida, más rápido, suelta esmeraldas y a veces un arco encantado nivel 30.</li>
+  <li>Los dos aparecen de noche en el Overworld y tienen huevo en creativo.</li>
+</ul>
+<p class="nota">Todo tiene receta de crafteo: míralas en el libro de recetas.</p>
+  <p class="necesita">Necesita: Fabric Loader + Fabric API</p>
+<a class="boton" href="../descargas/mod-de-manu-1.21.4.jar" download>⬇ Descargar .jar (42 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Instala Fabric Loader para 1.21.4 (ver abajo).</li>
+    <li>Baja Fabric API para 1.21.4 y ponlo en la carpeta <code>mods</code>.</li>
+    <li>Pon <code>mod-de-manu-1.21.4.jar</code> en la misma carpeta.</li>
+    <li>Abre Minecraft 1.21.4 con el perfil Fabric.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta">
+  <div class="icono">🪄</div>
+  <h3>Manu Magia</h3>
+  <p class="version">Minecraft 1.21.4 · Fabric · Java 21</p>
+<p class="subtitulo">Varitas</p>
+<ul class="lista">
+  <li><b>Varita de Fuego:</b> lanza una bola de fuego.</li>
+  <li><b>Varita de Hielo:</b> congela el agua y ralentiza a los mobs.</li>
+  <li><b>Varita de Teletransporte:</b> te lleva al bloque que miras (hasta 64 bloques).</li>
+  <li><b>Varita de Curación:</b> te cura a ti y a los animales cerca.</li>
+  <li><b>Varita de Rayo en Cadena:</b> un rayo a cada mob hostil a 10 bloques.</li>
+  <li><b>Bastón de Gravedad:</b> lanza a los mobs por el aire.</li>
+</ul>
+<p class="subtitulo">Más</p>
+<ul class="lista">
+  <li><b>Poción de Invisibilidad Total.</b></li>
+  <li><b>Altar Mágico:</b> recarga las varitas y lanza fuegos artificiales.</li>
+</ul>
+<p class="nota">Recetas: cada varita = su ingrediente arriba (vara de blaze / hielo compacto / perla de ender / manzana dorada / pararrayos / vara de brisa) y dos palos debajo. Altar = amatista arriba, obsidiana-libro-obsidiana al medio, 3 obsidianas abajo. Poción = ojo de araña fermentado + azúcar + botella.</p>
+  <p class="necesita">Necesita: Fabric Loader + Fabric API</p>
+<a class="boton" href="../descargas/manu-magia-1.21.4.jar" download>⬇ Descargar .jar (36 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Instala Fabric Loader para 1.21.4 (ver abajo).</li>
+    <li>Baja Fabric API para 1.21.4 y ponlo en la carpeta <code>mods</code>.</li>
+    <li>Pon <code>manu-magia-1.21.4.jar</code> en la misma carpeta.</li>
+    <li>Abre Minecraft 1.21.4 con el perfil Fabric.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta">
+  <div class="icono">⌨️</div>
+  <h3>Manu Comandos</h3>
+  <p class="version">Minecraft 1.21.4 · Fabric · Java 21</p>
+<ul class="lista">
+  <li>Comandos para todos, <b>sin ser OP</b>.</li>
+  <li><code>/hogar set</code> guarda tu casa y <code>/hogar</code> te lleva.</li>
+  <li><code>/vuelo</code>, <code>/curar</code>, <code>/velocidad 1-5</code>, <code>/gigante</code>, <code>/pequeno</code>, <code>/mascota</code>.</li>
+  <li><code>/dia</code>, <code>/noche</code>, <code>/sol</code>, <code>/lluvia</code>.</li>
+  <li><code>/kit inicial</code>, <code>guerrero</code>, <code>minero</code> o <code>mago</code>.</li>
+  <li><code>/tpa &lt;jugador&gt;</code> pide ir donde alguien y <code>/tpaceptar</code> lo acepta.</li>
+  <li><code>/explotar</code>: una explosión que no hace daño.</li>
+</ul>
+  <p class="necesita">Necesita: Fabric Loader + Fabric API</p>
+<a class="boton" href="../descargas/manu-comandos-1.21.4.jar" download>⬇ Descargar .jar (22 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Instala Fabric Loader para 1.21.4 (ver abajo).</li>
+    <li>Baja Fabric API para 1.21.4 y ponlo en la carpeta <code>mods</code>.</li>
+    <li>Pon <code>manu-comandos-1.21.4.jar</code> en la misma carpeta.</li>
+    <li>Abre Minecraft 1.21.4 con el perfil Fabric.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta">
+  <div class="icono">🏷️</div>
+  <h3>Manu Tweaks</h3>
+  <p class="version">Minecraft 1.21.4 · Fabric · Java 21</p>
+<ul class="lista">
+  <li><b>Stackear todo</b> hasta 99, incluso tótems. Se cambia con <code>/stack &lt;1-99&gt;</code>.</li>
+  <li><b>Tu nametag:</b> ves tu propio nombre como lo ven los demás.</li>
+</ul>
+  <p class="necesita">Necesita: Fabric Loader + Fabric API</p>
+<a class="boton" href="../descargas/manu-tweaks-1.21.4.jar" download>⬇ Descargar .jar (19 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Instala Fabric Loader para 1.21.4 (ver abajo).</li>
+    <li>Baja Fabric API para 1.21.4 y ponlo en la carpeta <code>mods</code>.</li>
+    <li>Pon <code>manu-tweaks-1.21.4.jar</code> en la misma carpeta.</li>
+    <li>Abre Minecraft 1.21.4 con el perfil Fabric.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta">
+  <div class="icono">📦</div>
+  <h3>Manu Tweaks</h3>
+  <p class="version">Minecraft 26.2 · Fabric · Java 25</p>
+<ul class="lista">
+  <li><b>Tu nametag:</b> ves tu propio nombre como lo ven los demás.</li>
+  <li><b>PV:</b> cofres personales con <code>/pv</code>.</li>
+</ul>
+  <p class="necesita">Necesita: Fabric Loader + Fabric API + Java 25</p>
+<a class="boton" href="../descargas/manu-tweaks-26.2.jar" download>⬇ Descargar .jar (14 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Instala Fabric Loader para 26.2 (ver abajo).</li>
+    <li>Baja Fabric API para 26.2 y ponlo en la carpeta <code>mods</code>.</li>
+    <li>Pon <code>manu-tweaks-26.2.jar</code> en la misma carpeta.</li>
+    <li>Abre Minecraft 26.2 con el perfil Fabric.</li>
+  </ol>
+</details>
+</article>
+  </div>
+</section>
+
+<section id="packs">
+  <h2>Mis resource packs</h2>
+  <p class="nota">Un resource pack cambia cómo se ven las cosas (texturas). No necesita Fabric.</p>
+  <div class="tarjetas">
+<article class="tarjeta rp">
+  <div class="icono">🎨</div>
+  <h3>Manu Pack</h3>
+  <p class="version">Minecraft 1.21.4 · Resource pack (pack_format 46)</p>
+  <img class="captura" src="../img/manu-pack.png" alt="Texturas de Manu Pack" loading="lazy">
+<ul class="lista">
+  <li><b>26 texturas pixel art</b> dibujadas por código.</li>
+  <li>Espada, pico, diamante, bloque de diamante y menas rediseñados.</li>
+  <li>Manzana dorada, perla de ender con ojo, <b>tótem sonriente</b>, <b>TNT con calavera</b>, mesa de crafteo.</li>
+  <li>Pasto, piedra, tierra, tablas, glowstone, comida y el corazón del HUD.</li>
+</ul>
+  <p class="necesita">Necesita: nada, solo Minecraft 1.21.4</p>
+<a class="boton" href="../descargas/manu-pack.zip" download>⬇ Descargar .zip (14 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Copia el <code>.zip</code> tal cual a la carpeta <code>resourcepacks</code> de tu Minecraft.</li>
+    <li>En Linux (Flatpak): <code>~/.var/app/com.mojang.Minecraft/.minecraft/resourcepacks/</code> (o la carpeta resourcepacks de tu launcher).</li>
+    <li>En el juego: Opciones → Paquetes de recursos → mueve Manu Pack a la derecha → Listo.</li>
+  </ol>
+</details>
+</article>
+  </div>
+</section>
+
+<section id="datapacks">
+  <h2>Mis datapacks</h2>
+  <p class="nota">Un datapack no es un mod: no necesita Fabric. Va dentro de la carpeta de tu mundo.</p>
+  <div class="tarjetas">
+<article class="tarjeta pack">
+  <div class="icono">💎</div>
+  <h3>Recetas Locas</h3>
+  <p class="version">Minecraft 1.21.4 · Datapack</p>
+<ul class="lista">
+  <li>Nueva receta: 8 esmeraldas alrededor de una manzana en la mesa de crafteo = <b>Tótem de la Inmortalidad</b>.</li>
+  <li>Aparece también en el libro de recetas.</li>
+</ul>
+  <p class="necesita">Necesita: nada, solo Minecraft 1.21.4</p>
+<a class="boton" href="../descargas/recetas-locas.zip" download>⬇ Descargar .zip (1 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Copia el <code>.zip</code> tal cual (sin descomprimir) a la carpeta <code>datapacks</code> de tu mundo.</li>
+    <li>En Linux (Flatpak): <code>~/.var/app/com.mojang.Minecraft/.minecraft/saves/&lt;tu mundo&gt;/datapacks/</code></li>
+    <li>Entra al mundo y escribe <code>/reload</code>.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta pack">
+  <div class="icono">⏱️</div>
+  <h3>Parkour</h3>
+  <p class="version">Minecraft 1.21.4 · Datapack</p>
+<ul class="lista">
+  <li>Minijuego con <b>cronómetro</b>. Pon una placa de presión de oro al inicio y otra al final.</li>
+  <li>Al pisar la primera arranca el reloj (a la derecha de la pantalla). Al pisar la segunda te muestra tu tiempo.</li>
+  <li>Guarda tu récord. Si te caes: <code>/function parkour:reiniciar</code>.</li>
+</ul>
+  <p class="necesita">Necesita: nada, solo Minecraft 1.21.4</p>
+<a class="boton" href="../descargas/parkour.zip" download>⬇ Descargar .zip (5 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Copia el <code>.zip</code> tal cual (sin descomprimir) a la carpeta <code>datapacks</code> de tu mundo.</li>
+    <li>En Linux (Flatpak): <code>~/.var/app/com.mojang.Minecraft/.minecraft/saves/&lt;tu mundo&gt;/datapacks/</code></li>
+    <li>Entra al mundo y escribe <code>/reload</code>.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta pack">
+  <div class="icono">👑</div>
+  <h3>Rey Zombie</h3>
+  <p class="version">Minecraft 1.21.4 · Datapack</p>
+<ul class="lista">
+  <li>Un <b>jefe</b>: 200 de vida, armadura de netherita, grande y fuerte, con barra de jefe arriba.</li>
+  <li>Cada 20 segundos llama a 3 esbirros.</li>
+  <li>Al derrotarlo suelta un <b>cofre de tesoro</b> (diamantes, netherita, manzanas encantadas, la Corona del Rey, espada de netherita afilada, tótem) con fuegos artificiales.</li>
+  <li><code>/function jefe:invocar</code> lo hace aparecer · <code>/function jefe:quitar</code> cancela la pelea.</li>
+</ul>
+  <p class="necesita">Necesita: nada, solo Minecraft 1.21.4</p>
+<a class="boton" href="../descargas/jefe-zombie.zip" download>⬇ Descargar .zip (6 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Copia el <code>.zip</code> tal cual (sin descomprimir) a la carpeta <code>datapacks</code> de tu mundo.</li>
+    <li>En Linux (Flatpak): <code>~/.var/app/com.mojang.Minecraft/.minecraft/saves/&lt;tu mundo&gt;/datapacks/</code></li>
+    <li>Entra al mundo y escribe <code>/reload</code>.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta pack">
+  <div class="icono">🍬</div>
+  <h3>Dimensión Dulce</h3>
+  <p class="version">Minecraft 1.21.4 · Datapack</p>
+<ul class="lista">
+  <li>Una <b>dimensión nueva</b> de caramelo: colinas de pasto rosado con lana rosa, roca de panal, <b>lagos de miel</b> en los valles, cielo y agua rosados.</li>
+  <li>Cerezos, conejos, abejas y ovejas. <b>Nada de monstruos</b>, y allá te curas solo (regeneración).</li>
+  <li><code>/function dulce:ir</code> te lleva (a altura 100, sobre una plataforma de miel) · <code>/function dulce:volver</code> te devuelve justo donde estabas.</li>
+  <li>Logro <b>¡Bienvenido a la Dimensión Dulce!</b> al entrar por primera vez: te regala miel y azúcar.</li>
+  <li>Recetas nuevas: <b>Caramelo dorado</b> (manzana + 4 frascos de miel + 4 azúcar = manzana dorada) y <b>bloque de miel barato</b> (2 frascos en vez de 4).</li>
+  <li>Cuidado: la miel es pegajosa, en los lagos no puedes saltar.</li>
+</ul>
+  <p class="necesita">Necesita: nada, solo Minecraft 1.21.4</p>
+<a class="boton" href="../descargas/dimension-dulce.zip" download>⬇ Descargar .zip (13 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Copia el <code>.zip</code> tal cual (sin descomprimir) a la carpeta <code>datapacks</code> de tu mundo.</li>
+    <li>En Linux (Flatpak): <code>~/.var/app/com.mojang.Minecraft/.minecraft/saves/&lt;tu mundo&gt;/datapacks/</code></li>
+    <li><b>Sal del mundo y vuelve a entrar</b> (Guardar y salir). Con <code>/reload</code> NO basta: las dimensiones solo se cargan al abrir el mundo.</li>
+    <li>Al entrar debería salir <code>[Dulce] listo...</code> en el chat. Si no, revisa con <code>/datapack list</code> que aparezca en verde.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta pack">
+  <div class="icono">🪙</div>
+  <h3>Tienda con monedas</h3>
+  <p class="version">Minecraft 1.21.4 · Datapack</p>
+<ul class="lista">
+  <li>Ganas <b>monedas</b> minando minerales (carbón 1, hierro 2, oro 3, esmeralda 8, diamante 10, restos antiguos 20...) y matando monstruos (zombie 5, creeper 8, enderman 15, bruja 12...).</li>
+  <li>Al entrar por primera vez te regala 50. Las monedas se ven en la lista de jugadores (<b>TAB</b>).</li>
+  <li><code>/trigger tienda</code> abre un menú en el chat con botones <b>[COMPRAR]</b>. Funciona sin ser operador.</li>
+  <li>Kits: comida (20), herramientas de hierro (60), armadura de hierro con Protección I (120), diamante con espada Filo II y pico Eficiencia III (300).</li>
+</ul>
+  <p class="necesita">Necesita: nada, solo Minecraft 1.21.4</p>
+<a class="boton" href="../descargas/tienda.zip" download>⬇ Descargar .zip (18 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Copia el <code>.zip</code> tal cual (sin descomprimir) a la carpeta <code>datapacks</code> de tu mundo.</li>
+    <li>En Linux (Flatpak): <code>~/.var/app/com.mojang.Minecraft/.minecraft/saves/&lt;tu mundo&gt;/datapacks/</code></li>
+    <li>Entra al mundo y escribe <code>/reload</code>.</li>
+  </ol>
+</details>
+</article>
+  </div>
+</section>
+
+<section id="recomendados">
+  <h2>Mods recomendados</h2>
+  <p class="nota">Mods populares para Fabric 1.21.4. Los enlaces van a Modrinth, su página oficial. Casi todos necesitan Fabric API.</p>
+  <h3 class="grupo">⚡ Rendimiento</h3>
+  <p class="nota">Para que el juego vaya más fluido y con más FPS.</p>
+  <div class="tarjetas">
+<article class="tarjeta reco">
+  <h3>Sodium</h3>
+  <p>Muchos más FPS. Mejora el renderizado del juego.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/sodium" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Lithium</h3>
+  <p>Hace que el juego y el servidor vayan más fluidos.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/lithium" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Entity Culling</h3>
+  <p>No dibuja los mobs que no puedes ver.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/entityculling" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>FerriteCore</h3>
+  <p>Usa menos memoria RAM.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/ferrite-core" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>ImmediatelyFast</h3>
+  <p>Acelera el dibujado del HUD y los textos.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/immediatelyfast" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Krypton</h3>
+  <p>Mejora la conexión de red.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/krypton" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>C2ME</h3>
+  <p>Carga chunks más rápido usando varios núcleos.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/c2me-fabric" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Dynamic FPS</h3>
+  <p>Baja los FPS cuando el juego está minimizado.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/dynamic-fps" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Reese's Sodium Options</h3>
+  <p>Un menú de opciones mejor para Sodium.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/reeses-sodium-options" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Sodium Extra</h3>
+  <p>Más opciones para Sodium (partículas, niebla, etc).</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/sodium-extra" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Indium</h3>
+  <p>Hace que otros mods de renderizado funcionen con Sodium.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/indium" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+  </div>
+  <h3 class="grupo">🗺️ Mapas</h3>
+  <p class="nota">Para no perderte.</p>
+  <div class="tarjetas">
+<article class="tarjeta reco">
+  <h3>Xaero's Minimap</h3>
+  <p>Minimapa en la esquina de la pantalla.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/xaeros-minimap" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Xaero's World Map</h3>
+  <p>Mapa completo del mundo. Va con el Minimap.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/xaeros-world-map" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>JourneyMap</h3>
+  <p>Otro mapa completo, con waypoints y versión web.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/journeymap" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+  </div>
+  <h3 class="grupo">🧰 Utilidad</h3>
+  <p class="nota">Herramientas y librerías que otros mods necesitan.</p>
+  <div class="tarjetas">
+<article class="tarjeta reco">
+  <h3>Fabric API</h3>
+  <p>Obligatorio. Casi todos los mods de Fabric lo necesitan.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/fabric-api" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Mod Menu</h3>
+  <p>Un menú dentro del juego para ver y configurar tus mods.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/modmenu" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Roughly Enough Items (REI)</h3>
+  <p>Ver todas las recetas de todos los ítems.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/rei" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Mouse Tweaks</h3>
+  <p>Arrastra el mouse para mover ítems más rápido.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/mouse-tweaks" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Inventory Profiles Next</h3>
+  <p>Ordena tu inventario con un botón.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/inventory-profiles-next" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Cloth Config API</h3>
+  <p>Librería de configuración. Muchos mods la piden.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/cloth-config" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>YetAnotherConfigLib</h3>
+  <p>Otra librería de configuración. Algunos mods la piden.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/yacl" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Architectury API</h3>
+  <p>Librería para mods que salen en Fabric y Forge.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/architectury-api" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Simple Voice Chat</h3>
+  <p>Hablar por voz dentro del juego.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/simple-voice-chat" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Carpet</h3>
+  <p>Comandos técnicos para servidores y granjas.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/carpet" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>AppleSkin</h3>
+  <p>Muestra cuánta hambre y saturación da cada comida.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/appleskin" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Replay Mod</h3>
+  <p>Graba tus partidas y haz videos con cámara libre.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/replaymod" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Chunky</h3>
+  <p>Genera chunks del mundo por adelantado (servidores).</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/chunky" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Zoomify</h3>
+  <p>Zoom con una tecla, como en OptiFine.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/zoomify" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+  </div>
+  <h3 class="grupo">🎨 Visual</h3>
+  <p class="nota">Para que el juego se vea más bonito.</p>
+  <div class="tarjetas">
+<article class="tarjeta reco">
+  <h3>Iris Shaders</h3>
+  <p>Para usar shaders. Necesita Sodium.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/iris" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Complementary Shaders</h3>
+  <p>Un shader precioso y liviano. Va con Iris.</p>
+  <a class="boton enlace" href="https://modrinth.com/shader/complementary-reimagined" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Continuity</h3>
+  <p>Texturas conectadas (vidrio sin bordes).</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/continuity" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Falling Leaves</h3>
+  <p>Hojas que caen de los árboles.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/fallingleaves" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Distant Horizons</h3>
+  <p>Ver muchísimo más lejos sin perder FPS.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/distanthorizons" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Better Third Person</h3>
+  <p>Cámara en tercera persona que gira libre.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/better-third-person" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Not Enough Animations</h3>
+  <p>Animaciones nuevas para comer, remar, escalar...</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/not-enough-animations" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Physics Mod</h3>
+  <p>Bloques que se rompen en pedazos con física.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/physicsmod" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>LambDynamicLights</h3>
+  <p>Las antorchas en la mano iluminan.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/lambdynamiclights" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Presence Footsteps</h3>
+  <p>Sonidos de pasos distintos según el bloque.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/presence-footsteps" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Ambient Sounds</h3>
+  <p>Sonidos de ambiente: pájaros, viento, cuevas.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/ambientsounds" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+  </div>
+  <h3 class="grupo">🧱 Construcción</h3>
+  <p class="nota">Para construir cosas enormes más rápido.</p>
+  <div class="tarjetas">
+<article class="tarjeta reco">
+  <h3>Litematica</h3>
+  <p>Hologramas de construcciones para copiarlas bloque a bloque.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/litematica" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>MaLiLib</h3>
+  <p>Librería que Litematica y Tweakeroo necesitan.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/malilib" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Tweakeroo</h3>
+  <p>Un montón de trucos para construir más cómodo.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/tweakeroo" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>WorldEdit</h3>
+  <p>Comandos para copiar, pegar y rellenar zonas enteras.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/worldedit" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+  </div>
+</section>
+
+<section id="instalar" class="instalar">
+  <h2>Cómo instalar un mod de Fabric</h2>
+  <ol>
+    <li>
+      <strong>Instala Fabric Loader.</strong>
+      Descárgalo desde <a href="https://fabricmc.net/use/installer/" target="_blank" rel="noopener">fabricmc.net</a>,
+      ábrelo y elige la versión de Minecraft del mod (por ejemplo 1.21.4).
+    </li>
+    <li>
+      <strong>Descarga Fabric API</strong> desde
+      <a href="https://modrinth.com/mod/fabric-api" target="_blank" rel="noopener">Modrinth</a>.
+      Elige la misma versión de Minecraft.
+    </li>
+    <li>
+      <strong>Copia los archivos .jar</strong> (el del mod y el de Fabric API)
+      a la carpeta <code>mods</code> de tu Minecraft:
+      <ul>
+        <li>Linux: <code>~/.minecraft/mods</code> (Flatpak: <code>~/.var/app/com.mojang.Minecraft/.minecraft/mods</code>)</li>
+        <li>Windows: <code>%APPDATA%\.minecraft\mods</code></li>
+        <li>Mac: <code>~/Library/Application Support/minecraft/mods</code></li>
+      </ul>
+      Si la carpeta <code>mods</code> no existe, créala.
+    </li>
+    <li>
+      <strong>Abre Minecraft</strong> con el perfil "fabric-loader". ¡Listo!
+    </li>
+  </ol>
+</section>
+
+  </main>
+
+  <footer>
+    <p>Hecho por Manu en su Game Studio</p>
+  </footer>
+
+  <script>
+    // Botón de tema: cambia entre claro y oscuro y lo recuerda.
+    const botonTema = document.getElementById('tema');
+    function pintarBotonTema() {
+      const oscuro = document.documentElement.dataset.tema === 'oscuro';
+      botonTema.textContent = oscuro ? '☀️ Modo claro' : '🌙 Modo oscuro';
+    }
+    botonTema.addEventListener('click', () => {
+      const nuevo = document.documentElement.dataset.tema === 'oscuro' ? 'claro' : 'oscuro';
+      document.documentElement.dataset.tema = nuevo;
+      try { localStorage.setItem('tema', nuevo); } catch (e) {}
+      pintarBotonTema();
+    });
+    pintarBotonTema();
+
+    // Buscador: esconde las tarjetas cuyo nombre (el h3) no contiene lo escrito.
+    const buscar = document.getElementById('buscar');
+    const todasLasTarjetas = document.querySelectorAll('.tarjeta');
+
+    buscar.addEventListener('input', () => {
+      const texto = buscar.value.trim().toLowerCase();
+      todasLasTarjetas.forEach(tarjeta => {
+        const nombre = tarjeta.querySelector('h3').textContent.toLowerCase();
+        tarjeta.style.display = nombre.includes(texto) ? '' : 'none';
+      });
+    });
+
+  </script>
+</body>
+</html>

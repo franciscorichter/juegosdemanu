@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roblox — Manu</title>
+  <!-- Fuente pixelada: si no hay internet, el CSS usa una monoespaciada del computador -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+  <script>
+    // Aplica el tema guardado antes de dibujar la página, para que no parpadee.
+    try {
+      const tema = localStorage.getItem('tema');
+      if (tema) document.documentElement.dataset.tema = tema;
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="cabecera">
+    <h1>🟥 Roblox</h1>
+    <p class="sub">Lo que hace Manu en Roblox</p>
+    <nav class="menu">
+      <a href="../">🏠 Portada</a>
+      <a href="../minecraft/">⛏ Minecraft</a>
+      <a class="activo" href="../roblox/">🟥 Roblox</a>
+      <a href="../programas/">🎮 Programas</a>
+      <button class="tema" id="tema" title="Cambiar entre modo claro y oscuro">🌙 Modo oscuro</button>
+    </nav>
+  </header>
+
+  <main>
+
+<section class="bloque en-construccion">
+  <h2>🚧 En construcción</h2>
+  <p>Aquí van a aparecer mis cosas de Roblox. ¡Vuelve pronto!</p>
+</section>
+
+  </main>
+
+  <footer>
+    <p>Hecho por Manu en su Game Studio</p>
+  </footer>
+
+  <script>
+    // Botón de tema: cambia entre claro y oscuro y lo recuerda.
+    const botonTema = document.getElementById('tema');
+    function pintarBotonTema() {
+      const oscuro = document.documentElement.dataset.tema === 'oscuro';
+      botonTema.textContent = oscuro ? '☀️ Modo claro' : '🌙 Modo oscuro';
+    }
+    botonTema.addEventListener('click', () => {
+      const nuevo = document.documentElement.dataset.tema === 'oscuro' ? 'claro' : 'oscuro';
+      document.documentElement.dataset.tema = nuevo;
+      try { localStorage.setItem('tema', nuevo); } catch (e) {}
+      pintarBotonTema();
+    });
+    pintarBotonTema();
+  </script>
+</body>
+</html>

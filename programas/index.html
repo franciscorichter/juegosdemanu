@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Programas — Los juegos de Manu</title>
+  <!-- Fuente pixelada: si no hay internet, el CSS usa una monoespaciada del computador -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+  <script>
+    // Aplica el tema guardado antes de dibujar la página, para que no parpadee.
+    try {
+      const tema = localStorage.getItem('tema');
+      if (tema) document.documentElement.dataset.tema = tema;
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="cabecera">
+    <h1>🎮 Programas</h1>
+    <p class="sub">Los juegos que ha creado Manu</p>
+    <nav class="menu">
+      <a href="../">🏠 Portada</a>
+      <a href="../minecraft/">⛏ Minecraft</a>
+      <a href="../roblox/">🟥 Roblox</a>
+      <a class="activo" href="../programas/">🎮 Programas</a>
+      <a href="#juegos">Juegos</a>
+      <a href="#records">Récords</a>
+      <a href="#niveles">Tu nivel</a>
+      <button class="tema" id="tema" title="Cambiar entre modo claro y oscuro">🌙 Modo oscuro</button>
+    </nav>
+    <div class="buscador">
+      <input type="search" id="buscar" placeholder="Buscar un mod o juego..." autocomplete="off">
+    </div>
+  </header>
+
+  <main>
+
+<section id="juegos">
+  <h2>Mis juegos</h2>
+  <p class="nota">Hechos en Python con pygame. Toca la captura para ver la página de cada juego.</p>
+  <div class="tarjetas">
+<article class="tarjeta juego">
+  <div class="icono">🐦</div>
+  <h3>Flappy</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="../juegos/flappy.html"><img class="captura" src="../img/flappy.png" alt="Captura de Flappy" loading="lazy"></a>
+  <p>Un Flappy Bird hecho en Python.</p>
+<ul class="lista">
+  <li><b>ESPACIO</b> salta, <b>R</b> reinicia.</li>
+  <li>Elige tu pájaro con <b>1 / 2 / 3</b> (Clásico, Azulito o Fueguito).</li>
+  <li>La dificultad sube de a poco: los tubos van más rápido y el hueco se achica.</li>
+  <li>Guarda tu <b>récord</b> en <code>record.txt</code>. Sonidos hechos con números.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="../descargas/flappy.zip" download>⬇ Descargar .zip (7 KB)</a>
+  <a class="boton jugar" href="../jugar/flappy.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="../juegos/flappy.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 flappy.py</code> (en Windows: <code>python flappy.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🔦</div>
+  <h3>Escape de la Fábrica</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="../juegos/escape.html"><img class="captura" src="../img/escape.png" alt="Captura de Escape de la Fábrica" loading="lazy"></a>
+  <p>Estás encerrado en una fábrica oscura y solo ves lo que alumbra tu linterna.</p>
+<ul class="lista">
+  <li><b>3 niveles</b>. En cada uno junta las 3 llaves, abre las puertas de colores y llega a la salida.</li>
+  <li>La <b>linterna</b> gasta batería; las pilas verdes la recargan. Con luz ves lejos... y el monstruo también te ve.</li>
+  <li>El <b>monstruo</b> patrulla; si te ve, te persigue (la pantalla tiembla y suena un zumbido).</li>
+  <li>En el nivel 3 hay un <b>espectro</b> que solo se mueve cuando no lo alumbras.</li>
+  <li>Dificultad Fácil / Normal / Difícil al empezar.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="../descargas/escape.zip" download>⬇ Descargar .zip (13 KB)</a>
+  <a class="boton jugar" href="../jugar/escape.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="../juegos/escape.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 escape.py</code> (en Windows: <code>python escape.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🔪</div>
+  <h3>Impostor</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="../juegos/impostor.html"><img class="captura" src="../img/impostor.png" alt="Captura de Impostor" loading="lazy"></a>
+  <p>Mini Among Us para un jugador. Tú eres el impostor.</p>
+<ul class="lista">
+  <li>6 tripulantes bots caminan entre tareas y las <b>hacen de verdad</b>: si llenan la barra de tareas, perdiste.</li>
+  <li>Mátalos con <b>ESPACIO</b> sin que te vean. Apaga las luces con <b>S</b>. Salta entre salas por las <b>ventilaciones</b> con <b>V</b>.</li>
+  <li>Si un bot ve un cuerpo o te ve, corre al botón y hay <b>reunión</b>: votan por sospecha y te pueden expulsar.</li>
+  <li>2 mapas (nave chica y nave grande con cámara que te sigue) y dificultad Fácil / Normal / Difícil.</li>
+  <li>Sonidos hechos con números: kill, alarma, reunión, vent, luces.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="../descargas/impostor.zip" download>⬇ Descargar .zip (13 KB)</a>
+  <a class="boton jugar" href="../jugar/impostor.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="../juegos/impostor.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 impostor.py</code> (en Windows: <code>python impostor.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🪡</div>
+  <h3>Silk</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="../juegos/silk.html"><img class="captura" src="../img/silk.png" alt="Captura de Silk" loading="lazy"></a>
+  <p>Plataformas con un bichito armado con una aguja. Dibujos hechos por Manu.</p>
+<ul class="lista">
+  <li><b>5 niveles</b> encadenados con <b>checkpoints</b> (banderas grises).</li>
+  <li>Corre, salta (¡doble salto!), haz <b>dash</b> y ataca con la aguja.</li>
+  <li>Desde el nivel 4 hay <b>enemigos voladores</b>.</li>
+  <li>Dos <b>jefes</b>: uno en el nivel 3 (5 golpes de aguja, pégale por el lado) y una <b>polilla</b> que se lanza en picada en el nivel 5.</li>
+  <li>Cronómetro y <b>récord</b> de tiempo en <code>record.txt</code>.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="../descargas/silk.zip" download>⬇ Descargar .zip (12 KB)</a>
+  <a class="boton jugar" href="../jugar/silk.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="../juegos/silk.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 silk.py</code> (en Windows: <code>python silk.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🟨</div>
+  <h3>Salto</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="../juegos/salto.html"><img class="captura" src="../img/salto.png" alt="Captura de Salto" loading="lazy"></a>
+  <p>Runner rítmico: un cubo que corre solo y tú decides cuándo saltar.</p>
+<ul class="lista">
+  <li>Pinchos y bloques de frente te hacen <b>explotar</b>, y reinicias al tiro.</li>
+  <li>Barra de <b>porcentaje</b> del nivel y contador de <b>intentos</b>.</li>
+  <li><b>2 niveles</b> dibujados en texto que puedes editar.</li>
+  <li>El fondo cambia de color según cuánto llevas del nivel.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="../descargas/salto.zip" download>⬇ Descargar .zip (7 KB)</a>
+  <a class="boton jugar" href="../jugar/salto.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="../juegos/salto.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 salto.py</code> (en Windows: <code>python salto.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🏰</div>
+  <h3>Torres</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="../juegos/torres.html"><img class="captura" src="../img/torres.png" alt="Captura de Torres" loading="lazy"></a>
+  <p>Tower defense: los enemigos caminan por el camino hacia tu base y tú pones torres en el pasto.</p>
+<ul class="lista">
+  <li>Enemigos: <b>rojos</b> normales, <b>amarillos</b> rápidos, <b>grises</b> tanques.</li>
+  <li>3 torres: <b>Rápida</b> (celeste, $50), <b>Fuerte</b> (naranja, $90) y <b>Bomba</b> (morada, $120, daña en área).</li>
+  <li><b>10 oleadas</b> cada vez más duras, 10 vidas, monedas por cada enemigo.</li>
+  <li>Pantalla de ganaste / perdiste.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="../descargas/torres.zip" download>⬇ Descargar .zip (9 KB)</a>
+  <a class="boton jugar" href="../jugar/torres.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="../juegos/torres.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 torres.py</code> (en Windows: <code>python torres.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🏎️</div>
+  <h3>Carreras</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="../juegos/carreras.html"><img class="captura" src="../img/carreras.png" alt="Captura de Carreras" loading="lazy"></a>
+  <p>Carreras de autos vistas desde arriba. Eres el auto rojo.</p>
+<ul class="lista">
+  <li><b>3 vueltas</b> contra 5 rivales con IA en <b>3 pistas</b>: Óvalo, Chicanas y Gran Premio.</li>
+  <li>Física con aceleración, freno y <b>derrape</b>. El pasto frena y los muros rebotan.</li>
+  <li>Ítems en la pista: <b>turbo</b> (flecha verde) y <b>aceite</b> (mancha negra).</li>
+  <li>Posición en vivo, cronómetro y <b>mejor vuelta</b> guardada. Sonidos hechos con matemáticas.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="../descargas/carreras.zip" download>⬇ Descargar .zip (11 KB)</a>
+  <a class="boton jugar" href="../jugar/carreras.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="../juegos/carreras.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 carreras.py</code> (en Windows: <code>python carreras.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">⛏️</div>
+  <h3>Mina</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="../juegos/mina.html"><img class="captura" src="../img/mina.png" alt="Captura de Mina" loading="lazy"></a>
+  <p>Un mundo 2D de bloques generado al azar. Pica, construye y sobrevive a la noche.</p>
+<ul class="lista">
+  <li>Mundo con cielo, pasto, tierra, piedra, <b>cuevas</b>, árboles con manzanas y minerales (carbón, hierro, oro, diamante).</li>
+  <li><b>Pica</b> con clic izquierdo (los bloques duros necesitan mejor pico) y <b>pon</b> bloques con clic derecho. Inventario de 9 casillas.</li>
+  <li><b>Crafteo</b> con C: tablas, palos, mesa, antorchas que iluminan, picos de piedra / hierro / diamante.</li>
+  <li><b>Día y noche</b> con oscuridad real en cuevas. De noche salen <b>zombies</b> que te persiguen.</li>
+  <li>Vida y comida (manzanas). Guarda y carga tu mundo con F5 / F9 en <code>mundo.json</code>.</li>
+  <li>Todo dibujado con rectángulos, sin imágenes.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="../descargas/mina.zip" download>⬇ Descargar .zip (14 KB)</a>
+  <a class="boton jugar" href="../jugar/mina.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="../juegos/mina.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 mina.py</code> (en Windows: <code>python mina.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🐍</div>
+  <h3>Serpiente</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="../juegos/serpiente.html"><img class="captura" src="../img/serpiente.png" alt="Captura de Serpiente" loading="lazy"></a>
+  <p>Snake para 1 o 2 jugadores en el mismo teclado.</p>
+<ul class="lista">
+  <li>Come manzanas para crecer sin chocar con paredes, obstáculos, tu cola ni la otra serpiente.</li>
+  <li>Cada 5 manzanas sube el nivel y cambian los obstáculos: <b>5 niveles</b> dibujados en <code>niveles.txt</code>.</li>
+  <li><b>Power-ups</b> que aparecen y se van: <b>R</b> rayo (rápido y doble puntos), <b>T</b> tortuga (lento), <b>E</b> estrella (x3), <b>X</b> tijeras (cola más corta), <b>F</b> fantasma (atraviesas paredes).</li>
+  <li>Con 1 jugador guarda el récord en <code>record.txt</code>; con 2, gana el que no choca y lleva el marcador de victorias.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="../descargas/serpiente.zip" download>⬇ Descargar .zip (9 KB)</a>
+  <a class="boton jugar" href="../jugar/serpiente.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="../juegos/serpiente.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 serpiente.py</code> (en Windows: <code>python serpiente.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🛡️</div>
+  <h3>Tanques</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="../juegos/tanques.html"><img class="captura" src="../img/tanques.png" alt="Captura de Tanques" loading="lazy"></a>
+  <p>Batalla de tanques vista desde arriba. 2 jugadores en el mismo teclado o tú contra la IA.</p>
+<ul class="lista">
+  <li><b>IA con 3 niveles</b>: patrulla, persigue o esquiva tus balas y agarra power-ups.</li>
+  <li><b>4 arenas</b> dibujadas en texto (<code>arena1.txt</code> a <code>arena4.txt</code>).</li>
+  <li>Las balas <b>rebotan</b> en los muros, los <b>ladrillos</b> se rompen, el agua no se cruza y en los arbustos te escondes.</li>
+  <li>Power-ups: <b>E</b> escudo, <b>3</b> triple disparo, <b>V</b> velocidad, <b>M</b> mina.</li>
+  <li>3 vidas por ronda, tanques con inercia, gana el primero con 3 rondas (<b>mejor de 5</b>).</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="../descargas/tanques.zip" download>⬇ Descargar .zip (20 KB)</a>
+  <a class="boton jugar" href="../jugar/tanques.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="../juegos/tanques.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 tanques.py</code> (en Windows: <code>python tanques.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🐉</div>
+  <h3>Criaturas</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="../juegos/criaturas.html"><img class="captura" src="../img/criaturas.png" alt="Captura de Criaturas" loading="lazy"></a>
+  <p>RPG de batallas por turnos con criaturas inventadas por Manu.</p>
+<ul class="lista">
+  <li><b>12 criaturas</b> de 6 tipos (Fuego, Agua, Planta, Eléctrico, Roca, Fantasma) con tabla de tipos: unos pegan fuerte a otros.</li>
+  <li><b>Evolucionan</b> al nivel 16. Captúralas en el pasto con <b>esferas</b>; equipo de 6, las demás van a la caja.</li>
+  <li><b>Mochila</b> con pociones y centro de curación en el mapa.</li>
+  <li>3 entrenadores y el <b>Campeón Orión</b> al final.</li>
+  <li>Guarda con <b>F5</b> y carga con <b>F9</b>. Sonidos hechos con números.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="../descargas/criaturas.zip" download>⬇ Descargar .zip (37 KB)</a>
+  <a class="boton jugar" href="../jugar/criaturas.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="../juegos/criaturas.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 criaturas.py</code> (en Windows: <code>python criaturas.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+  </div>
+</section>
+
+<section id="records">
+  <h2>🏆 Mis récords</h2>
+  <p class="nota">Lo que cada juego del navegador guardó en este computador. Juega y vuelve aquí: se actualiza solo. (Para que se vean, abre la página con <code>abrir.sh</code>, no como archivo suelto.)</p>
+  <div class="bloque">
+    <table class="records" id="tabla-records">
+      <thead><tr><th>Juego</th><th>Récord</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="nota" id="records-vacio">Todavía no hay récords. ¡Juega algo con el botón 🎮 y vuelve!</p>
+  </div>
+</section>
+
+<section id="niveles">
+  <h2>Haz tu propio nivel</h2>
+  <p class="nota">Los niveles de estos juegos son dibujos de texto. Ábrelos con cualquier editor, cambia letras, guarda y juega.</p>
+  <div class="tarjetas">
+<article class="tarjeta juego nivel">
+  <div class="icono">🔦</div>
+  <h3>Escape de la Fábrica</h3>
+  <p>Archivos: laberinto1.txt, laberinto2.txt y laberinto3.txt. Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>pared</td></tr>
+  <tr><td><code>.</code></td><td>piso</td></tr>
+  <tr><td><code>P</code></td><td>tú</td></tr>
+  <tr><td><code>M</code></td><td>monstruo</td></tr>
+  <tr><td><code>E</code></td><td>espectro (se congela con la luz)</td></tr>
+  <tr><td><code>K</code></td><td>llave de salida</td></tr>
+  <tr><td><code>D</code></td><td>puerta de salida (se abre con todas las K)</td></tr>
+  <tr><td><code>B</code></td><td>pila</td></tr>
+  <tr><td><code>r v a</code></td><td>llave roja / verde / azul</td></tr>
+  <tr><td><code>R V A</code></td><td>puerta roja / verde / azul</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 escape.py mi_laberinto.txt</code></p>
+  <ul class="lista">
+  <li>Tiene que haber una <b>P</b> y una <b>D</b>. Lo demás es opcional.</li>
+  <li>Puedes pasar varios archivos y se juegan en orden: <code>python3 escape.py uno.txt dos.txt</code>.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🪡</div>
+  <h3>Silk</h3>
+  <p>Archivos: nivel1.txt a nivel5.txt (lista <code>NIVELES</code> arriba de <code>silk.py</code>). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>bloque</td></tr>
+  <tr><td><code>E</code></td><td>enemigo</td></tr>
+  <tr><td><code>^</code></td><td>pincho</td></tr>
+  <tr><td><code>C</code></td><td>checkpoint</td></tr>
+  <tr><td><code>M</code></td><td>meta</td></tr>
+  <tr><td><code>P</code></td><td>donde empiezas</td></tr>
+  <tr><td><code>J</code></td><td>jefe</td></tr>
+  <tr><td><code>.</code></td><td>nada</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 silk.py</code></p>
+  <ul class="lista">
+  <li>Los enemigos y el jugador necesitan un <code>#</code> debajo, si no se caen.</li>
+  <li>Con doble salto llegas a unos 5 cuadritos de alto y unos 8 de largo.</li>
+  <li>Con <b>J</b> la meta se abre solo al vencer al jefe.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🟨</div>
+  <h3>Salto</h3>
+  <p>Archivos: nivel1.txt y nivel2.txt (lista <code>NIVELES</code> arriba de <code>salto.py</code>). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>bloque (te paras encima; de frente te mata)</td></tr>
+  <tr><td><code>^</code></td><td>pincho (te mata)</td></tr>
+  <tr><td><code>.</code></td><td>nada</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 salto.py</code></p>
+  <ul class="lista">
+  <li><b>La última fila es la que va pegada al piso.</b> El nivel termina donde termina el texto.</li>
+  <li>Un salto pasa por encima de hasta 3 pinchos seguidos.</li>
+  <li>Puedes subirte a un bloque de 2 de alto, pero no a uno de 3 (salvo desde otro bloque).</li>
+  <li>Si un pincho va encima de un bloque, escríbelo en la fila de arriba.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🏰</div>
+  <h3>Torres</h3>
+  <p>Archivos: camino.txt. Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>.</code></td><td>pasto (aquí puedes construir)</td></tr>
+  <tr><td><code>=</code></td><td>camino</td></tr>
+  <tr><td><code>S</code></td><td>donde salen los enemigos</td></tr>
+  <tr><td><code>B</code></td><td>tu base</td></tr>
+  <tr><td><code>#</code></td><td>roca (no se puede construir)</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 torres.py mi_mapa.txt</code></p>
+  <ul class="lista">
+  <li>El camino <code>=</code> tiene que conectar la <b>S</b> con la <b>B</b>.</li>
+  <li>Mientras más largo el camino, más tiempo tienen tus torres para disparar.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🏎️</div>
+  <h3>Carreras</h3>
+  <p>Archivos: la lista <code>PISTAS</code> dentro de <code>carreras.py</code> (dibujos de 30 x 20 letras). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>muro</td></tr>
+  <tr><td><code>.</code></td><td>asfalto</td></tr>
+  <tr><td><code>g</code></td><td>pasto (frena)</td></tr>
+  <tr><td><code>1-9</code></td><td>checkpoints en orden</td></tr>
+  <tr><td><code>M</code></td><td>meta</td></tr>
+  <tr><td><code>S</code></td><td>largada (pon al menos 6)</td></tr>
+  <tr><td><code>T</code></td><td>turbo</td></tr>
+  <tr><td><code>O</code></td><td>aceite</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 carreras.py</code></p>
+  <ul class="lista">
+  <li>Copia una pista, cámbiale el dibujo y el nombre, y ponle los <code>puntos</code> por donde van a manejar los rivales (columna, fila; <code>.5</code> es el centro del cuadrito).</li>
+  <li>Los checkpoints tienen que cruzar la pista completa, si no los autos se los saltan.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🐍</div>
+  <h3>Serpiente</h3>
+  <p>Archivos: niveles.txt (5 dibujos de 32 x 24, separados por una línea vacía). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>.</code></td><td>casilla libre</td></tr>
+  <tr><td><code>#</code></td><td>obstáculo</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 serpiente.py</code></p>
+  <ul class="lista">
+  <li>Agrega un dibujo más al final del archivo (con su línea vacía antes) y tendrás un nivel 6.</li>
+  <li>Deja libre el centro: ahí salen las serpientes.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🛡️</div>
+  <h3>Tanques</h3>
+  <p>Archivos: arena1.txt a arena4.txt (14 filas de 20 letras). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>muro (las balas rebotan)</td></tr>
+  <tr><td><code>L</code></td><td>ladrillo (se rompe de un tiro)</td></tr>
+  <tr><td><code>A</code></td><td>agua (las balas pasan, los tanques no)</td></tr>
+  <tr><td><code>B</code></td><td>arbusto (esconde al tanque)</td></tr>
+  <tr><td><code>.</code></td><td>piso</td></tr>
+  <tr><td><code>1</code></td><td>donde empieza el jugador 1</td></tr>
+  <tr><td><code>2</code></td><td>donde empieza el jugador 2</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 tanques.py</code></p>
+  <ul class="lista">
+  <li>Copia <code>arena1.txt</code> a <code>arena5.txt</code>, edítalo, y el menú lo encuentra solo.</li>
+  <li>Las líneas que empiezan con <code># </code> (con espacio) son comentarios.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🐉</div>
+  <h3>Criaturas</h3>
+  <p>Archivos: mapa.txt (la leyenda está arriba del archivo). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>árbol (no se pasa)</td></tr>
+  <tr><td><code>~</code></td><td>agua (no se pasa)</td></tr>
+  <tr><td><code>H</code></td><td>casa (no se pasa)</td></tr>
+  <tr><td><code>.</code></td><td>camino</td></tr>
+  <tr><td><code>+</code></td><td>centro de curación</td></tr>
+  <tr><td><code>L</code></td><td>letrero (choca para leer)</td></tr>
+  <tr><td><code>,</code></td><td>pasto bajo (criaturas nivel 3-6)</td></tr>
+  <tr><td><code>;</code></td><td>pasto medio (8-12)</td></tr>
+  <tr><td><code>"</code></td><td>pasto alto (13-18)</td></tr>
+  <tr><td><code>P</code></td><td>donde empiezas</td></tr>
+  <tr><td><code>1 2 3</code></td><td>entrenadores</td></tr>
+  <tr><td><code>K</code></td><td>el campeón</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 criaturas.py</code></p>
+  <ul class="lista">
+  <li>Puedes mover a los entrenadores y al campeón a donde quieras.</li>
+  <li>Las criaturas, sus ataques y los equipos de los entrenadores están en <code>datos.py</code>; el dibujo de cada una es una función en <code>dibujos.py</code>.</li>
+  </ul>
+</article>
+  </div>
+</section>
+
+  </main>
+
+  <footer>
+    <p>Hecho por Manu en su Game Studio</p>
+  </footer>
+
+  <script>
+    // Botón de tema: cambia entre claro y oscuro y lo recuerda.
+    const botonTema = document.getElementById('tema');
+    function pintarBotonTema() {
+      const oscuro = document.documentElement.dataset.tema === 'oscuro';
+      botonTema.textContent = oscuro ? '☀️ Modo claro' : '🌙 Modo oscuro';
+    }
+    botonTema.addEventListener('click', () => {
+      const nuevo = document.documentElement.dataset.tema === 'oscuro' ? 'claro' : 'oscuro';
+      document.documentElement.dataset.tema = nuevo;
+      try { localStorage.setItem('tema', nuevo); } catch (e) {}
+      pintarBotonTema();
+    });
+    pintarBotonTema();
+
+    // Tabla de récords: lee lo que cada juego guardó en localStorage.
+    function leer(clave) { try { return localStorage.getItem(clave); } catch (e) { return null; } }
+    function leerJSON(clave) { try { return JSON.parse(leer(clave)); } catch (e) { return null; } }
+    function tiempo(seg) { const m = Math.floor(seg / 60), s = seg - m * 60; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(2); }
+    function armarRecords() {
+      const filas = [];
+      const n = Number(leer('flappy-record')); if (n > 0) filas.push(['🐦 Flappy', n + ' puntos']);
+      const sp = Number(leer('serpiente-record')); if (sp > 0) filas.push(['🐍 Serpiente', sp + ' puntos']);
+      const si = Number(leer('silk-record')); if (si > 0) filas.push(['🕷️ Silk', 'los 5 niveles en ' + tiempo(si)]);
+      const im = leerJSON('impostor-record'); if (im && im.victorias) filas.push(['🔪 Impostor', im.victorias + ' victorias' + (im.mejorTiempo ? ' · mejor ' + im.mejorTiempo + ' s' : '')]);
+      const sa = leerJSON('salto-record'); if (sa && Object.keys(sa).length) filas.push(['🟨 Salto', Object.entries(sa).map(([k, v]) => k.replace('nivel', 'nivel ') + ': ' + v + ' intento' + (v === 1 ? '' : 's')).join(' · ')]);
+      const ca = leerJSON('carreras-mejores'); if (ca && Object.keys(ca).length) filas.push(['🏎️ Carreras', Object.entries(ca).map(([k, v]) => k + ' ' + tiempo(v)).join(' · ')]);
+      const cr = leerJSON('criaturas-partida'); if (cr && cr.equipo && cr.equipo.length) {
+        const vencidos = (cr.vencidos || []).filter(v => v !== 'K').length;
+        filas.push(['🐾 Criaturas', cr.equipo.length + ' en el equipo (' + cr.equipo.map(c => (c.apodo || c.especie) + ' Nv ' + c.nivel).join(', ') + ') · ' + vencidos + '/3 entrenadores' + (cr.campeon ? ' · ★ CAMPEÓN' : '')]);
+      }
+      const mi = leerJSON('mina-mundo'); if (mi && mi.filas) {
+        const cosas = (mi.inventario || []).filter(s => s[0]).map(s => s[1] + ' ' + s[0].replace('_', ' ')).join(', ');
+        filas.push(['⛏️ Mina', 'mundo guardado · día ' + (Math.floor((mi.tiempo || 0) / 180) + 1) + (cosas ? ' · ' + cosas : '')]);
+      }
+      const cuerpo = document.querySelector('#tabla-records tbody');
+      cuerpo.innerHTML = '';
+      for (const [juego, record] of filas) {
+        const tr = document.createElement('tr');
+        const a = document.createElement('td'), b = document.createElement('td');
+        a.textContent = juego; b.textContent = record;
+        tr.append(a, b); cuerpo.append(tr);
+      }
+      document.getElementById('records-vacio').style.display = filas.length ? 'none' : '';
+      document.getElementById('tabla-records').style.display = filas.length ? '' : 'none';
+    }
+    armarRecords();
+    window.addEventListener('focus', armarRecords);        // al volver de un juego, se actualiza
+    window.addEventListener('pageshow', armarRecords);
+
+
+    // Buscador: esconde las tarjetas cuyo nombre (el h3) no contiene lo escrito.
+    const buscar = document.getElementById('buscar');
+    const todasLasTarjetas = document.querySelectorAll('.tarjeta');
+
+    buscar.addEventListener('input', () => {
+      const texto = buscar.value.trim().toLowerCase();
+      todasLasTarjetas.forEach(tarjeta => {
+        const nombre = tarjeta.querySelector('h3').textContent.toLowerCase();
+        tarjeta.style.display = nombre.includes(texto) ? '' : 'none';
+      });
+    });
+
+  </script>
+</body>
+</html>
