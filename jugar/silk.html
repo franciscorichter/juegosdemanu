@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Silk de Manu</title>
+<style>
+  /* Colores de la página (style.css) */
+  :root {
+    --pasto: #5d9a3c; --pasto-oscuro: #3e6b28; --piedra: #7f7f7f; --piedra-oscura: #4f4f4f;
+    --cielo: #7fb2f0; --diamante: #4aedd9; --texto: #ffffff; --sombra: #1a1a1a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 16px;
+    background: var(--sombra); color: var(--texto);
+    font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 12px; line-height: 1.8;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  h1 { font-size: 18px; color: var(--diamante); text-shadow: 3px 3px 0 #000; margin: 8px 0 12px; text-align: center; }
+  canvas {
+    display: block; max-width: 100%; height: auto; background: #000;
+    border: 4px solid var(--piedra-oscura); box-shadow: 6px 6px 0 #000;
+    image-rendering: pixelated; touch-action: none;
+  }
+  .ayuda { font-size: 9px; color: #dddddd; text-align: center; max-width: 560px; margin: 10px 0 0; }
+  .boton {
+    display: inline-block; margin: 16px 0; padding: 12px 16px; font-size: 11px;
+    background: #3c6ec9; border: 4px solid #244a8c; box-shadow: 4px 4px 0 #000;
+    color: var(--texto); text-decoration: none; text-shadow: 2px 2px 0 #000;
+  }
+  .boton:hover { background: #4a82e0; }
+  .boton:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+  /* Botones de celular: solo aparecen en pantallas táctiles */
+  .tactil { display: none; gap: 10px; margin-top: 12px; width: 100%; max-width: 800px; justify-content: space-between; }
+  @media (pointer: coarse) { .tactil { display: flex; } }
+  .tactil div { display: flex; gap: 10px; }
+  .tactil button {
+    font-family: inherit; font-size: 16px; width: 64px; height: 64px;
+    background: var(--piedra-oscura); border: 4px solid #000; color: var(--texto);
+    box-shadow: 4px 4px 0 #000; touch-action: none; user-select: none;
+  }
+  .tactil button:active { background: var(--piedra); }
+</style>
+</head>
+<body>
+<h1>SILK</h1>
+<canvas id="juego" width="800" height="560"></canvas>
+<div class="tactil">
+  <div><button data-tecla="ArrowLeft">◀</button><button data-tecla="ArrowRight">▶</button></div>
+  <div><button data-tecla="Shift">DASH</button><button data-tecla="x">⚔</button><button data-tecla=" ">▲</button></div>
+</div>
+<p class="ayuda">← → correr &middot; ESPACIO saltar (dos veces = doble salto) &middot; X atacar con la aguja &middot; SHIFT dash &middot; R reiniciar</p>
+<a class="boton" href="../index.html">&larr; Volver a la página</a>
+
+<script>
+// ============================================================
+//  Silk — versión web del silk.py de Manu
+//  Todo se dibuja con canvas. Sin imágenes, sin internet.
+// ============================================================
+
+// ---------- Ajustes (los mismos que en silk.py) ----------
+const TILE = 40;
+const ANCHO = 800, ALTO = 560;
+const FPS = 60;
+const PASO = 1000 / FPS;
+
+const VELOCIDAD = 5;              // qué tan rápido corre el personaje
+const GRAVEDAD = 0.6;
+const SALTO = -12;                // fuerza del salto (negativo = arriba)
+const SALTOS_MAX = 2;             // 2 = doble salto
+const VIDAS = 3;
+
+const ATAQUE_DURA = 12;           // cuadros que dura el golpe de aguja
+const ATAQUE_LARGO = 44;
+const INVULNERABLE = 60;          // cuadros sin recibir daño después de un golpe
+const EMPUJON = 7;
+
+const DASH_VEL = 14;
+const DASH_DURA = 9;
+const DASH_COOLDOWN = 35;
+
+const VEL_ENEMIGO = 1.5;
+const VEL_VOLADOR = 2.2;
+const VISTA_VOLADOR = 320;
+
+const JEFE_VIDA = 5;
+const JEFE_CADA = 100;
+const JEFE_SALTO = -14;
+const JEFE_VEL = 4;
+const JEFE2_VIDA = 6;
+const JEFE2_CADA = 130;
+const JEFE2_VEL = 7;
+
+// ---------- Colores ----------
+const FONDO = 'rgb(28,24,44)';
+const FONDO_LEJOS = 'rgb(44,38,70)';
+const FONDO_MEDIO = 'rgb(60,52,95)';
+const ESTRELLA = 'rgb(200,200,230)';
+const BLOQUE = 'rgb(90,80,120)';
+const BLOQUE_BORDE = 'rgb(140,125,180)';
+const PINCHO = 'rgb(200,200,220)';
+const PERSONAJE = 'rgb(240,240,250)';
+const CAPA = 'rgb(200,60,80)';
+const AGUJA = 'rgb(255,255,255)';
+const ENEMIGO = 'rgb(120,200,90)';
+const ENEMIGO_OJO = 'rgb(20,20,20)';
+const VOLADOR = 'rgb(200,140,220)';
+const POLILLA = 'rgb(230,190,120)';
+const POLILLA_ALA = 'rgb(180,120,90)';
+const JEFE = 'rgb(170,80,200)';
+const JEFE_HERIDO = 'rgb(255,255,255)';
+const META = 'rgb(255,210,60)';
+const META_APAGADA = 'rgb(120,110,90)';
+const CHECK_APAGADO = 'rgb(110,110,140)';
+const CHECK_PRENDIDO = 'rgb(90,220,200)';
+const CORAZON = 'rgb(230,60,90)';
+const CORAZON_VACIO = 'rgb(70,50,70)';
+const DASH_COLOR = 'rgb(120,220,255)';
+const BLANCO = 'rgb(255,255,255)';
+const NEGRO = 'rgb(0,0,0)';
+
+// ---------- Niveles (copiados de nivel1.txt ... nivel5.txt) ----------
+//   #  bloque      E  enemigo      V  volador     ^  pincho       C  checkpoint
+//   M  meta        P  donde empiezas   J  jefe saltarín   K  jefe polilla   .  nada
+const NIVELES = [`
+............................................................................................
+............................................................................................
+............................................................................................
+............................................................................................
+..........................................................................................M.
+.........................................................................................###
+.....................................................................................###....
+.............................................E...................................###........
+......................E....................########.........................................
+.....................####....###...#####..................#####....######..###..............
+..P.......E......................................C..^^......................................
+##############....#######.......................########........................############
+##############....#######.......................########........................############
+##############^^^^#######^^^^^^^^^^^^^^^^^^^^^^^########^^^^^^^^^^^^^^^^^^^^^^^^############
+`, `
+..............................................................................................................
+..............................................................................................................
+...........................................................................................................M..
+.................................E................................................................####...#####
+................................####..........................................................................
+............................................................................................###...............
+...........................###........###.....................................................................
+.........................................................E....#########.............###.......................
+......................###.......................####...####...^^^^^^^^^.......................................
+.........................................................................###...###............................
+..P.............E^^....................C..E................................................C...^^...E^^^......
+##########....#######.................#########...............#########...................####################
+##########....#######.................#########...............#########...................####################
+##########^^^^#######^^^^^^^^^^^^^^^^^#########^^^^^^^^^^^^^^^#########^^^^^^^^^^^^^^^^^^^####################
+`, `
+....................................................................................................
+....................................................................................................
+....................................................................................................
+....................................................................................................
+....................................................................................................
+....................................................................................................
+....................................................................................................
+................................###.......................####........####........####........#.....
+............###.........###.................###...............................................#.....
+..............................................................................................#.....
+..P.....E.........^^.........E........^^E........C..........................J.................#..M..
+############....#######....#####....#######.....####################################################
+############....#######....#####....#######.....####################################################
+############^^^^#######^^^^#####^^^^#######^^^^^####################################################
+`, `
+........................................................................................................................
+........................................................................................................................
+..............................................V.................................................................E....M..
+....................................................V.........................................................##########
+................................................###..........................V...........................###............
+...............V........V............................................V..................................................
+...........................................###.......###..............................V..............###................
+...............................................................................#........................................
+.................##...................###..............................#........................###.....................
+............##........##...........................................#.......#.......##...................................
+..P...E...................##...C.^^........................C.E...........................C^^E...........................
+##########....................#######.....................#######.......................#######.............############
+##########....................#######.....................#######.......................#######.............############
+##########^^^^^^^^^^^^^^^^^^^^#######^^^^^^^^^^^^^^^^^^^^^#######^^^^^^^^^^^^^^^^^^^^^^^#######^^^^^^^^^^^^^############
+`, `
+..............................................................................................................
+..............................................................................................................
+..............................................................................................................
+..............................................................................................................
+..............................V...............................................................................
+...........V...................................V..............................................................
+..................................................................####............####........................
+..................##.................##.................................................................#.....
+.........##...............##..................###.........####............####............####..........#.....
+........................................................................................................#.....
+..P...........^.......E........^^^.......E^........C...........^^...........K..^^...............^^......#..M..
+########....#####....####....#######....#####.....############################################################
+########....#####....####....#######....#####.....############################################################
+########^^^^#####^^^^####^^^^#######^^^^#####^^^^^############################################################
+`];
+
+// ---------- Rect: como el pygame.Rect ----------
+class Rect {
+  constructor(x, y, w, h) { this.x = x; this.y = y; this.w = w; this.h = h; }
+  get left() { return this.x; }          set left(v) { this.x = v; }
+  get top() { return this.y; }           set top(v) { this.y = v; }
+  get right() { return this.x + this.w; } set right(v) { this.x = v - this.w; }
+  get bottom() { return this.y + this.h; } set bottom(v) { this.y = v - this.h; }
+  get centerx() { return this.x + this.w / 2; } set centerx(v) { this.x = v - this.w / 2; }
+  get centery() { return this.y + this.h / 2; } set centery(v) { this.y = v - this.h / 2; }
+  colliderect(o) { return this.x < o.x + o.w && this.x + this.w > o.x && this.y < o.y + o.h && this.y + this.h > o.y; }
+  move(dx, dy) { return new Rect(this.x + dx, this.y + dy, this.w, this.h); }
+  inflate(dw, dh) { return new Rect(this.x - dw / 2, this.y - dh / 2, this.w + dw, this.h + dh); }
+}
+
+// ---------- Récord (localStorage en vez de record.txt) ----------
+function leerRecord() {
+  try { const v = parseFloat(localStorage.getItem('silk-record')); return isNaN(v) ? null : v; } catch (e) { return null; }
+}
+function guardarRecord(seg) { try { localStorage.setItem('silk-record', seg.toFixed(2)); } catch (e) {} }
+function formatoTiempo(seg) {
+  const m = Math.floor(seg / 60), s = seg - m * 60;
+  return m + ':' + (s < 10 ? '0' : '') + s.toFixed(2);
+}
+
+// ---------- Cargar un nivel desde el texto ----------
+function cargarNivel(txt) {
+  const filas = txt.split('\n').filter(l => l.trim());
+  const n = { bloques: [], pinchos: [], enemigos: [], voladores: [], checkpoints: [], jefe: null, jefe2: null, inicio: [TILE, TILE], meta: null };
+  filas.forEach((fila, fy) => [...fila].forEach((letra, fx) => {
+    const x = fx * TILE, y = fy * TILE;
+    if (letra === '#') n.bloques.push(new Rect(x, y, TILE, TILE));
+    else if (letra === '^') n.pinchos.push(new Rect(x, y, TILE, TILE));
+    else if (letra === 'E') n.enemigos.push([x, y]);
+    else if (letra === 'V') n.voladores.push([x, y]);
+    else if (letra === 'K') n.jefe2 = [x, y];
+    else if (letra === 'C') n.checkpoints.push(new Rect(x, y, TILE, TILE));
+    else if (letra === 'J') n.jefe = [x, y];
+    else if (letra === 'P') n.inicio = [x, y];
+    else if (letra === 'M') n.meta = new Rect(x, y, TILE, TILE);
+  }));
+  n.ancho = Math.max(...filas.map(f => f.length)) * TILE;
+  n.alto = filas.length * TILE;
+  return n;
+}
+
+// ---------- Mover un rect chocando con bloques ----------
+// Mueve el rect y lo frena contra los bloques. Devuelve [tocaSuelo, tocaPared].
+function moverConChoques(rect, dx, dy, bloques) {
+  let tocaSuelo = false, tocaPared = false;
+  rect.x += dx;
+  for (const b of bloques) {
+    if (rect.colliderect(b)) {
+      tocaPared = true;
+      if (dx > 0) rect.right = b.left;
+      else if (dx < 0) rect.left = b.right;
+    }
+  }
+  rect.y += dy;
+  for (const b of bloques) {
+    if (rect.colliderect(b)) {
+      if (dy > 0) { rect.bottom = b.top; tocaSuelo = true; }
+      else if (dy < 0) rect.top = b.bottom;
+    }
+  }
+  return [tocaSuelo, tocaPared];
+}
+
+const azarEntre = (a, b) => a + Math.random() * (b - a);
+const azarEntero = (a, b) => Math.floor(azarEntre(a, b + 1));
+const trunc = Math.trunc;
+
+// ---------- Partículas (chispitas al golpear) ----------
+class Particula {
+  constructor(x, y, color) {
+    this.x = x; this.y = y;
+    this.vx = azarEntre(-4, 4); this.vy = azarEntre(-5, 1);
+    this.vida = azarEntero(15, 30);
+    this.color = color;
+  }
+  actualizar() { this.x += this.vx; this.y += this.vy; this.vy += 0.3; this.vida -= 1; }
+  dibujar(cam) {
+    const tam = Math.max(1, Math.floor(this.vida / 6));
+    ctx.fillStyle = this.color;
+    ctx.fillRect(Math.floor(this.x - cam), Math.floor(this.y), tam, tam);
+  }
+}
+function chispas(lista, x, y, color, cuantas = 12) {
+  for (let i = 0; i < cuantas; i++) lista.push(new Particula(x, y, color));
+}
+
+// ---------- Dibujos de ayuda ----------
+function elipse(x, y, w, h, color, soloBorde = false) {
+  ctx.beginPath(); ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+  if (soloBorde) { ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke(); }
+  else { ctx.fillStyle = color; ctx.fill(); }
+}
+function circulo(x, y, r, color, grosor = 0) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  if (grosor) { ctx.strokeStyle = color; ctx.lineWidth = grosor; ctx.stroke(); }
+  else { ctx.fillStyle = color; ctx.fill(); }
+}
+function poligono(puntos, color) {
+  ctx.beginPath(); ctx.moveTo(puntos[0][0], puntos[0][1]);
+  for (let i = 1; i < puntos.length; i++) ctx.lineTo(puntos[i][0], puntos[i][1]);
+  ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+}
+function linea(x1, y1, x2, y2, color, grosor) {
+  ctx.strokeStyle = color; ctx.lineWidth = grosor;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+}
+function rect(x, y, w, h, color, grosor = 0) {
+  if (grosor) { ctx.strokeStyle = color; ctx.lineWidth = grosor; ctx.strokeRect(x + grosor / 2, y + grosor / 2, w - grosor, h - grosor); }
+  else { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); }
+}
+
+// ---------- El personaje ----------
+class Personaje {
+  constructor(x, y) {
+    this.rect = new Rect(x + 6, y, 28, 40);
+    this.velY = 0;
+    this.miraDerecha = true;
+    this.saltos = 0;              // cuántos saltos lleva en el aire
+    this.enSuelo = false;
+    this.vidas = VIDAS;
+    this.atacando = 0;
+    this.invulnerable = 0;
+    this.empujonX = 0;
+    this.dash = 0;
+    this.dashEspera = 0;
+  }
+  saltar() { if (this.saltos < SALTOS_MAX) { this.velY = SALTO; this.saltos += 1; } }
+  atacar() { if (this.atacando === 0) this.atacando = ATAQUE_DURA; }
+  hacerDash() {
+    if (this.dash === 0 && this.dashEspera === 0) { this.dash = DASH_DURA; this.dashEspera = DASH_COOLDOWN; this.velY = 0; }
+  }
+  // El rect de la aguja cuando está atacando, o null.
+  aguja() {
+    if (this.atacando === 0) return null;
+    const y = this.rect.centery - 4;
+    if (this.miraDerecha) return new Rect(this.rect.right, y, ATAQUE_LARGO, 8);
+    return new Rect(this.rect.left - ATAQUE_LARGO, y, ATAQUE_LARGO, 8);
+  }
+  herir(desdeX) {
+    if (this.invulnerable > 0) return false;
+    this.vidas -= 1;
+    this.invulnerable = INVULNERABLE;
+    this.velY = -6;
+    this.dash = 0;
+    this.empujonX = this.rect.centerx > desdeX ? EMPUJON : -EMPUJON;
+    return true;
+  }
+  reaparecer(pos) {
+    this.rect.x = pos[0] + 6; this.rect.y = pos[1];
+    this.velY = 0; this.dash = 0; this.empujonX = 0;
+    this.invulnerable = INVULNERABLE;
+  }
+  actualizar(teclas, bloques) {
+    let dx = 0;
+    if (teclas.ArrowLeft) { dx = -VELOCIDAD; this.miraDerecha = false; }
+    if (teclas.ArrowRight) { dx = VELOCIDAD; this.miraDerecha = true; }
+    if (this.empujonX !== 0) { dx = this.empujonX; this.empujonX = trunc(this.empujonX * 0.8); }
+
+    if (this.dash > 0) {
+      // durante el dash: rapidísimo, sin gravedad
+      dx = this.miraDerecha ? DASH_VEL : -DASH_VEL;
+      this.velY = 0;
+      this.dash -= 1;
+    } else {
+      this.velY = Math.min(this.velY + GRAVEDAD, 16);   // no caer infinitamente rápido
+    }
+    let dy = trunc(this.velY);
+    if (this.velY > 0 && dy === 0) dy = 1;   // si cae despacito, igual baja 1 px para "sentir" el suelo
+    if (this.dash > 0) dy = 1;
+    [this.enSuelo] = moverConChoques(this.rect, dx, dy, bloques);
+    if (this.enSuelo) { this.velY = 0; this.saltos = 0; }
+    else if (this.saltos === 0 && this.velY > 1) this.saltos = 1;   // si se cae de un borde, ya gastó un salto
+
+    if (this.atacando > 0) this.atacando -= 1;
+    if (this.invulnerable > 0) this.invulnerable -= 1;
+    if (this.dashEspera > 0) this.dashEspera -= 1;
+  }
+  dibujar(cam) {
+    // parpadea cuando es invulnerable
+    if (this.invulnerable > 0 && Math.floor(this.invulnerable / 4) % 2 === 0) return;
+    const r = this.rect.move(-cam, 0);
+    // estela del dash
+    if (this.dash > 0) {
+      const lado = this.miraDerecha ? -1 : 1;
+      for (let i = 1; i < 4; i++) {
+        const e = r.move(lado * i * 12, 0).inflate(-i * 6, -i * 6);
+        elipse(e.x, e.y, e.w, e.h, DASH_COLOR, true);
+      }
+    }
+    // capa roja
+    poligono([[r.centerx, r.top + 8], [r.left - 4, r.bottom], [r.right + 4, r.bottom]], CAPA);
+    // cuerpo
+    elipse(r.left, r.top + 8, r.w, r.h - 8, PERSONAJE);
+    // cabeza con cuernitos
+    const cx = r.centerx, cy = r.top + 8;
+    circulo(cx, cy, 11, PERSONAJE);
+    const lado = this.miraDerecha ? 1 : -1;
+    linea(cx - 6, cy - 6, cx - 10, r.top - 8, PERSONAJE, 3);
+    linea(cx + 6, cy - 6, cx + 10, r.top - 8, PERSONAJE, 3);
+    // ojos
+    circulo(cx + 4 * lado, cy, 2, NEGRO);
+    circulo(cx - 2 * lado, cy, 2, NEGRO);
+    // aguja
+    const ag = this.aguja();
+    if (ag) rect(ag.x - cam, ag.y, ag.w, ag.h, AGUJA);
+  }
+}
+
+// ---------- Enemigos que patrullan ----------
+class Enemigo {
+  constructor(x, y) { this.rect = new Rect(x + 6, y + TILE - 28, 28, 28); this.dir = 1; this.vivo = true; }
+  actualizar(bloques) {
+    if (!this.vivo) return;
+    const [, pared] = moverConChoques(this.rect, Math.round(this.dir * VEL_ENEMIGO), 0, bloques);
+    // ¿hay suelo adelante? si no, se da vuelta (no se cae del borde)
+    const pie = new Rect(this.rect.centerx + this.dir * 14, this.rect.bottom + 2, 4, 4);
+    const haySuelo = bloques.some(b => pie.colliderect(b));
+    if (pared || !haySuelo) this.dir *= -1;
+  }
+  dibujar(cam) {
+    if (!this.vivo) return;
+    const r = this.rect.move(-cam, 0);
+    elipse(r.x, r.y, r.w, r.h, ENEMIGO);
+    circulo(r.centerx + 6 * this.dir, r.centery - 4, 3, ENEMIGO_OJO);
+    for (const i of [-8, 0, 8]) linea(r.centerx + i, r.bottom, r.centerx + i, r.bottom + 5, ENEMIGO, 2);   // patitas
+  }
+}
+
+// ---------- Volador: flota en su sitio y, si te ve, te persigue ----------
+class Volador {
+  constructor(x, y) {
+    this.rect = new Rect(x + 8, y + 8, 24, 20);
+    this.origen = [this.rect.centerx, this.rect.centery];
+    this.vivo = true; this.t = 0; this.persiguiendo = false;
+  }
+  actualizar(bloques, objetivo) {
+    if (!this.vivo) return;
+    this.t += 1;
+    if (objetivo) this.persiguiendo = Math.hypot(objetivo.centerx - this.rect.centerx, objetivo.centery - this.rect.centery) < VISTA_VOLADOR;
+    if (this.persiguiendo && objetivo) {
+      const dx = objetivo.centerx - this.rect.centerx, dy = objetivo.centery - this.rect.centery;
+      const d = Math.max(1, Math.hypot(dx, dy));
+      this.rect.x += Math.round(dx / d * VEL_VOLADOR);
+      this.rect.y += Math.round(dy / d * VEL_VOLADOR);
+    } else {
+      // flota haciendo un 8 alrededor de donde nació
+      this.rect.centerx = trunc(this.origen[0] + Math.sin(this.t / 25) * 30);
+      this.rect.centery = trunc(this.origen[1] + Math.sin(this.t / 12) * 12);
+    }
+  }
+  dibujar(cam) {
+    if (!this.vivo) return;
+    const r = this.rect.move(-cam, 0);
+    const aleteo = Math.floor(this.t / 6) % 2 === 0 ? 6 : -2;
+    poligono([[r.centerx, r.centery], [r.left - 8, r.top - aleteo], [r.left, r.bottom]], VOLADOR);
+    poligono([[r.centerx, r.centery], [r.right + 8, r.top - aleteo], [r.right, r.bottom]], VOLADOR);
+    elipse(r.centerx - 7, r.top, 14, r.h, VOLADOR);
+    const ojo = this.persiguiendo ? CORAZON : NEGRO;
+    circulo(r.centerx - 3, r.centery - 2, 2, ojo);
+    circulo(r.centerx + 3, r.centery - 2, 2, ojo);
+  }
+}
+
+// ---------- Jefe 2: la polilla. Vuela alto y se lanza en picada, 6 golpes ----------
+class Jefe2 {
+  constructor(x, y) {
+    this.rect = new Rect(x - 30, y - 160, 100, 60);
+    this.techoY = this.rect.centery;
+    this.vida = JEFE2_VIDA; this.timer = JEFE2_CADA; this.herido = 0; this.t = 0;
+    this.fase = 'flotando';       // 'flotando', 'picada', 'subiendo'
+    this.destino = null; this.despierto = false;
+  }
+  get vivo() { return this.vida > 0; }
+  golpear() { if (this.herido === 0) { this.vida -= 1; this.herido = 25; return true; } return false; }
+  actualizar(bloques, objetivo) {
+    if (!this.vivo) return;
+    this.t += 1;
+    if (Math.abs(objetivo.centerx - this.rect.centerx) < ANCHO * 0.7) this.despierto = true;
+    if (this.fase === 'flotando') {
+      // se mueve suave siguiendo tu x, allá arriba
+      this.rect.centerx += trunc((objetivo.centerx - this.rect.centerx) * 0.03);
+      this.rect.centery = trunc(this.techoY + Math.sin(this.t / 20) * 14);
+      if (this.despierto) this.timer -= 1;
+      if (this.timer <= 0) { this.fase = 'picada'; this.destino = [objetivo.centerx, objetivo.centery]; }
+    } else if (this.fase === 'picada') {
+      const dx = this.destino[0] - this.rect.centerx, dy = this.destino[1] - this.rect.centery;
+      const d = Math.hypot(dx, dy);
+      if (d < JEFE2_VEL) this.fase = 'subiendo';
+      else { this.rect.x += Math.round(dx / d * JEFE2_VEL); this.rect.y += Math.round(dy / d * JEFE2_VEL); }
+    } else if (this.fase === 'subiendo') {
+      this.rect.y -= 3;
+      if (this.rect.centery <= this.techoY) { this.fase = 'flotando'; this.timer = JEFE2_CADA; }
+    }
+    if (this.herido > 0) this.herido -= 1;
+  }
+  dibujar(cam) {
+    if (!this.vivo) return;
+    const r = this.rect.move(-cam, 0);
+    const blanco = Math.floor(this.herido / 3) % 2 === 1;
+    const color = blanco ? JEFE_HERIDO : POLILLA, ala = blanco ? JEFE_HERIDO : POLILLA_ALA;
+    const aleteo = Math.floor(this.t / 5) % 2 === 0 ? 14 : 0;
+    poligono([[r.centerx, r.centery], [r.left - 20, r.top - aleteo], [r.left, r.bottom + 10]], ala);
+    poligono([[r.centerx, r.centery], [r.right + 20, r.top - aleteo], [r.right, r.bottom + 10]], ala);
+    elipse(r.centerx - 18, r.top, 36, r.h, color);            // cuerpo peludo
+    for (let i = 0; i < 3; i++) linea(r.centerx - 16, r.top + 15 + i * 14, r.centerx + 16, r.top + 15 + i * 14, ala, 2);
+    linea(r.centerx - 6, r.top, r.centerx - 16, r.top - 18, color, 2);   // antenas
+    linea(r.centerx + 6, r.top, r.centerx + 16, r.top - 18, color, 2);
+    for (const ox of [-7, 7]) circulo(r.centerx + ox, r.top + 12, 5, CORAZON);
+    rect(r.left, r.top - 34, 100, 8, NEGRO);                  // barra de vida
+    rect(r.left, r.top - 34, 100 * this.vida / JEFE2_VIDA, 8, CORAZON);
+  }
+}
+
+// ---------- El jefe: grande, salta hacia ti, 5 golpes ----------
+class Jefe {
+  constructor(x, y) {
+    this.rect = new Rect(x - 20, y + TILE - 80, 80, 80);
+    this.vida = JEFE_VIDA; this.velY = 0; this.velX = 0;
+    this.timer = JEFE_CADA; this.herido = 0; this.despierto = false;
+  }
+  get vivo() { return this.vida > 0; }
+  golpear() { if (this.herido === 0) { this.vida -= 1; this.herido = 25; return true; } return false; }
+  actualizar(bloques, objetivo) {
+    const objetivoX = objetivo.centerx;
+    if (!this.vivo) return;
+    if (Math.abs(objetivoX - this.rect.centerx) < ANCHO * 0.7) this.despierto = true;
+    if (this.despierto) this.timer -= 1;
+    this.velY = Math.min(this.velY + GRAVEDAD, 16);
+    let dy = trunc(this.velY);
+    if (this.velY > 0 && dy === 0) dy = 1;
+    const [enSuelo, pared] = moverConChoques(this.rect, trunc(this.velX), dy, bloques);
+    if (enSuelo) {
+      this.velY = 0; this.velX = 0;
+      if (this.timer <= 0) {
+        // ¡salta hacia ti!
+        this.velY = JEFE_SALTO;
+        this.velX = objetivoX > this.rect.centerx ? JEFE_VEL : -JEFE_VEL;
+        this.timer = JEFE_CADA;
+      }
+    }
+    if (pared) this.velX = 0;
+    if (this.herido > 0) this.herido -= 1;
+  }
+  dibujar(cam) {
+    if (!this.vivo) return;
+    const r = this.rect.move(-cam, 0);
+    const color = Math.floor(this.herido / 3) % 2 === 1 ? JEFE_HERIDO : JEFE;
+    elipse(r.x, r.y, r.w, r.h, color);
+    poligono([[r.left + 10, r.top + 15], [r.left + 5, r.top - 15], [r.left + 25, r.top + 8]], color);     // cuernos
+    poligono([[r.right - 10, r.top + 15], [r.right - 5, r.top - 15], [r.right - 25, r.top + 8]], color);
+    for (const ox of [-18, 18]) {                                                                         // ojos enojados
+      circulo(r.centerx + ox, r.centery - 10, 6, NEGRO);
+      circulo(r.centerx + ox + 2, r.centery - 12, 2, BLANCO);
+    }
+    rect(r.left, r.top - 30, 80, 8, NEGRO);                                                               // barra de vida
+    rect(r.left, r.top - 30, 80 * this.vida / JEFE_VIDA, 8, CORAZON);
+  }
+}
+
+// ---------- Dibujos del escenario ----------
+function dibujarCorazones(vidas) {
+  for (let i = 0; i < VIDAS; i++) {
+    const color = i < vidas ? CORAZON : CORAZON_VACIO;
+    const x = 20 + i * 34, y = 20;
+    circulo(x + 6, y + 6, 7, color); circulo(x + 18, y + 6, 7, color);
+    poligono([[x - 1, y + 9], [x + 25, y + 9], [x + 12, y + 24]], color);
+  }
+}
+function dibujarPincho(r) {
+  for (let i = 0; i < 2; i++) {
+    const x = r.left + i * (TILE / 2);
+    poligono([[x, r.bottom], [x + TILE / 2, r.bottom], [x + TILE / 4, r.top + 8]], PINCHO);
+  }
+}
+function dibujarBandera(r, color) {
+  rect(r.centerx - 3, r.top, 6, TILE, color);
+  poligono([[r.centerx + 3, r.top], [r.right + 10, r.top + 10], [r.centerx + 3, r.top + 20]], color);
+}
+function dibujarFondo(cam) {
+  rect(0, 0, ANCHO, ALTO, FONDO);
+  for (const [x, y, t] of estrellas) rect(x, y, t, t, ESTRELLA);      // estrellas quietas (muy lejos)
+  // montañas lejanas (se mueven lento) y cerros cercanos (más rápido)
+  for (let i = -1; i < ANCHO / 200 + 2; i++) {
+    const x = i * 200 - Math.floor(cam / 4) % 200;
+    poligono([[x, ALTO], [x + 100, ALTO - 240], [x + 200, ALTO]], FONDO_LEJOS);
+  }
+  for (let i = -1; i < ANCHO / 150 + 2; i++) {
+    const x = i * 150 - Math.floor(cam / 2) % 150;
+    poligono([[x, ALTO], [x + 75, ALTO - 120], [x + 150, ALTO]], FONDO_MEDIO);
+  }
+}
+function texto(msg, y, tam, color = BLANCO, x = ANCHO / 2) {
+  ctx.font = tam + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = NEGRO; ctx.fillText(msg, x + 2, y + 2);
+  ctx.fillStyle = color; ctx.fillText(msg, x, y);
+}
+
+// ---------- Armar un nivel listo para jugar ----------
+function armarNivel(indice, vidas = VIDAS) {
+  const n = cargarNivel(NIVELES[indice]);
+  const p = new Personaje(n.inicio[0], n.inicio[1]);
+  p.vidas = vidas;
+  return {
+    indice, bloques: n.bloques, pinchos: n.pinchos,
+    enemigos: [...n.enemigos.map(([x, y]) => new Enemigo(x, y)), ...n.voladores.map(([x, y]) => new Volador(x, y))],
+    checkpoints: n.checkpoints, checkActivo: null,
+    jefe: n.jefe ? new Jefe(n.jefe[0], n.jefe[1]) : (n.jefe2 ? new Jefe2(n.jefe2[0], n.jefe2[1]) : null),
+    inicio: n.inicio, reaparecer: n.inicio, meta: n.meta,
+    ancho: n.ancho, alto: n.alto, personaje: p, particulas: [],
+  };
+}
+function nuevoJuego() {
+  const j = armarNivel(0);
+  j.estado = 'jugando';       // 'jugando', 'ganaste' o 'perdiste'
+  j.cuadros = 0;              // para el cronómetro
+  j.nuevoRecord = false;
+  return j;
+}
+// Pasa al siguiente nivel conservando el cronómetro.
+function siguienteNivel(j) {
+  const nuevo = armarNivel(j.indice + 1);
+  nuevo.estado = 'jugando'; nuevo.cuadros = j.cuadros; nuevo.nuevoRecord = false;
+  return nuevo;
+}
+
+// ---------- Canvas, teclas y estado ----------
+const canvas = document.getElementById('juego');
+const ctx = canvas.getContext('2d');
+const estrellas = [];
+for (let i = 0; i < 60; i++) estrellas.push([azarEntero(0, ANCHO), azarEntero(0, ALTO / 2), [1, 1, 2][azarEntero(0, 2)]]);
+let record = leerRecord();
+let j = nuevoJuego();
+const teclas = {};
+
+function tecla(k) {
+  const p = j.personaje;
+  if (j.estado === 'jugando') {
+    if (k === ' ') p.saltar();
+    else if (k === 'x' || k === 'X') p.atacar();
+    else if (k === 'Shift') p.hacerDash();
+  } else if (k === 'r' || k === 'R') j = nuevoJuego();
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault();
+  if (!e.repeat) tecla(e.key);
+  teclas[e.key] = true;
+});
+document.addEventListener('keyup', (e) => { teclas[e.key] = false; });
+document.querySelectorAll('.tactil button').forEach(b => {
+  const k = b.dataset.tecla;
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); teclas[k] = true; tecla(k); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { teclas[k] = false; });
+});
+canvas.addEventListener('pointerdown', () => { if (j.estado !== 'jugando') j = nuevoJuego(); });
+
+// ---------- Lógica (un cuadro) ----------
+function actualizar() {
+  if (j.estado !== 'jugando') return;
+  let p = j.personaje;
+  j.cuadros += 1;
+  p.actualizar(teclas, j.bloques);
+  for (const en of j.enemigos) en.actualizar(j.bloques, p.rect);
+  const jefe = j.jefe;
+  if (jefe) jefe.actualizar(j.bloques, p.rect);
+
+  // ataque contra enemigos y jefe
+  const ag = p.aguja();
+  if (ag) {
+    for (const en of j.enemigos) {
+      if (en.vivo && ag.colliderect(en.rect)) {
+        en.vivo = false;
+        chispas(j.particulas, en.rect.centerx, en.rect.centery, en instanceof Volador ? VOLADOR : ENEMIGO);
+      }
+    }
+    if (jefe && jefe.vivo && ag.colliderect(jefe.rect) && jefe.golpear()) {
+      chispas(j.particulas, ag.centerx, ag.centery, JEFE, 18);
+      if (!jefe.vivo) chispas(j.particulas, jefe.rect.centerx, jefe.rect.centery, META, 40);
+    }
+  }
+
+  // cosas que te hacen daño
+  for (const en of j.enemigos) {
+    if (en.vivo && p.rect.colliderect(en.rect) && p.herir(en.rect.centerx)) chispas(j.particulas, p.rect.centerx, p.rect.centery, CAPA);
+  }
+  if (jefe && jefe.vivo && p.rect.colliderect(jefe.rect) && p.herir(jefe.rect.centerx)) chispas(j.particulas, p.rect.centerx, p.rect.centery, CAPA);
+  for (const pin of j.pinchos) {
+    const punta = pin.inflate(-12, -16).move(0, 8);
+    if (p.rect.colliderect(punta) && p.herir(pin.centerx)) chispas(j.particulas, p.rect.centerx, p.rect.centery, CAPA);
+  }
+
+  // checkpoints: al tocar uno, ahí reapareces
+  for (const c of j.checkpoints) {
+    if (c !== j.checkActivo && p.rect.colliderect(c)) {
+      j.checkActivo = c; j.reaparecer = [c.x, c.y];
+      chispas(j.particulas, c.centerx, c.centery, CHECK_PRENDIDO, 20);
+    }
+  }
+
+  // caerse del mapa
+  if (p.rect.top > j.alto + 100) {
+    if (p.invulnerable === 0) p.vidas -= 1;     // si venía herido por pinchos, no cobra doble
+    p.reaparecer(j.reaparecer);
+  }
+
+  for (const part of j.particulas) part.actualizar();
+  j.particulas = j.particulas.filter(q => q.vida > 0);
+
+  // meta: si hay jefe, primero hay que vencerlo
+  const metaAbierta = !jefe || !jefe.vivo;
+  if (j.meta && metaAbierta && p.rect.colliderect(j.meta)) {
+    if (j.indice + 1 < NIVELES.length) { j = siguienteNivel(j); p = j.personaje; }
+    else {
+      j.estado = 'ganaste';
+      const segundos = j.cuadros / FPS;
+      if (record === null || segundos < record) { record = segundos; guardarRecord(segundos); j.nuevoRecord = true; }
+    }
+  }
+  if (p.vidas <= 0) j.estado = 'perdiste';
+}
+
+// ---------- Dibujar ----------
+function dibujar() {
+  const p = j.personaje;
+  // cámara: sigue al personaje sin salirse del nivel
+  const cam = Math.max(0, Math.min(trunc(p.rect.centerx - ANCHO / 2), j.ancho - ANCHO));
+
+  dibujarFondo(cam);
+  for (const b of j.bloques) {
+    const x = b.x - cam;
+    if (x > -TILE && x < ANCHO) { rect(x, b.y, b.w, b.h, BLOQUE); rect(x, b.y, b.w, b.h, BLOQUE_BORDE, 2); }
+  }
+  for (const pin of j.pinchos) {
+    const r = pin.move(-cam, 0);
+    if (r.x > -TILE && r.x < ANCHO) dibujarPincho(r);
+  }
+  for (const c of j.checkpoints) dibujarBandera(c.move(-cam, 0), c === j.checkActivo ? CHECK_PRENDIDO : CHECK_APAGADO);
+  if (j.meta) dibujarBandera(j.meta.move(-cam, 0), (!j.jefe || !j.jefe.vivo) ? META : META_APAGADA);
+  for (const en of j.enemigos) en.dibujar(cam);
+  if (j.jefe) j.jefe.dibujar(cam);
+  p.dibujar(cam);
+  for (const part of j.particulas) part.dibujar(cam);
+
+  // HUD: corazones, nivel, tiempo, récord, dash listo
+  dibujarCorazones(p.vidas);
+  texto('Nivel ' + (j.indice + 1) + '/' + NIVELES.length, 30, 22);
+  texto(formatoTiempo(j.cuadros / FPS), 30, 22, BLANCO, ANCHO - 90);
+  if (record !== null) texto('Récord ' + formatoTiempo(record), 58, 22, META, ANCHO - 90);
+  if (p.dashEspera === 0) circulo(135, 32, 8, DASH_COLOR); else circulo(135, 32, 8, DASH_COLOR, 2);
+
+  if (j.estado === 'ganaste') {
+    texto('¡GANASTE!', ALTO / 2 - 60, 56, META);
+    texto('Tiempo: ' + formatoTiempo(j.cuadros / FPS), ALTO / 2, 22);
+    if (j.nuevoRecord) texto('¡NUEVO RÉCORD!', ALTO / 2 + 32, 22, CHECK_PRENDIDO);
+    texto('R para jugar de nuevo', ALTO / 2 + 70, 22);
+  } else if (j.estado === 'perdiste') {
+    texto('PERDISTE', ALTO / 2 - 40, 56, CORAZON);
+    texto('R para intentar de nuevo', ALTO / 2 + 20, 22);
+  }
+}
+
+// ---------- El bucle: siempre 60 cuadros por segundo ----------
+let acumulado = 0;
+let ultimoTiempo = performance.now();
+function bucle(ahora) {
+  let dt = ahora - ultimoTiempo;
+  ultimoTiempo = ahora;
+  if (dt > 250) dt = 250;      // si la pestaña estuvo escondida, no saltamos mil cuadros
+  acumulado += dt;
+  while (acumulado >= PASO) { actualizar(); acumulado -= PASO; }
+  dibujar();
+  requestAnimationFrame(bucle);
+}
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>

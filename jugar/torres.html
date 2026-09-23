@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Torres de Manu</title>
+<style>
+  /* Colores de la página (style.css) */
+  :root {
+    --pasto: #5d9a3c; --pasto-oscuro: #3e6b28; --piedra: #7f7f7f; --piedra-oscura: #4f4f4f;
+    --cielo: #7fb2f0; --diamante: #4aedd9; --texto: #ffffff; --sombra: #1a1a1a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 16px;
+    background: var(--sombra); color: var(--texto);
+    font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 12px; line-height: 1.8;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  h1 { font-size: 18px; color: var(--diamante); text-shadow: 3px 3px 0 #000; margin: 8px 0 12px; text-align: center; }
+  canvas {
+    display: block; max-width: 100%; height: auto; background: #000;
+    border: 4px solid var(--piedra-oscura); box-shadow: 6px 6px 0 #000;
+    image-rendering: pixelated; touch-action: none; cursor: crosshair;
+  }
+  .ayuda { font-size: 9px; color: #dddddd; text-align: center; max-width: 560px; margin: 10px 0 0; }
+  .boton {
+    display: inline-block; margin: 16px 0; padding: 12px 16px; font-size: 11px;
+    background: #3c6ec9; border: 4px solid #244a8c; box-shadow: 4px 4px 0 #000;
+    color: var(--texto); text-decoration: none; text-shadow: 2px 2px 0 #000;
+  }
+  .boton:hover { background: #4a82e0; }
+  .boton:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+</style>
+</head>
+<body>
+<h1>TORRES</h1>
+<canvas id="juego" width="800" height="610"></canvas>
+<p class="ayuda">1 / 2 / 3: elegir torre &middot; clic: poner torre &middot; clic derecho (o botón Vender): vender &middot; ESPACIO (o botón Oleada): lanzar oleada &middot; R: reiniciar</p>
+<a class="boton" href="../index.html">&larr; Volver a la página</a>
+
+<script>
+// ============================================================
+//  Torres — versión web del torres.py de Manu
+//  Todo se dibuja con canvas. Sin imágenes, sin internet.
+// ============================================================
+
+// ---------- Ajustes del juego (los mismos que en torres.py) ----------
+const TILE = 40;
+const ALTO_BARRA = 90;              // la barra de abajo con las torres
+const FPS = 60;
+const PASO = 1000 / FPS;
+const VIDAS = 10;
+const MONEDAS_INICIO = 150;
+const OLEADAS = 10;
+const BONO_OLEADA = 30;             // monedas de regalo al terminar una oleada
+const ESPERA_OLEADA = 15;           // segundos hasta que la siguiente oleada sale sola
+const VIDA_EXTRA_POR_OLEADA = 0.35; // cada oleada los enemigos tienen 35% más vida que la primera
+const FRAMES_ENTRE_ENEMIGOS = 20;   // cada cuánto sale un enemigo de la oleada (60 = 1 s)
+const VEL_BALA = 9;
+
+// Los 3 tipos de torre. Cambia números y prueba.
+//   dano = cuánta vida quita cada disparo    espera = cuadros entre disparos (60 = 1 s)
+//   alcance = hasta dónde llega (píxeles)    area = radio de la explosión (0 = sin área)
+const TORRES = {
+  1: { nombre: 'Rápida', precio: 50,  dano: 6,  espera: 10, alcance: 100, area: 0,  color: 'rgb(80,200,240)' },
+  2: { nombre: 'Fuerte', precio: 90,  dano: 40, espera: 50, alcance: 150, area: 0,  color: 'rgb(240,150,50)' },
+  3: { nombre: 'Bomba',  precio: 120, dano: 25, espera: 90, alcance: 120, area: 65, color: 'rgb(190,90,230)' },
+};
+
+// Los tipos de enemigo: vida, velocidad (píxeles por cuadro), monedas que dan, tamaño
+const ENEMIGOS = {
+  normal: { vida: 40,  vel: 1.6, monedas: 8,  radio: 12, color: 'rgb(220,70,70)' },
+  rapido: { vida: 25,  vel: 3.0, monedas: 10, radio: 9,  color: 'rgb(240,220,60)' },
+  tanque: { vida: 160, vel: 0.9, monedas: 25, radio: 17, color: 'rgb(90,90,110)' },
+};
+
+// Qué enemigos salen en la oleada n (1 a 10). Cada oleada es más dura.
+function armarOleada(n) {
+  const lista = Array(4 + n * 2).fill('normal');
+  if (n >= 3) lista.push(...Array(n - 1).fill('rapido'));
+  if (n >= 5) lista.push(...Array(Math.floor(n / 3)).fill('tanque'));
+  if (n === OLEADAS) lista.push(...Array(4).fill('tanque'), ...Array(6).fill('rapido'));
+  return lista;
+}
+
+// ---------- Colores ----------
+const PASTO = 'rgb(70,140,70)';
+const PASTO_2 = 'rgb(64,130,64)';
+const CAMINO = 'rgb(190,165,120)';
+const ROCA = 'rgb(110,110,115)';
+const BASE = 'rgb(60,120,220)';
+const BLANCO = 'rgb(245,245,245)';
+const NEGRO = 'rgb(15,15,20)';
+
+// ---------- Mapa (copiado de camino.txt) ----------
+//   .  pasto (aquí puedes construir)     =  camino
+//   S  donde salen los enemigos           B  tu base
+//   #  roca (no se puede construir)
+const MAPA_TXT = `
+......#.............
+.S=================.
+....#.............=.
+.==================.
+.=......#...........
+.=================..
+.#..............=...
+.================...
+.=.........#........
+.==================.
+...#..............=.
+.=================B.
+......#.......#.....
+`;
+
+class Mapa {
+  constructor(txt) {
+    this.filas = txt.split('\n').filter(l => l.trim());
+    this.alto = this.filas.length;
+    this.ancho = Math.max(...this.filas.map(f => f.length));
+    this.filas = this.filas.map(f => f.padEnd(this.ancho, '.'));
+    this.inicio = this.buscar('S');
+    this.base = this.buscar('B');
+    this.camino = this.armarCamino();   // lista de puntos (píxeles) que siguen los enemigos
+  }
+
+  buscar(letra) {
+    for (let cy = 0; cy < this.alto; cy++) {
+      const cx = this.filas[cy].indexOf(letra);
+      if (cx >= 0) return [cx, cy];
+    }
+    throw new Error('Al mapa le falta la letra ' + letra);
+  }
+
+  celda(cx, cy) {
+    if (cy >= 0 && cy < this.alto && cx >= 0 && cx < this.ancho) return this.filas[cy][cx];
+    return '#';
+  }
+
+  // Sigue el camino desde S hasta B (búsqueda BFS por las casillas '=')
+  armarCamino() {
+    const clave = (p) => p[0] + ',' + p[1];
+    const anterior = new Map([[clave(this.inicio), null]]);
+    const cola = [this.inicio];
+    while (cola.length) {
+      const actual = cola.shift();
+      if (clave(actual) === clave(this.base)) break;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const v = [actual[0] + dx, actual[1] + dy];
+        if (!anterior.has(clave(v)) && '=B'.includes(this.celda(v[0], v[1]))) {
+          anterior.set(clave(v), actual);
+          cola.push(v);
+        }
+      }
+    }
+    if (!anterior.has(clave(this.base))) throw new Error("El camino '=' no conecta S con B");
+    const ruta = [];
+    let paso = this.base;
+    while (paso) {
+      ruta.push([paso[0] * TILE + TILE / 2, paso[1] * TILE + TILE / 2]);
+      paso = anterior.get(clave(paso));
+    }
+    return ruta.reverse();
+  }
+
+  sePuedeConstruir(cx, cy) { return this.celda(cx, cy) === '.'; }
+}
+
+// ---------- Enemigo ----------
+class Enemigo {
+  constructor(tipo, camino, oleada) {
+    const d = ENEMIGOS[tipo];
+    this.tipo = tipo;
+    this.vidaMax = this.vida = Math.floor(d.vida * (1 + VIDA_EXTRA_POR_OLEADA * (oleada - 1)));
+    this.vel = d.vel;
+    this.monedas = d.monedas;
+    this.radio = d.radio;
+    this.color = d.color;
+    this.camino = camino;
+    [this.x, this.y] = camino[0];
+    this.indice = 1;                // hacia qué punto del camino voy
+    this.llego = false;
+    this.avance = 0;                // cuánto camino lleva (para saber quién va primero)
+  }
+
+  actualizar() {
+    if (this.indice >= this.camino.length) { this.llego = true; return; }
+    const [ox, oy] = this.camino[this.indice];
+    const dx = ox - this.x, dy = oy - this.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist <= this.vel) { this.x = ox; this.y = oy; this.indice += 1; }
+    else { this.x += dx / dist * this.vel; this.y += dy / dist * this.vel; }
+    this.avance += this.vel;
+  }
+
+  get vivo() { return this.vida > 0; }
+
+  dibujar() {
+    const x = Math.floor(this.x), y = Math.floor(this.y);
+    ctx.fillStyle = this.color;
+    ctx.beginPath(); ctx.arc(x, y, this.radio, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = NEGRO; ctx.lineWidth = 2; ctx.stroke();
+    // barrita de vida
+    const ancho = this.radio * 2;
+    ctx.fillStyle = 'rgb(60,20,20)';
+    ctx.fillRect(x - this.radio, y - this.radio - 8, ancho, 4);
+    ctx.fillStyle = 'rgb(80,230,80)';
+    ctx.fillRect(x - this.radio, y - this.radio - 8, Math.floor(ancho * this.vida / this.vidaMax), 4);
+  }
+}
+
+// ---------- Torre y bala ----------
+class Torre {
+  constructor(tipo, cx, cy) {
+    this.tipo = tipo;
+    this.datos = TORRES[tipo];
+    this.cx = cx; this.cy = cy;
+    this.x = cx * TILE + TILE / 2;
+    this.y = cy * TILE + TILE / 2;
+    this.enfriando = 0;
+    this.angulo = 0;
+    this.disparos = 0;
+  }
+
+  actualizar(enemigos, balas) {
+    if (this.enfriando > 0) this.enfriando -= 1;
+    // apunta al enemigo que va más adelante dentro del alcance
+    let objetivo = null;
+    for (const e of enemigos) {
+      if (Math.hypot(e.x - this.x, e.y - this.y) <= this.datos.alcance) {
+        if (!objetivo || e.avance > objetivo.avance) objetivo = e;
+      }
+    }
+    if (!objetivo) return;
+    this.angulo = Math.atan2(objetivo.y - this.y, objetivo.x - this.x);
+    if (this.enfriando === 0) {
+      balas.push(new Bala(this, objetivo));
+      this.enfriando = this.datos.espera;
+      this.disparos += 1;
+    }
+  }
+
+  dibujar(seleccionada) {
+    const x = this.x, y = this.y;
+    // base cuadrada y cañón que gira
+    ctx.fillStyle = 'rgb(50,50,60)';
+    ctx.beginPath(); ctx.roundRect(x - 14, y - 14, 28, 28, 5); ctx.fill();
+    ctx.fillStyle = this.datos.color;
+    ctx.beginPath(); ctx.arc(x, y, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = NEGRO; ctx.lineWidth = this.tipo !== 1 ? 6 : 3;
+    ctx.beginPath(); ctx.moveTo(x, y);
+    ctx.lineTo(x + Math.cos(this.angulo) * 16, y + Math.sin(this.angulo) * 16); ctx.stroke();
+    if (seleccionada) {
+      ctx.strokeStyle = BLANCO; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(x, y, this.datos.alcance, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+}
+
+class Bala {
+  constructor(torre, objetivo) {
+    this.x = torre.x; this.y = torre.y;
+    this.objetivo = objetivo;
+    this.dano = torre.datos.dano;
+    this.area = torre.datos.area;
+    this.color = torre.datos.color;
+    this.llego = false;
+  }
+
+  actualizar(enemigos, explosiones) {
+    // persigue al enemigo (o al último lugar donde estaba si ya murió)
+    const ox = this.objetivo.x, oy = this.objetivo.y;
+    const dx = ox - this.x, dy = oy - this.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist <= VEL_BALA) {
+      this.llego = true;
+      if (this.area) {
+        explosiones.push({ x: ox, y: oy, radio: this.area, frames: 12 });
+        for (const e of enemigos) if (Math.hypot(e.x - ox, e.y - oy) <= this.area) e.vida -= this.dano;
+      } else if (this.objetivo.vivo) {
+        this.objetivo.vida -= this.dano;
+      }
+    } else {
+      this.x += dx / dist * VEL_BALA;
+      this.y += dy / dist * VEL_BALA;
+    }
+  }
+
+  dibujar() {
+    ctx.fillStyle = this.color;
+    ctx.beginPath(); ctx.arc(this.x, this.y, this.area ? 6 : 4, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// ---------- Canvas y estado ----------
+const canvas = document.getElementById('juego');
+const ctx = canvas.getContext('2d');
+const mapa = new Mapa(MAPA_TXT);
+const ANCHO = mapa.ancho * TILE, ALTO = mapa.alto * TILE + ALTO_BARRA;
+canvas.width = ANCHO; canvas.height = ALTO;
+
+let torres, enemigos, balas, explosiones, monedas, vidas, oleada, porSalir, esperaAparecer;
+let cuentaRegresiva, tipoElegido, estado, mensaje, mensajeHasta, tiempo;
+let mouse = [-100, -100];          // dónde está el mouse (en píxeles del canvas)
+let modoVender = false;            // para celular: el botón "Vender" de la barra
+
+function reiniciar() {
+  torres = new Map();              // "cx,cy" -> Torre
+  enemigos = []; balas = []; explosiones = [];
+  monedas = MONEDAS_INICIO;
+  vidas = VIDAS;
+  oleada = 0;                      // la última que salió
+  porSalir = [];                   // enemigos que faltan por aparecer en esta oleada
+  esperaAparecer = 0;
+  cuentaRegresiva = ESPERA_OLEADA * FPS;
+  tipoElegido = 1;
+  modoVender = false;
+  estado = 'jugando';              // 'jugando', 'ganaste', 'perdiste'
+  mensaje = 'ESPACIO (o el botón Oleada) para lanzar la oleada 1';
+  mensajeHasta = 1e9;
+  tiempo = 0;
+}
+reiniciar();
+
+function avisar(txt, segundos = 3) { mensaje = txt; mensajeHasta = tiempo + segundos * FPS; }
+
+// ---------- Acciones del jugador ----------
+function lanzarOleada() {
+  if (estado !== 'jugando' || oleada >= OLEADAS || porSalir.length) return;
+  oleada += 1;
+  porSalir = armarOleada(oleada);
+  esperaAparecer = 0;
+  cuentaRegresiva = ESPERA_OLEADA * FPS;
+  avisar('¡Oleada ' + oleada + '! Vienen ' + porSalir.length + ' enemigos');
+}
+
+function construir(cx, cy) {
+  const precio = TORRES[tipoElegido].precio;
+  if (torres.has(cx + ',' + cy)) avisar('Ahí ya hay una torre (clic derecho para venderla)');
+  else if (!mapa.sePuedeConstruir(cx, cy)) avisar('Solo puedes construir en el pasto');
+  else if (monedas < precio) avisar('Te faltan ' + (precio - monedas) + ' monedas');
+  else { monedas -= precio; torres.set(cx + ',' + cy, new Torre(tipoElegido, cx, cy)); }
+}
+
+function vender(cx, cy) {
+  const torre = torres.get(cx + ',' + cy);
+  if (!torre) return;
+  torres.delete(cx + ',' + cy);
+  const devuelto = Math.floor(torre.datos.precio / 2);
+  monedas += devuelto;
+  avisar('Torre vendida: +' + devuelto + ' monedas');
+}
+
+// Las cajas de la barra de abajo: 3 torres y el botón Vender
+function rectsBarra() {
+  const y = mapa.alto * TILE + 10, h = ALTO_BARRA - 20;
+  const r = {};
+  for (const tipo of [1, 2, 3]) r[tipo] = { x: 10 + (tipo - 1) * 150, y, w: 140, h };
+  r.vender = { x: 460, y, w: 90, h };
+  r.oleada = { x: 560, y, w: 90, h };
+  return r;
+}
+const dentro = (r, x, y) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+
+function clic(x, y, boton) {
+  if (estado !== 'jugando') return;
+  if (y >= mapa.alto * TILE) {
+    // clic en la barra de abajo: elegir torre o modo vender
+    for (const [tipo, r] of Object.entries(rectsBarra())) {
+      if (!dentro(r, x, y)) continue;
+      if (tipo === 'vender') modoVender = !modoVender;
+      else if (tipo === 'oleada') lanzarOleada();
+      else { tipoElegido = Number(tipo); modoVender = false; }
+    }
+    return;
+  }
+  const cx = Math.floor(x / TILE), cy = Math.floor(y / TILE);
+  if (boton === 2 || modoVender) vender(cx, cy);
+  else construir(cx, cy);
+}
+
+function tecla(k) {
+  if (k === 'r' || k === 'R') reiniciar();
+  else if (estado !== 'jugando') return;
+  else if (k === ' ') lanzarOleada();
+  else if (k === '1' || k === '2' || k === '3') { tipoElegido = Number(k); modoVender = false; }
+}
+
+// El canvas puede verse más chico que sus píxeles (celular): convertimos las coordenadas
+function posCanvas(e) {
+  const r = canvas.getBoundingClientRect();
+  return [(e.clientX - r.left) * ANCHO / r.width, (e.clientY - r.top) * ALTO / r.height];
+}
+document.addEventListener('keydown', (e) => { if (e.key === ' ') e.preventDefault(); tecla(e.key); });
+canvas.addEventListener('pointermove', (e) => { mouse = posCanvas(e); });
+canvas.addEventListener('pointerleave', () => { mouse = [-100, -100]; });
+canvas.addEventListener('pointerdown', (e) => {
+  mouse = posCanvas(e);
+  clic(mouse[0], mouse[1], e.button);
+});
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());   // el clic derecho es para vender
+
+// ---------- Lógica ----------
+function actualizar() {
+  if (estado !== 'jugando') return;
+  tiempo += 1;
+
+  // aparecen los enemigos de la oleada, de a uno
+  if (porSalir.length) {
+    esperaAparecer -= 1;
+    if (esperaAparecer <= 0) {
+      enemigos.push(new Enemigo(porSalir.shift(), mapa.camino, oleada));
+      esperaAparecer = FRAMES_ENTRE_ENEMIGOS;
+    }
+  } else if (!enemigos.length && oleada > 0 && oleada < OLEADAS) {
+    // oleada terminada: cuenta regresiva para la siguiente
+    if (cuentaRegresiva === ESPERA_OLEADA * FPS) {
+      monedas += BONO_OLEADA;
+      avisar('Oleada ' + oleada + ' superada: +' + BONO_OLEADA + ' monedas. ESPACIO o espera...', 6);
+    }
+    cuentaRegresiva -= 1;
+    if (cuentaRegresiva <= 0) lanzarOleada();
+  }
+
+  for (const e of enemigos) e.actualizar();
+  for (const t of torres.values()) t.actualizar(enemigos, balas);
+  for (const b of balas) b.actualizar(enemigos, explosiones);
+  balas = balas.filter(b => !b.llego);
+  for (const ex of explosiones) ex.frames -= 1;
+  explosiones = explosiones.filter(ex => ex.frames > 0);
+
+  // enemigos muertos dan monedas; los que llegan quitan vidas
+  const quedan = [];
+  for (const e of enemigos) {
+    if (!e.vivo) monedas += e.monedas;
+    else if (e.llego) vidas -= 1;
+    else quedan.push(e);
+  }
+  enemigos = quedan;
+
+  if (vidas <= 0) { vidas = 0; estado = 'perdiste'; }
+  else if (oleada === OLEADAS && !porSalir.length && !enemigos.length) estado = 'ganaste';
+}
+
+// ---------- Dibujar ----------
+function texto(cadena, x, y, tam, color, modo, fondo) {
+  ctx.font = tam + 'px sans-serif';
+  ctx.textAlign = modo === 'centro' ? 'center' : modo === 'derecha' ? 'right' : 'left';
+  ctx.textBaseline = 'top';
+  if (fondo) {
+    const w = ctx.measureText(cadena).width;
+    const x0 = modo === 'centro' ? x - w / 2 : modo === 'derecha' ? x - w : x;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.beginPath(); ctx.roundRect(x0 - 8, y - 4, w + 16, tam + 8, 6); ctx.fill();
+  }
+  ctx.fillStyle = color;
+  ctx.fillText(cadena, x, y);
+}
+
+function dibujar() {
+  const m = mapa;
+  for (let cy = 0; cy < m.alto; cy++) for (let cx = 0; cx < m.ancho; cx++) {
+    const x = cx * TILE, y = cy * TILE, c = m.celda(cx, cy);
+    if (c === '=' || c === 'S') {
+      ctx.fillStyle = CAMINO; ctx.fillRect(x, y, TILE, TILE);
+    } else if (c === 'B') {
+      ctx.fillStyle = CAMINO; ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = BASE;
+      ctx.beginPath(); ctx.roundRect(x + 4, y + 4, TILE - 8, TILE - 8, 6); ctx.fill();
+      ctx.fillStyle = BLANCO;
+      ctx.beginPath(); ctx.moveTo(x + TILE / 2, y + 8); ctx.lineTo(x + TILE - 8, y + TILE / 2); ctx.lineTo(x + 8, y + TILE / 2); ctx.fill();
+    } else if (c === '#') {
+      ctx.fillStyle = PASTO; ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = ROCA;
+      ctx.beginPath(); ctx.arc(x + TILE / 2, y + TILE / 2, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgb(80,80,85)'; ctx.lineWidth = 2; ctx.stroke();
+    } else {
+      ctx.fillStyle = (cx + cy) % 2 ? PASTO : PASTO_2; ctx.fillRect(x, y, TILE, TILE);
+    }
+  }
+  // entrada
+  const [sx, sy] = m.inicio;
+  ctx.fillStyle = 'rgb(120,60,40)';
+  ctx.beginPath(); ctx.roundRect(sx * TILE + 4, sy * TILE + 4, TILE - 8, TILE - 8, 6); ctx.fill();
+
+  // donde está el mouse: sombra de la torre que vas a poner
+  const [mx, my] = mouse;
+  const cx = Math.floor(mx / TILE), cy = Math.floor(my / TILE);
+  if (estado === 'jugando' && my >= 0 && my < m.alto * TILE && !modoVender) {
+    const datos = TORRES[tipoElegido];
+    const ok = m.sePuedeConstruir(cx, cy) && !torres.has(cx + ',' + cy) && monedas >= datos.precio;
+    ctx.strokeStyle = ok ? 'rgb(255,255,255)' : 'rgb(255,80,80)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx * TILE + TILE / 2, cy * TILE + TILE / 2, datos.alcance, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeRect(cx * TILE + 1, cy * TILE + 1, TILE - 2, TILE - 2);
+  }
+
+  for (const t of torres.values()) t.dibujar(t.cx === cx && t.cy === cy);
+  for (const e of enemigos) e.dibujar();
+  for (const b of balas) b.dibujar();
+  for (const ex of explosiones) {
+    ctx.strokeStyle = 'rgb(255,200,80)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(ex.x, ex.y, ex.radio * (1 - ex.frames / 24), 0, Math.PI * 2); ctx.stroke();
+  }
+
+  dibujarBarra();
+
+  if (estado === 'ganaste') pantallaFinal('¡GANASTE!', 'rgb(80,255,120)');
+  else if (estado === 'perdiste') pantallaFinal('PERDISTE', 'rgb(255,70,70)');
+}
+
+function dibujarBarra() {
+  const y0 = mapa.alto * TILE;
+  ctx.fillStyle = 'rgb(30,30,40)';
+  ctx.fillRect(0, y0, ANCHO, ALTO_BARRA);
+  const rects = rectsBarra();
+  for (const tipo of [1, 2, 3]) {
+    const r = rects[tipo], d = TORRES[tipo];
+    const elegido = tipo === tipoElegido && !modoVender;
+    ctx.fillStyle = elegido ? 'rgb(60,60,75)' : 'rgb(42,42,55)';
+    ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 8); ctx.fill();
+    ctx.strokeStyle = elegido ? d.color : 'rgb(90,90,100)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = d.color;
+    ctx.beginPath(); ctx.arc(r.x + 22, r.y + r.h / 2, 11, 0, Math.PI * 2); ctx.fill();
+    texto('[' + tipo + '] ' + d.nombre, r.x + 42, r.y + 8, 18, BLANCO);
+    texto('$' + d.precio + '  daño ' + d.dano, r.x + 42, r.y + 32, 14, 'rgb(200,200,210)');
+    const extra = d.area ? 'área ' + d.area : 'cada ' + (d.espera / FPS).toFixed(1) + ' s';
+    texto(extra, r.x + 42, r.y + 50, 14, 'rgb(200,200,210)');
+  }
+  // botón vender (para quien no tiene clic derecho)
+  const rv = rects.vender;
+  ctx.fillStyle = modoVender ? 'rgb(90,50,50)' : 'rgb(42,42,55)';
+  ctx.beginPath(); ctx.roundRect(rv.x, rv.y, rv.w, rv.h, 8); ctx.fill();
+  ctx.strokeStyle = modoVender ? 'rgb(255,120,120)' : 'rgb(90,90,100)'; ctx.lineWidth = 2; ctx.stroke();
+  texto('Vender', rv.x + rv.w / 2, rv.y + 14, 18, BLANCO, 'centro');
+  texto('mitad precio', rv.x + rv.w / 2, rv.y + 40, 12, 'rgb(200,200,210)', 'centro');
+  // botón oleada (lo mismo que ESPACIO)
+  const ro = rects.oleada;
+  const puede = estado === 'jugando' && oleada < OLEADAS && !porSalir.length;
+  ctx.fillStyle = puede ? 'rgb(45,75,55)' : 'rgb(42,42,55)';
+  ctx.beginPath(); ctx.roundRect(ro.x, ro.y, ro.w, ro.h, 8); ctx.fill();
+  ctx.strokeStyle = puede ? 'rgb(120,255,150)' : 'rgb(90,90,100)'; ctx.lineWidth = 2; ctx.stroke();
+  texto('Oleada', ro.x + ro.w / 2, ro.y + 14, 18, BLANCO, 'centro');
+  texto(puede ? '¡lanzar ya!' : 'en camino', ro.x + ro.w / 2, ro.y + 40, 12, 'rgb(200,200,210)', 'centro');
+  // marcador a la derecha
+  const x = ANCHO - 10;
+  texto('Monedas: ' + monedas, x, y0 + 8, 18, 'rgb(255,220,90)', 'derecha');
+  texto('Vidas: ' + vidas, x, y0 + 32, 18, 'rgb(255,120,120)', 'derecha');
+  texto('Oleada: ' + oleada + '/' + OLEADAS, x, y0 + 56, 18, BLANCO, 'derecha');
+  // mensaje
+  if (tiempo < mensajeHasta && mensaje) {
+    texto(mensaje, ANCHO / 2, 6, 18, 'rgb(255,245,200)', 'centro', true);
+  } else if (estado === 'jugando' && !enemigos.length && !porSalir.length && oleada > 0 && oleada < OLEADAS) {
+    const seg = Math.floor(cuentaRegresiva / FPS) + 1;
+    texto('Siguiente oleada en ' + seg + ' s (ESPACIO para ya)', ANCHO / 2, 6, 18, 'rgb(255,245,200)', 'centro', true);
+  }
+}
+
+function pantallaFinal(titulo, color) {
+  ctx.fillStyle = 'rgba(0,0,0,0.63)';
+  ctx.fillRect(0, 0, ANCHO, ALTO);
+  const cx = ANCHO / 2, cy = mapa.alto * TILE / 2;
+  texto(titulo, cx, cy - 55, 48, color, 'centro');
+  texto('Llegaste a la oleada ' + oleada + ' con ' + torres.size + ' torres', cx, cy + 10, 18, BLANCO, 'centro');
+  texto('R para jugar de nuevo', cx, cy + 40, 18, 'rgb(220,220,220)', 'centro');
+}
+
+// ---------- El bucle: siempre 60 cuadros por segundo ----------
+let acumulado = 0;
+let ultimoTiempo = performance.now();
+function bucle(ahora) {
+  let dt = ahora - ultimoTiempo;
+  ultimoTiempo = ahora;
+  if (dt > 250) dt = 250;      // si la pestaña estuvo escondida, no saltamos mil cuadros
+  acumulado += dt;
+  while (acumulado >= PASO) { actualizar(); acumulado -= PASO; }
+  dibujar();
+  requestAnimationFrame(bucle);
+}
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>

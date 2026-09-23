@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Serpiente de Manu</title>
+<style>
+  /* Colores de la página (style.css) */
+  :root {
+    --pasto: #5d9a3c; --pasto-oscuro: #3e6b28; --piedra: #7f7f7f; --piedra-oscura: #4f4f4f;
+    --cielo: #7fb2f0; --diamante: #4aedd9; --texto: #ffffff; --sombra: #1a1a1a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 16px;
+    background: var(--sombra); color: var(--texto);
+    font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 12px; line-height: 1.8;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  h1 { font-size: 18px; color: var(--diamante); text-shadow: 3px 3px 0 #000; margin: 8px 0 12px; text-align: center; }
+  canvas {
+    display: block; max-width: 100%; height: auto; background: #000;
+    border: 4px solid var(--piedra-oscura); box-shadow: 6px 6px 0 #000;
+    image-rendering: pixelated; touch-action: none;
+  }
+  .ayuda { font-size: 9px; color: #dddddd; text-align: center; max-width: 520px; margin: 10px 0 0; }
+  .boton {
+    display: inline-block; margin: 16px 0; padding: 12px 16px; font-size: 11px;
+    background: #3c6ec9; border: 4px solid #244a8c; box-shadow: 4px 4px 0 #000;
+    color: var(--texto); text-decoration: none; text-shadow: 2px 2px 0 #000;
+  }
+  .boton:hover { background: #4a82e0; }
+  .boton:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+</style>
+</head>
+<body>
+<h1>SERPIENTE</h1>
+<canvas id="juego" width="800" height="650"></canvas>
+<p class="ayuda">Jugador 1: flechas &middot; Jugador 2: W A S D &middot; 1 / 2: elegir modo &middot; ESPACIO: empezar &middot; R: menú &middot; en celular: desliza el dedo</p>
+<a class="boton" href="../index.html">&larr; Volver a la página</a>
+
+<script>
+// ============================================================
+//  Serpiente — versión web del serpiente.py de Manu
+//  Todo se dibuja con canvas. Sin imágenes, sin internet.
+// ============================================================
+
+// ---------- Ajustes del juego (los mismos que en serpiente.py) ----------
+const COLS = 32, FILAS = 24;      // tamaño del tablero en casillas
+const CELDA = 25;                 // píxeles por casilla
+const ALTO_HUD = 50;              // la franja de arriba con los puntos
+const FPS = 60;
+const PASO = 1000 / FPS;
+const FRAMES_POR_PASO = 8;        // cada cuántos cuadros avanza la serpiente (menos = más rápido)
+const MANZANAS_POR_NIVEL = 5;
+const LARGO_INICIAL = 4;
+const CADA_CUANTO_POWERUP = 6;    // segundos entre power-ups
+const DURA_POWERUP_EN_SUELO = 8;  // segundos que se queda esperando
+const DURA_EFECTO = 7;            // segundos que dura el efecto
+const PUNTOS_MANZANA = 10;
+
+const POWERUPS = {
+  rayo:     { letra: 'R', color: 'rgb(255,230,60)',  texto: '¡Rayo! Rápido y doble puntos' },
+  tortuga:  { letra: 'T', color: 'rgb(90,200,120)',  texto: 'Tortuga: más lento' },
+  estrella: { letra: 'E', color: 'rgb(255,150,220)', texto: '¡Estrella! Puntos x3' },
+  tijeras:  { letra: 'X', color: 'rgb(200,200,210)', texto: 'Tijeras: cola más corta' },
+  fantasma: { letra: 'F', color: 'rgb(170,170,255)', texto: '¡Fantasma! Atraviesas paredes' },
+};
+
+// ---------- Colores ----------
+const FONDO = 'rgb(24,26,32)';
+const FONDO_2 = 'rgb(28,30,37)';
+const OBSTACULO = 'rgb(110,100,120)';
+const MANZANA = 'rgb(230,60,60)';
+const BLANCO = 'rgb(245,245,245)';
+const GRIS = 'rgb(150,150,160)';
+const DORADO = 'rgb(255,220,90)';
+const COLORES_JUGADOR = { 1: [80, 220, 100], 2: [80, 160, 255] };
+
+// ---------- Niveles (copiados de niveles.txt: '.' libre, '#' obstáculo) ----------
+const NIVELES_TXT = `
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+........################........
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+........################........
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+
+................................
+................................
+................................
+................................
+....####................####....
+....####................####....
+....####................####....
+....####................####....
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+....####................####....
+....####................####....
+....####................####....
+....####................####....
+................................
+................................
+................................
+................................
+
+................................
+................................
+................................
+................................
+................#...............
+................#...............
+................#...............
+................#...............
+................#...............
+................#...............
+................#...............
+................................
+......#########..#########......
+................................
+................#...............
+................#...............
+................#...............
+................#...............
+................#...............
+................#...............
+................................
+................................
+................................
+................................
+
+................................
+................................
+...........#.....#.....#...#....
+.....#...........#.....#...#....
+.....#.....#...........#...#....
+.....#.....#.....#.........#....
+.....#.....#.....#.....#...#....
+.....#.....#.....#.....#...#....
+.....#.....#.....#.....#........
+...........#.....#.....#...#....
+.....#...........#.....#...#....
+.....#.....#...........#...#....
+.....#.....#.....#.........#....
+.....#.....#.....#.....#...#....
+.....#.....#.....#.....#...#....
+.....#.....#.....#.....#........
+...........#.....#.....#...#....
+.....#...........#.....#...#....
+.....#.....#...........#...#....
+.....#.....#.....#.........#....
+.....#.....#.....#.....#...#....
+.....#.....#.....#.....#...#....
+................................
+................................
+`;
+
+// Cada dibujo separado por una línea vacía es un nivel: lista de "x,y" con obstáculo.
+function cargarNiveles() {
+  const niveles = [];
+  let actual = [];
+  for (const linea of NIVELES_TXT.split('\n').concat([''])) {
+    if (linea.trim()) actual.push(linea);
+    else if (actual.length) {
+      const obst = new Set();
+      actual.forEach((fila, y) => { [...fila].forEach((c, x) => { if (c === '#') obst.add(x + ',' + y); }); });
+      niveles.push(obst);
+      actual = [];
+    }
+  }
+  return niveles.length ? niveles : [new Set()];
+}
+const NIVELES = cargarNiveles();
+
+// ---------- Récord (localStorage en vez de record.txt) ----------
+function leerRecord() {
+  try { return parseInt(localStorage.getItem('serpiente-record'), 10) || 0; }
+  catch (e) { return 0; }
+}
+function guardarRecord(puntos) {
+  try { localStorage.setItem('serpiente-record', String(puntos)); } catch (e) {}
+}
+
+// ---------- Canvas ----------
+const canvas = document.getElementById('juego');
+const ctx = canvas.getContext('2d');
+const ANCHO = COLS * CELDA, ALTO = FILAS * CELDA + ALTO_HUD;
+
+function texto(cadena, x, y, tam, color, modo) {
+  // modo: 'centro', 'derecha' o nada (izquierda). y es la parte de arriba del texto.
+  ctx.font = tam + 'px sans-serif';
+  ctx.fillStyle = color;
+  ctx.textAlign = modo === 'centro' ? 'center' : modo === 'derecha' ? 'right' : 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(cadena, x, y);
+}
+
+function rectRedondo(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+  ctx.fill();
+}
+
+const azar = (n) => Math.floor(Math.random() * n);
+const elegir = (lista) => lista[azar(lista.length)];
+
+// ---------- Serpiente ----------
+class Serpiente {
+  constructor(numero, cabeza, direccion) {
+    this.numero = numero;
+    this.color = COLORES_JUGADOR[numero];
+    this.dir = direccion;              // [dx, dy]
+    this.proximaDir = direccion;
+    const [x, y] = cabeza;
+    // el cuerpo es una lista de casillas; la primera es la cabeza
+    this.cuerpo = [];
+    for (let i = 0; i < LARGO_INICIAL; i++) this.cuerpo.push([x - direccion[0] * i, y - direccion[1] * i]);
+    this.crecer = 0;
+    this.puntos = 0;
+    this.viva = true;
+    this.efectos = {};                 // nombre -> cuadros que le quedan
+    this.contador = 0;                 // cuadros hasta el próximo paso
+  }
+
+  get cabeza() { return this.cuerpo[0]; }
+
+  girar(nueva) {
+    // no puedes darte vuelta 180 grados de golpe (te comerías tu cuello)
+    if (nueva[0] + this.dir[0] !== 0 || nueva[1] + this.dir[1] !== 0) this.proximaDir = nueva;
+  }
+
+  framesPorPaso() {
+    if ('rayo' in this.efectos) return Math.max(3, FRAMES_POR_PASO - 3);
+    if ('tortuga' in this.efectos) return FRAMES_POR_PASO + 5;
+    return FRAMES_POR_PASO;
+  }
+
+  multiplicador() {
+    let m = 1;
+    if ('rayo' in this.efectos) m *= 2;
+    if ('estrella' in this.efectos) m *= 3;
+    return m;
+  }
+
+  aplicar(nombre) {
+    if (nombre === 'tijeras') this.cuerpo = this.cuerpo.slice(0, Math.max(3, this.cuerpo.length - 3));
+    else this.efectos[nombre] = DURA_EFECTO * FPS;
+  }
+
+  bajarEfectos() {
+    for (const k of Object.keys(this.efectos)) {
+      this.efectos[k] -= 1;
+      if (this.efectos[k] <= 0) delete this.efectos[k];
+    }
+  }
+
+  ocupa(x, y, desdeIndice = 0) {
+    for (let i = desdeIndice; i < this.cuerpo.length; i++) {
+      if (this.cuerpo[i][0] === x && this.cuerpo[i][1] === y) return true;
+    }
+    return false;
+  }
+
+  dibujar(d) {
+    const n = this.cuerpo.length;
+    this.cuerpo.forEach(([x, y], i) => {
+      const rx = x * CELDA + 1, ry = y * CELDA + 1 + d, lado = CELDA - 2;
+      let color;
+      if ('fantasma' in this.efectos) {
+        color = this.color.map(c => Math.min(255, c + 60));
+      } else {
+        // la cola se va oscureciendo
+        const f = 1 - 0.5 * i / Math.max(1, n);
+        color = this.color.map(c => Math.floor(c * f));
+      }
+      ctx.fillStyle = `rgb(${color[0]},${color[1]},${color[2]})`;
+      rectRedondo(rx, ry, lado, lado, i === 0 ? 6 : 4);
+      if (i === 0) {
+        // ojos mirando hacia donde va
+        const [dx, dy] = this.dir;
+        const cx = rx + lado / 2, cy = ry + lado / 2;
+        ctx.fillStyle = 'rgb(20,20,20)';
+        for (const lado of [-1, 1]) {
+          const ox = cx + dx * 6 + (dy * lado) * 5;
+          const oy = cy + dy * 6 + (dx * lado) * 5;
+          ctx.beginPath(); ctx.arc(ox, oy, 3, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    });
+  }
+}
+
+// ---------- Estado del juego ----------
+let record = leerRecord();
+let jugadores = 1;
+let victorias = { 1: 0, 2: 0 };
+let estado = 'menu';          // 'menu', 'jugando', 'fin'
+let mensajeFin = '';
+let nuevoRecord = false;
+let aviso = '', avisoHasta = 0;
+let tiempo = 0;
+let nivel, manzanasComidas, serpientes, obstaculos, manzana, powerup, proximoPowerup;
+
+function avisar(txt, segundos = 2) { aviso = txt; avisoHasta = tiempo + segundos * FPS; }
+
+function empezar() {
+  nivel = 1;
+  manzanasComidas = 0;
+  // cada uno sale en una fila distinta, para no chocar de frente al empezar
+  const fila1 = jugadores === 1 ? Math.floor(FILAS / 2) : Math.floor(FILAS / 3);
+  serpientes = [new Serpiente(1, [Math.floor(COLS / 4), fila1], [1, 0])];
+  if (jugadores === 2) serpientes.push(new Serpiente(2, [Math.floor(COLS * 3 / 4), Math.floor(FILAS * 2 / 3)], [-1, 0]));
+  manzana = null; powerup = null;
+  cargarNivel();
+  manzana = casillaLibre();
+  proximoPowerup = CADA_CUANTO_POWERUP * FPS;
+  estado = 'jugando';
+  nuevoRecord = false;
+  tiempo = 0;
+  avisar('Nivel ' + nivel);
+}
+
+function cargarNivel() {
+  const obst = NIVELES[(nivel - 1) % NIVELES.length];
+  const ocupadas = new Set();
+  for (const s of serpientes) {
+    for (const [x, y] of s.cuerpo) ocupadas.add(x + ',' + y);
+    // un obstáculo no puede aparecer encima de una serpiente ni justo delante de su cabeza
+    for (let i = 1; i <= 3; i++) ocupadas.add((s.cabeza[0] + s.dir[0] * i) + ',' + (s.cabeza[1] + s.dir[1] * i));
+  }
+  obstaculos = new Set([...obst].filter(c => !ocupadas.has(c)));
+}
+
+function casillaLibre() {
+  const ocupadas = new Set(obstaculos);
+  for (const s of serpientes) for (const [x, y] of s.cuerpo) ocupadas.add(x + ',' + y);
+  if (manzana) ocupadas.add(manzana[0] + ',' + manzana[1]);
+  if (powerup) ocupadas.add(powerup.casilla[0] + ',' + powerup.casilla[1]);
+  const libres = [];
+  for (let y = 0; y < FILAS; y++) for (let x = 0; x < COLS; x++) if (!ocupadas.has(x + ',' + y)) libres.push([x, y]);
+  return libres.length ? elegir(libres) : [0, 0];
+}
+
+// ---------- Teclas ----------
+const TECLA_J1 = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+const TECLA_J2 = { w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0] };
+
+function tecla(k) {
+  if (k === 'r' || k === 'R') { estado = 'menu'; return; }
+  if (estado === 'menu') {
+    if (k === '1' || k === '2') { jugadores = Number(k); empezar(); }
+    else if (k === 'ArrowUp' || k === 'ArrowDown' || k === 'w' || k === 's') jugadores = jugadores === 1 ? 2 : 1;
+    else if (k === ' ') empezar();
+  } else if (estado === 'fin') {
+    if (k === ' ') empezar();
+  } else if (estado === 'jugando') {
+    if (k in TECLA_J1) serpientes[0].girar(TECLA_J1[k]);
+    const k2 = k.toLowerCase();
+    if (jugadores === 2 && k2 in TECLA_J2) serpientes[1].girar(TECLA_J2[k2]);
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key in TECLA_J1 || e.key === ' ') e.preventDefault();   // que la página no se mueva
+  tecla(e.key);
+});
+
+// En celular: deslizar el dedo mueve al jugador 1; tocar sin deslizar es como ESPACIO.
+let toqueInicio = null;
+canvas.addEventListener('pointerdown', (e) => { toqueInicio = [e.clientX, e.clientY]; });
+canvas.addEventListener('pointerup', (e) => {
+  if (!toqueInicio) return;
+  const dx = e.clientX - toqueInicio[0], dy = e.clientY - toqueInicio[1];
+  toqueInicio = null;
+  if (Math.abs(dx) < 20 && Math.abs(dy) < 20) { tecla(' '); return; }
+  if (Math.abs(dx) > Math.abs(dy)) tecla(dx > 0 ? 'ArrowRight' : 'ArrowLeft');
+  else tecla(dy > 0 ? 'ArrowDown' : 'ArrowUp');
+});
+
+// ---------- Lógica ----------
+function actualizar() {
+  if (estado !== 'jugando') return;
+  tiempo += 1;
+
+  // power-ups: aparecen y desaparecen
+  if (powerup) {
+    powerup.quedan -= 1;
+    if (powerup.quedan <= 0) powerup = null;
+  } else {
+    proximoPowerup -= 1;
+    if (proximoPowerup <= 0) {
+      const nombre = elegir(Object.keys(POWERUPS));
+      powerup = { casilla: casillaLibre(), nombre, quedan: DURA_POWERUP_EN_SUELO * FPS };
+      proximoPowerup = CADA_CUANTO_POWERUP * FPS;
+    }
+  }
+
+  // cada serpiente avanza a su ritmo
+  for (const s of serpientes) {
+    s.bajarEfectos();
+    s.contador += 1;
+    if (s.contador >= s.framesPorPaso()) { s.contador = 0; paso(s); }
+  }
+
+  // choques entre serpientes (se revisan después de que todas se movieron)
+  for (const s of serpientes) {
+    for (const otra of serpientes) {
+      if (otra !== s && otra.ocupa(s.cabeza[0], s.cabeza[1])) s.viva = false;
+    }
+    if (s.ocupa(s.cabeza[0], s.cabeza[1], 1)) s.viva = false;
+  }
+
+  const muertas = serpientes.filter(s => !s.viva);
+  if (muertas.length) terminar(muertas);
+}
+
+function paso(s) {
+  // la serpiente avanza una casilla
+  s.dir = s.proximaDir;
+  const [x, y] = s.cabeza;
+  let nx = x + s.dir[0], ny = y + s.dir[1];
+  const fantasma = 'fantasma' in s.efectos;
+
+  // paredes: chocas, o si eres fantasma sales por el otro lado
+  if (!(nx >= 0 && nx < COLS && ny >= 0 && ny < FILAS)) {
+    if (fantasma) { nx = (nx + COLS) % COLS; ny = (ny + FILAS) % FILAS; }
+    else { s.viva = false; return; }
+  }
+  if (obstaculos.has(nx + ',' + ny) && !fantasma) { s.viva = false; return; }
+
+  s.cuerpo.unshift([nx, ny]);
+  if (s.crecer > 0) s.crecer -= 1;
+  else s.cuerpo.pop();
+
+  // ¿comió la manzana?
+  if (nx === manzana[0] && ny === manzana[1]) {
+    s.crecer += 1;
+    s.puntos += PUNTOS_MANZANA * s.multiplicador();
+    manzanasComidas += 1;
+    manzana = casillaLibre();
+    if (manzanasComidas % MANZANAS_POR_NIVEL === 0) {
+      nivel += 1;
+      cargarNivel();
+      avisar('¡Nivel ' + nivel + '!');
+    }
+  }
+
+  // ¿agarró un power-up?
+  if (powerup && nx === powerup.casilla[0] && ny === powerup.casilla[1]) {
+    s.aplicar(powerup.nombre);
+    avisar('J' + s.numero + ': ' + POWERUPS[powerup.nombre].texto);
+    powerup = null;
+  }
+}
+
+function terminar(muertas) {
+  estado = 'fin';
+  if (jugadores === 1) {
+    const p = serpientes[0].puntos;
+    mensajeFin = 'Perdiste con ' + p + ' puntos';
+    if (p > record) { record = p; nuevoRecord = true; guardarRecord(p); }
+  } else if (muertas.length === 2) {
+    mensajeFin = '¡Empate! Chocaron a la vez';
+  } else {
+    const ganador = muertas[0].numero === 1 ? 2 : 1;
+    victorias[ganador] += 1;
+    mensajeFin = '¡Gana el Jugador ' + ganador + '!';
+  }
+}
+
+// ---------- Dibujar ----------
+function dibujar() {
+  if (estado === 'menu') { dibujarMenu(); return; }
+  ctx.fillStyle = FONDO;
+  ctx.fillRect(0, 0, ANCHO, ALTO);
+  const d = ALTO_HUD;
+  // tablero a cuadros
+  ctx.fillStyle = FONDO_2;
+  for (let y = 0; y < FILAS; y++) for (let x = 0; x < COLS; x++) {
+    if ((x + y) % 2) ctx.fillRect(x * CELDA, y * CELDA + d, CELDA, CELDA);
+  }
+  ctx.fillStyle = OBSTACULO;
+  for (const c of obstaculos) {
+    const [x, y] = c.split(',').map(Number);
+    rectRedondo(x * CELDA + 1, y * CELDA + 1 + d, CELDA - 2, CELDA - 2, 3);
+  }
+  // manzana
+  let cx = manzana[0] * CELDA + CELDA / 2, cy = manzana[1] * CELDA + CELDA / 2 + d;
+  ctx.fillStyle = MANZANA;
+  ctx.beginPath(); ctx.arc(cx, cy, CELDA / 2 - 3, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgb(90,60,30)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(cx, cy - 8); ctx.lineTo(cx + 3, cy - 13); ctx.stroke();
+  // power-up (parpadea cuando está por irse)
+  if (powerup && (powerup.quedan > 2 * FPS || Math.floor(powerup.quedan / 8) % 2 === 0)) {
+    const info = POWERUPS[powerup.nombre];
+    cx = powerup.casilla[0] * CELDA + CELDA / 2; cy = powerup.casilla[1] * CELDA + CELDA / 2 + d;
+    ctx.fillStyle = info.color;
+    ctx.beginPath(); ctx.arc(cx, cy, CELDA / 2 - 2, 0, Math.PI * 2); ctx.fill();
+    ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = 'rgb(20,20,30)';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(info.letra, cx, cy + 1);
+  }
+  for (const s of serpientes) s.dibujar(d);
+  dibujarHud();
+  if (estado === 'fin') dibujarFin();
+}
+
+function efectosTexto(s) {
+  return Object.entries(s.efectos).map(([k, v]) => POWERUPS[k].letra + ' ' + (Math.floor(v / FPS) + 1) + 's').join('  ');
+}
+
+function dibujarHud() {
+  ctx.fillStyle = 'rgb(14,15,20)';
+  ctx.fillRect(0, 0, ANCHO, ALTO_HUD);
+  const s1 = serpientes[0];
+  const c1 = `rgb(${COLORES_JUGADOR[1].join(',')})`, c2 = `rgb(${COLORES_JUGADOR[2].join(',')})`;
+  texto('J1: ' + s1.puntos, 12, 8, 20, c1);
+  texto(efectosTexto(s1), 12, 30, 15, GRIS);
+  let marcador = '';
+  if (jugadores === 2) {
+    const s2 = serpientes[1];
+    texto('J2: ' + s2.puntos, ANCHO - 12, 8, 20, c2, 'derecha');
+    texto(efectosTexto(s2), ANCHO - 12, 30, 15, GRIS, 'derecha');
+    marcador = 'Victorias  J1 ' + victorias[1] + ' - ' + victorias[2] + ' J2';
+  } else {
+    texto('Récord: ' + record, ANCHO - 12, 8, 20, DORADO, 'derecha');
+  }
+  texto('Nivel ' + nivel + '   Manzanas: ' + manzanasComidas, ANCHO / 2, 10, 20, BLANCO, 'centro');
+  if (marcador) texto(marcador, ANCHO / 2, 32, 15, DORADO, 'centro');
+  else if (tiempo < avisoHasta) texto(aviso, ANCHO / 2, 32, 15, 'rgb(255,240,150)', 'centro');
+  if (marcador && tiempo < avisoHasta) texto(aviso, ANCHO / 2, ALTO_HUD + 6, 15, 'rgb(255,240,150)', 'centro');
+}
+
+function dibujarMenu() {
+  ctx.fillStyle = FONDO;
+  ctx.fillRect(0, 0, ANCHO, ALTO);
+  const cx = ANCHO / 2, cy = ALTO / 2;
+  texto('SERPIENTE', cx, cy - 165, 48, `rgb(${COLORES_JUGADOR[1].join(',')})`, 'centro');
+  [[1, cy - 60], [2, cy - 10]].forEach(([n, y]) => {
+    const elegido = jugadores === n;
+    const nombre = n === 1 ? '1 jugador  (flechas)' : '2 jugadores  (flechas y WASD)';
+    texto((elegido ? '> ' : '   ') + n + '. ' + nombre, cx, y, 20, elegido ? BLANCO : GRIS, 'centro');
+  });
+  texto('Arriba/abajo o 1-2 para elegir, ESPACIO para empezar', cx, cy + 52, 15, GRIS, 'centro');
+  texto('Récord de 1 jugador: ' + record, cx, cy + 82, 15, DORADO, 'centro');
+  let y = cy + 122;
+  for (const info of Object.values(POWERUPS)) {
+    texto(info.letra + ' = ' + info.texto, cx, y, 15, info.color, 'centro');
+    y += 20;
+  }
+}
+
+function dibujarFin() {
+  ctx.fillStyle = 'rgba(0,0,0,0.63)';
+  ctx.fillRect(0, 0, ANCHO, ALTO);
+  const cx = ANCHO / 2, cy = ALTO / 2;
+  const grande = mensajeFin.length < 22;
+  texto(mensajeFin, cx, cy - (grande ? 55 : 40), grande ? 48 : 20, BLANCO, 'centro');
+  if (nuevoRecord) texto('¡NUEVO RÉCORD!', cx, cy + 5, 20, DORADO, 'centro');
+  texto('ESPACIO para jugar de nuevo  -  R para el menú', cx, cy + 42, 15, GRIS, 'centro');
+}
+
+// ---------- El bucle: siempre 60 cuadros por segundo ----------
+let acumulado = 0;
+let ultimoTiempo = performance.now();
+function bucle(ahora) {
+  let dt = ahora - ultimoTiempo;
+  ultimoTiempo = ahora;
+  if (dt > 250) dt = 250;      // si la pestaña estuvo escondida, no saltamos mil cuadros
+  acumulado += dt;
+  while (acumulado >= PASO) { actualizar(); acumulado -= PASO; }
+  dibujar();
+  requestAnimationFrame(bucle);
+}
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>

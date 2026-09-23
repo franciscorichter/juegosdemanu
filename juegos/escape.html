@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escape de la Fábrica — juego de Manu</title>
+  <!-- Fuente pixelada: si no hay internet, el CSS usa una monoespaciada del computador -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+  <script>
+    // Aplica el tema guardado antes de dibujar la página, para que no parpadee.
+    try {
+      const tema = localStorage.getItem('tema');
+      if (tema) document.documentElement.dataset.tema = tema;
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="cabecera">
+    <nav class="menu">
+      <a href="../index.html#juegos">← Volver a la página</a>
+      <button class="tema" id="tema" title="Cambiar entre modo claro y oscuro">🌙 Modo oscuro</button>
+    </nav>
+    <h1>🔦 Escape de la Fábrica</h1>
+    <p class="sub">Estás encerrado en una fábrica oscura y solo ves lo que alumbra tu linterna.</p>
+  </header>
+
+  <main>
+
+<section class="bloque">
+  <img class="captura grande" src="../img/escape.png" alt="Captura de Escape de la Fábrica">
+<ul class="lista">
+  <li><b>3 niveles</b>. En cada uno junta las 3 llaves, abre las puertas de colores y llega a la salida.</li>
+  <li>La <b>linterna</b> gasta batería; las pilas verdes la recargan. Con luz ves lejos... y el monstruo también te ve.</li>
+  <li>El <b>monstruo</b> patrulla; si te ve, te persigue (la pantalla tiembla y suena un zumbido).</li>
+  <li>En el nivel 3 hay un <b>espectro</b> que solo se mueve cuando no lo alumbras.</li>
+  <li>Dificultad Fácil / Normal / Difícil al empezar.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame · Linux, Windows y Mac</p>
+  <a class="boton" href="../descargas/escape.zip" download>⬇ Descargar .zip (13 KB)</a>
+  <a class="boton jugar" href="../jugar/escape.html">🎮 Jugar en el navegador</a>
+</section>
+
+<section class="bloque">
+  <h2>▶️ Cómo jugar</h2>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 escape.py</code> (en Windows: <code>python escape.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</section>
+
+<section class="bloque">
+  <h2>🎮 Controles</h2>
+  <table class="leyenda">
+    <tr><td><b>Flechas</b></td><td>moverte</td></tr>
+    <tr><td><b>F</b></td><td>prender/apagar la linterna</td></tr>
+    <tr><td><b>ESPACIO</b></td><td>elegir en el menú / siguiente nivel</td></tr>
+    <tr><td><b>R</b></td><td>reiniciar</td></tr>
+    <tr><td><b>ESC</b></td><td>salir</td></tr>
+  </table>
+</section>
+
+<section class="bloque">
+  <h2>⌨️ Cambiar los controles</h2>
+  <p>Abre <code>controles.txt</code> (está junto a <code>escape.py</code>) y cambia la tecla después del <code>=</code>. Así viene de fábrica:</p>
+  <pre>izquierda = left
+derecha   = right
+arriba    = up
+abajo     = down
+linterna  = f
+continuar = space
+reiniciar = r
+salir     = escape</pre>
+  <p>Nombres válidos: letras (<code>a</code>, <code>b</code>...), flechas (<code>up</code>, <code>down</code>, <code>left</code>, <code>right</code>), <code>space</code>, <code>return</code>, <code>tab</code>, <code>left shift</code>, <code>left ctrl</code> y números. Si escribes una tecla que no existe, el juego avisa y usa la de siempre.</p>
+</section>
+
+<section class="bloque">
+  <h2>✏️ Haz tu propio nivel</h2>
+  <p>Los niveles están en laberinto1.txt, laberinto2.txt y laberinto3.txt. Son dibujos de texto: cada letra es un cuadrito.</p>
+  <table class="leyenda">
+    <tr><td><code>#</code></td><td>pared</td></tr>
+    <tr><td><code>.</code></td><td>piso</td></tr>
+    <tr><td><code>P</code></td><td>tú</td></tr>
+    <tr><td><code>M</code></td><td>monstruo</td></tr>
+    <tr><td><code>E</code></td><td>espectro (se congela con la luz)</td></tr>
+    <tr><td><code>K</code></td><td>llave de salida</td></tr>
+    <tr><td><code>D</code></td><td>puerta de salida (se abre con todas las K)</td></tr>
+    <tr><td><code>B</code></td><td>pila</td></tr>
+    <tr><td><code>r v a</code></td><td>llave roja / verde / azul</td></tr>
+    <tr><td><code>R V A</code></td><td>puerta roja / verde / azul</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 escape.py mi_laberinto.txt</code></p>
+  <ul class="lista">
+    <li>Tiene que haber una <b>P</b> y una <b>D</b>. Lo demás es opcional.</li>
+    <li>Puedes pasar varios archivos y se juegan en orden: <code>python3 escape.py uno.txt dos.txt</code>.</li>
+  </ul>
+</section>
+
+  </main>
+
+  <footer>
+    <p>Hecho por Manu en su Game Studio</p>
+  </footer>
+
+  <script>
+    // Botón de tema: cambia entre claro y oscuro y lo recuerda.
+    const botonTema = document.getElementById('tema');
+    function pintarBotonTema() {
+      const oscuro = document.documentElement.dataset.tema === 'oscuro';
+      botonTema.textContent = oscuro ? '☀️ Modo claro' : '🌙 Modo oscuro';
+    }
+    botonTema.addEventListener('click', () => {
+      const nuevo = document.documentElement.dataset.tema === 'oscuro' ? 'claro' : 'oscuro';
+      document.documentElement.dataset.tema = nuevo;
+      try { localStorage.setItem('tema', nuevo); } catch (e) {}
+      pintarBotonTema();
+    });
+    pintarBotonTema();
+  </script>
+</body>
+</html>

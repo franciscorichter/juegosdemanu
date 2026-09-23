@@ -1,0 +1,610 @@
+/* ============================================================
+   Los mods de Manu — estilo tipo Minecraft
+   Colores sacados de bloques. Modo claro (día) y oscuro (noche).
+   ============================================================ */
+
+:root {
+  --pasto: #5d9a3c;
+  --pasto-oscuro: #3e6b28;
+  --tierra: #79553d;
+  --tierra-oscura: #5a3d2b;
+  --piedra: #7f7f7f;
+  --piedra-oscura: #4f4f4f;
+  --madera: #a8834e;
+  --diamante: #4aedd9;
+  --amarillo: #ffff55;
+  --texto: #ffffff;
+  --sombra: #1a1a1a;
+
+  /* lo que cambia entre día y noche */
+  --cielo: #7fb2f0;
+  --fondo-cabecera: transparent;
+  --tarjeta: #7f7f7f;
+  --tarjeta-borde: #4f4f4f;
+  --tarjeta-texto: #ffffff;
+  --input-fondo: #1a1a1a;
+}
+
+/* Noche: cielo oscuro y tarjetas más apagadas */
+:root[data-tema="oscuro"] {
+  --cielo: #141a33;
+  --pasto: #3f6d2a;
+  --pasto-oscuro: #2a4a1b;
+  --tierra: #4a3324;
+  --tierra-oscura: #2f2016;
+  --piedra: #4a4a4a;
+  --piedra-oscura: #2b2b2b;
+  --madera: #6b532f;
+  --tarjeta: #3a3a3a;
+  --tarjeta-borde: #1f1f1f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  background-color: var(--cielo);
+  /* Franjas de pasto y tierra al fondo, como un bloque de pasto */
+  background-image: linear-gradient(
+    to bottom,
+    var(--cielo) 0,
+    var(--cielo) 180px,
+    var(--pasto) 180px,
+    var(--pasto) 200px,
+    var(--tierra) 200px
+  );
+  background-attachment: fixed;
+  color: var(--texto);
+  line-height: 1.8;
+  font-size: 12px;
+}
+
+/* ------------------------------------------------ cabecera */
+.cabecera {
+  text-align: center;
+  padding: 30px 16px 24px;
+}
+
+h1 {
+  font-size: 22px;
+  margin: 0 0 10px;
+  text-shadow: 4px 4px 0 var(--sombra);
+}
+
+.sub {
+  margin: 0;
+  color: var(--amarillo);
+  text-shadow: 2px 2px 0 var(--sombra);
+}
+
+/* Contadores: cuántas cosas hay, con número grande estilo cartel */
+.contadores {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.contador {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 92px;
+  padding: 10px 12px;
+  background: var(--tierra);
+  border: 3px solid var(--tierra-oscura);
+  box-shadow: 4px 4px 0 var(--sombra);
+  color: var(--texto);
+  text-decoration: none;
+}
+
+.contador:hover {
+  background: var(--madera);
+}
+
+.contador .numero {
+  font-size: 22px;
+  color: var(--amarillo);
+  text-shadow: 3px 3px 0 var(--sombra);
+}
+
+.contador .que {
+  font-size: 8px;
+}
+
+.menu {
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.menu a,
+.tema {
+  font-family: inherit;
+  background: var(--piedra-oscura);
+  border: 3px solid var(--sombra);
+  padding: 8px 10px;
+  color: var(--texto);
+  text-decoration: none;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.menu a:hover,
+.tema:hover {
+  background: var(--piedra);
+  color: var(--amarillo);
+}
+
+.tema {
+  border-color: var(--diamante);
+}
+
+.buscador {
+  margin-top: 16px;
+}
+
+#buscar {
+  width: 100%;
+  max-width: 500px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 10px;
+  color: var(--texto);
+  background: var(--input-fondo);
+  border: 4px solid var(--piedra-oscura);
+  box-shadow: 4px 4px 0 var(--sombra);
+  outline: none;
+}
+
+#buscar:focus {
+  border-color: var(--diamante);
+}
+
+#buscar::placeholder {
+  color: #888888;
+}
+
+/* ------------------------------------------------ cuerpo */
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 16px 40px;
+}
+
+h2 {
+  font-size: 16px;
+  margin: 30px 0 16px;
+  text-shadow: 3px 3px 0 var(--sombra);
+}
+
+h3 {
+  font-size: 14px;
+  margin: 0 0 6px;
+  color: var(--diamante);
+  text-shadow: 2px 2px 0 var(--sombra);
+}
+
+h3.grupo {
+  font-size: 13px;
+  color: var(--amarillo);
+  margin: 24px 0 4px;
+}
+
+.nota {
+  font-size: 9px;
+  color: #dddddd;
+  margin: 0 0 16px;
+}
+
+h3.grupo + .nota {
+  margin-bottom: 10px;
+}
+
+.subtitulo {
+  font-size: 10px;
+  color: var(--amarillo);
+  margin: 10px 0 2px;
+  text-shadow: 1px 1px 0 var(--sombra);
+}
+
+/* Cuadrícula de tarjetas: 1 columna en celular, más en pantalla grande */
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+/* Cada tarjeta parece un bloque con borde pixelado */
+.tarjeta,
+.bloque {
+  background: var(--tarjeta);
+  border: 4px solid var(--tarjeta-borde);
+  box-shadow: 6px 6px 0 var(--sombra);
+  padding: 16px;
+  color: var(--tarjeta-texto);
+}
+
+.bloque {
+  margin-bottom: 20px;
+}
+
+/* Tabla de récords */
+.records {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.records th,
+.records td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 3px solid var(--tarjeta-borde);
+  vertical-align: top;
+}
+
+.records th {
+  color: var(--amarillo);
+  text-shadow: 1px 1px 0 var(--sombra);
+}
+
+.records td:first-child {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.bloque h2 {
+  margin-top: 0;
+}
+
+.tarjeta p {
+  margin: 0;
+}
+
+.tarjeta.reco,
+.tarjeta.en-progreso {
+  background: var(--madera);
+  border-color: var(--tierra-oscura);
+}
+
+.tarjeta.pack {
+  background: #2e8b57;
+  border-color: #1c5a37;
+}
+
+.tarjeta.juego {
+  background: #5a3d8a;
+  border-color: #33224f;
+}
+
+.tarjeta.amongus {
+  background: #b0322e;
+  border-color: #6e1e1c;
+}
+
+.tarjeta.favorito {
+  background: #2b4c9e;
+  border-color: #172b5c;
+}
+
+:root[data-tema="oscuro"] .tarjeta.pack { background: #1f5a3a; }
+:root[data-tema="oscuro"] .tarjeta.juego { background: #3b2860; }
+:root[data-tema="oscuro"] .tarjeta.amongus { background: #7a2320; }
+:root[data-tema="oscuro"] .tarjeta.favorito { background: #1d356f; }
+
+.icono {
+  font-size: 32px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.version {
+  font-size: 9px;
+  color: var(--amarillo);
+  margin: 0 0 12px !important;
+}
+
+.necesita {
+  font-size: 9px;
+  color: #ffaa00;
+  margin: 10px 0 0 !important;
+}
+
+.lista {
+  padding-left: 18px;
+  margin: 0;
+  font-size: 10px;
+}
+
+.lista li {
+  margin-bottom: 6px;
+}
+
+.lista b,
+.novedades b {
+  color: var(--amarillo);
+}
+
+.captura {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 3px solid var(--sombra);
+  margin: 8px 0 12px;
+  image-rendering: pixelated;
+}
+
+.captura.grande {
+  max-width: 600px;
+  margin: 0 auto 16px;
+}
+
+/* ------------------------------------------------ botones */
+.boton {
+  display: block;
+  margin: 14px 0 0;
+  padding: 12px;
+  text-align: center;
+  background: var(--pasto);
+  border: 4px solid var(--pasto-oscuro);
+  box-shadow: 4px 4px 0 var(--sombra);
+  color: var(--texto);
+  text-decoration: none;
+  text-shadow: 2px 2px 0 var(--sombra);
+  font-size: 11px;
+}
+
+.boton:hover {
+  filter: brightness(1.15);
+  color: var(--texto);
+}
+
+.boton:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--sombra);
+}
+
+.boton.apagado {
+  background: var(--piedra-oscura);
+  border-color: var(--sombra);
+  color: #aaaaaa;
+  cursor: not-allowed;
+}
+
+.boton.enlace {
+  background: #3c6ec9;
+  border-color: #244a8c;
+  margin-top: 10px;
+}
+
+/* Etiqueta "juego de pago" / "gratis" al lado del nombre */
+.etiqueta {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 6px;
+  padding: 3px 6px;
+  font-size: 8px;
+  color: var(--texto);
+  text-shadow: 1px 1px 0 var(--sombra);
+  border: 2px solid var(--sombra);
+  white-space: nowrap;
+}
+
+.etiqueta.pago { background: #c8a000; }
+.etiqueta.gratis { background: var(--pasto); }
+
+/* Botones del filtro Todos / Gratis / De pago */
+.filtro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filtro button {
+  font-family: inherit;
+  font-size: 10px;
+  color: var(--texto);
+  background: var(--piedra-oscura);
+  border: 3px solid var(--sombra);
+  box-shadow: 3px 3px 0 var(--sombra);
+  padding: 8px 12px;
+  cursor: pointer;
+  text-shadow: 1px 1px 0 var(--sombra);
+}
+
+.filtro button:hover {
+  background: var(--piedra);
+}
+
+.filtro button.activo {
+  background: var(--pasto);
+  border-color: var(--pasto-oscuro);
+}
+
+/* ------------------------------------------------ desplegables y pasos */
+details {
+  margin-top: 12px;
+}
+
+summary {
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--amarillo);
+  text-shadow: 2px 2px 0 var(--sombra);
+}
+
+details ol {
+  padding-left: 20px;
+  margin: 8px 0 0;
+  font-size: 10px;
+}
+
+details li {
+  margin-bottom: 6px;
+}
+
+/* ------------------------------------------------ novedades */
+.novedades {
+  background: var(--madera);
+  border: 4px solid var(--tierra-oscura);
+  box-shadow: 6px 6px 0 var(--sombra);
+  padding: 16px;
+  margin-top: 30px;
+}
+
+.novedades h2 {
+  margin-top: 0;
+}
+
+.dia summary {
+  font-size: 11px;
+}
+
+.dia ul {
+  padding-left: 20px;
+  margin: 8px 0 12px;
+  font-size: 10px;
+}
+
+.dia li {
+  margin-bottom: 8px;
+}
+
+/* ------------------------------------------------ tablas y código */
+.leyenda {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 10px;
+  margin: 8px 0 12px;
+}
+
+.leyenda td {
+  border: 2px solid var(--sombra);
+  padding: 6px 8px;
+  vertical-align: top;
+}
+
+.leyenda td:first-child {
+  white-space: nowrap;
+  width: 1%;
+}
+
+pre {
+  background: var(--sombra);
+  color: var(--diamante);
+  padding: 12px;
+  font-family: inherit;
+  font-size: 10px;
+  overflow-x: auto;
+  border: 3px solid var(--piedra-oscura);
+}
+
+code {
+  background: var(--sombra);
+  padding: 2px 6px;
+  font-family: inherit;
+  font-size: 10px;
+  color: var(--diamante);
+  word-break: break-all;
+}
+
+strong {
+  color: #55ff55;
+}
+
+a {
+  color: #55ffff;
+}
+
+a:hover {
+  color: var(--amarillo);
+}
+
+/* ------------------------------------------------ instalar y pie */
+.instalar {
+  background: var(--tierra-oscura);
+  border: 4px solid var(--sombra);
+  box-shadow: 6px 6px 0 var(--sombra);
+  padding: 16px;
+  margin-top: 30px;
+}
+
+.instalar h2 {
+  margin-top: 0;
+}
+
+.instalar ol {
+  padding-left: 24px;
+  margin: 0;
+}
+
+.instalar li {
+  margin-bottom: 16px;
+}
+
+.instalar ul {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.instalar ul li {
+  margin-bottom: 4px;
+}
+
+footer {
+  text-align: center;
+  padding: 20px 16px;
+  font-size: 9px;
+  background: var(--sombra);
+}
+
+footer p {
+  margin: 0;
+}
+
+/* En pantallas grandes la letra puede ser un poco más grande */
+@media (min-width: 700px) {
+  body {
+    font-size: 13px;
+  }
+  h1 {
+    font-size: 28px;
+  }
+}
+
+/* Botón "Jugar en el navegador": naranja tipo lava */
+.boton.jugar {
+  background: #d9641e;
+  border-color: #8a3d0f;
+  margin-top: 10px;
+}
+
+/* Resource packs: tarjeta turquesa tipo prismarina */
+.tarjeta.rp {
+  background: #2a7f8a;
+  border-color: #174a52;
+}
+
+:root[data-tema="oscuro"] .tarjeta.rp { background: #1c545c; }
+
+/* Resource packs: tarjeta turquesa tipo prismarina */
+.tarjeta.rp {
+  background: #2a7f8a;
+  border-color: #174a52;
+}
+
+:root[data-tema="oscuro"] .tarjeta.rp { background: #1c545c; }

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salto de Manu</title>
+<style>
+  :root {
+    --pasto: #5d9a3c; --pasto-oscuro: #3e6b28; --piedra: #7f7f7f; --piedra-oscura: #4f4f4f;
+    --cielo: #7fb2f0; --diamante: #4aedd9; --texto: #ffffff; --sombra: #1a1a1a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 16px;
+    background: var(--sombra); color: var(--texto);
+    font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 12px; line-height: 1.8;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  h1 { font-size: 18px; color: var(--diamante); text-shadow: 3px 3px 0 #000; margin: 8px 0 12px; text-align: center; }
+  canvas {
+    display: block; max-width: 100%; height: auto; background: #000;
+    border: 4px solid var(--piedra-oscura); box-shadow: 6px 6px 0 #000;
+    image-rendering: pixelated; touch-action: none; cursor: pointer;
+  }
+  .ayuda { font-size: 9px; color: #dddddd; text-align: center; max-width: 600px; margin: 10px 0 0; }
+  .boton {
+    display: inline-block; margin: 16px 0; padding: 12px 16px; font-size: 11px;
+    background: #3c6ec9; border: 4px solid #244a8c; box-shadow: 4px 4px 0 #000;
+    color: var(--texto); text-decoration: none; text-shadow: 2px 2px 0 #000;
+  }
+  .boton:hover { background: #4a82e0; }
+  .boton:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+</style>
+</head>
+<body>
+<h1>SALTO</h1>
+<canvas id="juego" width="800" height="420"></canvas>
+<p class="ayuda">ESPACIO / flecha arriba / toque: saltar (déjalo apretado para saltar apenas toques el suelo) &middot; R: reiniciar el nivel</p>
+<a class="boton" href="../index.html">&larr; Volver a la página</a>
+
+<script>
+// ============================================================
+//  Salto — versión web del salto.py de Manu (runner tipo Geometry Dash)
+//  El cubo corre solo. Tú decides cuándo saltar.
+//    #  bloque (te paras encima; de frente te mata)
+//    ^  pincho (te mata)
+//    .  nada
+// ============================================================
+
+// ---------- Niveles (copiados de nivel1.txt y nivel2.txt) ----------
+const NIVELES = [
+`..........................................................................................................................................................................
+..........................................................................................................................................................................
+................................................................................##..................#....................^................................................
+..............^.........^........^^.........#.......##........^.......#^........##........^^........#.......^^^.........###.........^.....#.......^^........^.............`,
+`............................................................................................................................................................................................................................
+............................................................................................................................................................................................................................
+..................................................................................................#.........................................................................................................................
+................................................##..........#.......................####........###.......................................^...............................##................................................
+............^^......^^......^^^.........#^......##..^.......#...^^........^^^.......####^^......###.........^^......^^......^^^.........#####.......^.....^.....^.........##^^........^^^.........#^#.......^^..............`,
+];
+
+// ---------- Ajustes (los mismos que en salto.py) ----------
+const TILE = 40;
+const ANCHO = 800, ALTO = 420;
+const FPS = 60, PASO = 1000 / FPS;
+const SUELO_Y = 340;
+const CUBO_X = 200;
+
+const VELOCIDAD = 6;
+const GRAVEDAD = 0.7;
+const SALTO = -11.5;
+const LADO = 34;
+const CUADROS_EXPLOSION = 25;
+const CUADROS_FESTEJO = 120;
+
+// ---------- Colores ----------
+const FONDO_INICIO = [20, 30, 80];
+const FONDO_FIN = [90, 20, 80];
+const PISO = 'rgb(30,30,50)';
+const LINEA_PISO = 'rgb(120,220,255)';
+const BLOQUE = 'rgb(40,40,60)';
+const BLOQUE_BORDE = 'rgb(120,220,255)';
+const PINCHO = 'rgb(240,240,250)';
+const PINCHO_BORDE = 'rgb(0,0,0)';
+const CUBO = 'rgb(255,200,40)';
+const CUBO_BORDE = 'rgb(0,0,0)';
+const CUBO_OJO = 'rgb(0,0,0)';
+const BARRA_FONDO = 'rgb(0,0,0)';
+const BARRA = 'rgb(120,220,255)';
+const BLANCO = 'rgb(255,255,255)';
+const NEGRO = 'rgb(0,0,0)';
+const VERDE = 'rgb(90,230,120)';
+const AMARILLO = 'rgb(255,220,40)';
+
+const canvas = document.getElementById('juego');
+const ctx = canvas.getContext('2d');
+const FUENTE = "'Press Start 2P', 'Courier New', monospace";
+
+function azarEntre(a, b) { return a + Math.random() * (b - a); }
+
+// ---------- Récord: menos intentos por nivel (localStorage) ----------
+function leerRecords() {
+  try { return JSON.parse(localStorage.getItem('salto-record')) || {}; }
+  catch (e) { return {}; }
+}
+function guardarRecords(r) {
+  try { localStorage.setItem('salto-record', JSON.stringify(r)); } catch (e) {}
+}
+let records = leerRecords();
+
+// ---------- Sonidos (Web Audio) ----------
+let audio = null;
+function prepararAudio() {
+  try {
+    if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === 'suspended') audio.resume();
+  } catch (e) { audio = null; }
+}
+function tono(f0, f1, dur, vol, tipo) {
+  if (!audio) return;
+  try {
+    const t = audio.currentTime;
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = tipo || 'square';
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.linearRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    o.connect(g); g.connect(audio.destination);
+    o.start(t); o.stop(t + dur);
+  } catch (e) {}
+}
+function sonar(nombre) {
+  if (nombre === 'salto') tono(300, 600, 0.08, 0.15);
+  else if (nombre === 'boom') tono(150, 40, 0.3, 0.3, 'sawtooth');
+  else if (nombre === 'meta') { tono(523, 523, 0.12, 0.2); setTimeout(() => tono(659, 659, 0.12, 0.2), 120); setTimeout(() => tono(784, 784, 0.25, 0.2), 240); }
+}
+
+// ---------- Rectángulos ----------
+function R(x, y, w, h) { return { x, y, w, h }; }
+function chocan(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+// ---------- Cargar un nivel desde el texto ----------
+function cargarNivel(textoNivel) {
+  const filas = textoNivel.split('\n').filter((l) => l.length > 0);
+  const alto = filas.length;
+  const bloques = [], pinchos = [];
+  let largo = 0;
+  filas.forEach((fila, fy) => {
+    const y = SUELO_Y - (alto - fy) * TILE;     // la última fila queda sobre el piso
+    largo = Math.max(largo, fila.length * TILE);
+    for (let fx = 0; fx < fila.length; fx++) {
+      const x = fx * TILE;
+      if (fila[fx] === '#') bloques.push(R(x, y, TILE, TILE));
+      else if (fila[fx] === '^') pinchos.push(R(x, y, TILE, TILE));
+    }
+  });
+  return { bloques, pinchos, largo };
+}
+
+// ---------- Partículas de la explosión ----------
+class Particula {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    const ang = azarEntre(0, Math.PI * 2);
+    const rap = azarEntre(2, 9);
+    this.vx = Math.cos(ang) * rap;
+    this.vy = Math.sin(ang) * rap - 3;
+    this.vida = Math.floor(azarEntre(15, CUADROS_EXPLOSION + 1));
+  }
+  actualizar() { this.x += this.vx; this.y += this.vy; this.vy += 0.4; this.vida -= 1; }
+  dibujar(cam) {
+    const tam = Math.max(2, Math.floor(this.vida / 4));
+    ctx.fillStyle = CUBO;
+    ctx.fillRect(Math.floor(this.x - cam), Math.floor(this.y), tam, tam);
+  }
+}
+
+// ---------- El cubo ----------
+class Cubo {
+  constructor() {
+    this.rect = R(0, SUELO_Y - LADO, LADO, LADO);
+    this.velY = 0;
+    this.enSuelo = true;
+    this.angulo = 0;
+    this.vivo = true;
+  }
+  saltar() {
+    if (this.enSuelo) { this.velY = SALTO; this.enSuelo = false; sonar('salto'); }
+  }
+  actualizar(bloques) {
+    const r = this.rect;
+    // 1) avanza: si choca de frente con un bloque, muere
+    r.x += VELOCIDAD;
+    for (const b of bloques) if (chocan(r, b)) { this.vivo = false; return; }
+
+    // 2) cae o sube
+    this.velY += GRAVEDAD;
+    r.y += Math.trunc(this.velY);
+    this.enSuelo = false;
+    for (const b of bloques) {
+      if (chocan(r, b)) {
+        if (this.velY > 0 && (r.y + r.h) - b.y < 20) {
+          r.y = b.y - r.h;              // aterriza encima
+          this.velY = 0;
+          this.enSuelo = true;
+        } else {
+          this.vivo = false;            // se pegó por abajo o de lado
+          return;
+        }
+      }
+    }
+    if (r.y + r.h >= SUELO_Y) {
+      r.y = SUELO_Y - r.h;
+      this.velY = 0;
+      this.enSuelo = true;
+    }
+
+    // 3) gira en el aire, se endereza al aterrizar
+    if (this.enSuelo) this.angulo = 0;
+    else this.angulo = (this.angulo + 6) % 360;
+  }
+  tocaPincho(pinchos) {
+    const r = this.rect;
+    const caja = R(r.x + 5, r.y + 5, r.w - 10, r.h - 10);
+    for (const p of pinchos) {
+      // solo la punta hace daño: inflate(-16,-14) y bajado 7
+      const punta = R(p.x + 8, p.y + 7 + 7, p.w - 16, p.h - 14);
+      if (chocan(caja, punta)) return true;
+    }
+    return false;
+  }
+  dibujar(cam) {
+    const r = this.rect;
+    const cx = r.x + r.w / 2 - cam, cy = r.y + r.h / 2;
+    const a = this.angulo * Math.PI / 180;
+    const m = LADO / 2;
+    const cos = Math.cos(a), sin = Math.sin(a);
+    const esquinas = [[-m, -m], [m, -m], [m, m], [-m, m]].map(([ex, ey]) => [cx + ex * cos - ey * sin, cy + ex * sin + ey * cos]);
+    poligono(CUBO, esquinas);
+    poligono(CUBO_BORDE, esquinas, 3);
+    // ojos (dos cuadraditos que giran con el cubo)
+    for (const ox of [-7, 5]) {
+      const ex = ox, ey = -5;
+      const px = cx + ex * cos - ey * sin;
+      const py = cy + ex * sin + ey * cos;
+      ctx.fillStyle = CUBO_OJO;
+      ctx.fillRect(px - 2, py - 2, 5, 5);
+    }
+  }
+}
+
+// ---------- Dibujos de ayuda ----------
+function mezclar(c1, c2, t) {
+  return 'rgb(' + c1.map((a, i) => Math.floor(a + (c2[i] - a) * t)).join(',') + ')';
+}
+function poligono(color, puntos, grosor) {
+  ctx.beginPath();
+  ctx.moveTo(puntos[0][0], puntos[0][1]);
+  for (let i = 1; i < puntos.length; i++) ctx.lineTo(puntos[i][0], puntos[i][1]);
+  ctx.closePath();
+  if (grosor) { ctx.lineWidth = grosor; ctx.strokeStyle = color; ctx.stroke(); }
+  else { ctx.fillStyle = color; ctx.fill(); }
+}
+function dibujarPincho(r) {
+  poligono(PINCHO, [[r.x, r.y + r.h], [r.x + r.w, r.y + r.h], [r.x + r.w / 2, r.y]]);
+  poligono(PINCHO_BORDE, [[r.x, r.y + r.h], [r.x + r.w, r.y + r.h], [r.x + r.w / 2, r.y]], 2);
+}
+function texto(msg, y, tam, color, x) {
+  if (color === undefined) color = BLANCO;
+  if (x === undefined) x = ANCHO / 2;
+  ctx.font = 'bold ' + tam + 'px ' + FUENTE;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = NEGRO; ctx.fillText(msg, x + 2, y + 2);
+  ctx.fillStyle = color; ctx.fillText(msg, x, y);
+}
+function rectRedondo(color, x, y, w, h, r) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ---------- El juego ----------
+// estados: "inicio", "jugando", "explotando", "completo", "ganaste"
+let j;
+function nuevoIntento(indice, intentos) {
+  const n = cargarNivel(NIVELES[indice]);
+  return { indice, bloques: n.bloques, pinchos: n.pinchos, largo: n.largo,
+           cubo: new Cubo(), particulas: [], intentos, estado: 'jugando', timer: 0, nuevoRecord: false };
+}
+j = nuevoIntento(0, 1);
+j.estado = 'inicio';
+
+const teclas = {};
+let tocando = false;
+function saltarApretado() { return teclas[' '] || teclas['ArrowUp'] || teclas['w'] || teclas['W'] || tocando; }
+
+function empezar() {
+  if (j.estado === 'inicio') { j = nuevoIntento(0, 1); }
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === ' ' || e.key === 'ArrowUp') e.preventDefault();
+  teclas[e.key] = true;
+  prepararAudio();
+  if (e.repeat) return;
+  if (j.estado === 'inicio') { if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowUp') empezar(); return; }
+  if (e.key === 'r' || e.key === 'R') {
+    if (j.estado === 'ganaste') j = nuevoIntento(0, 1);
+    else j = nuevoIntento(j.indice, 1);
+  }
+});
+window.addEventListener('keyup', (e) => { teclas[e.key] = false; });
+window.addEventListener('blur', () => { for (const k in teclas) teclas[k] = false; tocando = false; });
+
+canvas.addEventListener('pointerdown', (e) => {
+  e.preventDefault(); prepararAudio();
+  if (j.estado === 'inicio') { empezar(); return; }
+  if (j.estado === 'ganaste') { j = nuevoIntento(0, 1); return; }
+  tocando = true;
+});
+window.addEventListener('pointerup', () => { tocando = false; });
+window.addEventListener('pointercancel', () => { tocando = false; });
+
+function paso() {
+  const cubo = j.cubo;
+  if (j.estado === 'jugando') {
+    if (saltarApretado()) cubo.saltar();
+    cubo.actualizar(j.bloques);
+    if (cubo.vivo && cubo.tocaPincho(j.pinchos)) cubo.vivo = false;
+    if (!cubo.vivo) {
+      j.estado = 'explotando';
+      j.timer = CUADROS_EXPLOSION;
+      j.particulas = [];
+      for (let i = 0; i < 30; i++) j.particulas.push(new Particula(cubo.rect.x + LADO / 2, cubo.rect.y + LADO / 2));
+      sonar('boom');
+    } else if (cubo.rect.x >= j.largo) {
+      j.estado = 'completo';
+      j.timer = CUADROS_FESTEJO;
+      sonar('meta');
+      // ¿récord de menos intentos en este nivel?
+      const clave = 'nivel' + (j.indice + 1);
+      if (!records[clave] || j.intentos < records[clave]) {
+        records[clave] = j.intentos;
+        j.nuevoRecord = true;
+        guardarRecords(records);
+      }
+    }
+  } else if (j.estado === 'explotando') {
+    for (const p of j.particulas) p.actualizar();
+    j.timer -= 1;
+    if (j.timer <= 0) j = nuevoIntento(j.indice, j.intentos + 1);   // reinicio instantáneo
+  } else if (j.estado === 'completo') {
+    cubo.rect.x += VELOCIDAD;         // sigue corriendo feliz
+    j.timer -= 1;
+    if (j.timer <= 0) {
+      if (j.indice + 1 < NIVELES.length) j = nuevoIntento(j.indice + 1, 1);
+      else j.estado = 'ganaste';
+    }
+  }
+}
+
+function dibujar() {
+  const cubo = j.cubo;
+  const cam = cubo.rect.x - CUBO_X;
+  const progreso = Math.max(0, Math.min(1, cubo.rect.x / j.largo));
+
+  ctx.fillStyle = mezclar(FONDO_INICIO, FONDO_FIN, progreso);
+  ctx.fillRect(0, 0, ANCHO, ALTO);
+  // rayitas del fondo que se mueven lento (parallax)
+  ctx.strokeStyle = mezclar(FONDO_INICIO, [255, 255, 255], 0.08);
+  ctx.lineWidth = 2;
+  const desfase = ((Math.floor(cam / 3) % 120) + 120) % 120;
+  for (let i = -1; i < ANCHO / 120 + 2; i++) {
+    const x = i * 120 - desfase;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, SUELO_Y); ctx.stroke();
+  }
+  ctx.fillStyle = PISO;
+  ctx.fillRect(0, SUELO_Y, ANCHO, ALTO - SUELO_Y);
+  ctx.fillStyle = LINEA_PISO;
+  ctx.fillRect(0, SUELO_Y - 1, ANCHO, 3);
+
+  for (const b of j.bloques) {
+    const x = b.x - cam;
+    if (-TILE < x && x < ANCHO) {
+      ctx.fillStyle = BLOQUE; ctx.fillRect(x, b.y, b.w, b.h);
+      ctx.strokeStyle = BLOQUE_BORDE; ctx.lineWidth = 2; ctx.strokeRect(x + 1, b.y + 1, b.w - 2, b.h - 2);
+    }
+  }
+  for (const p of j.pinchos) {
+    const x = p.x - cam;
+    if (-TILE < x && x < ANCHO) dibujarPincho(R(x, p.y, p.w, p.h));
+  }
+  // meta: una línea brillante al final
+  const finX = j.largo - cam;
+  if (-10 < finX && finX < ANCHO + 10) { ctx.fillStyle = VERDE; ctx.fillRect(finX, 0, 8, SUELO_Y); }
+
+  if (j.estado === 'explotando') for (const p of j.particulas) p.dibujar(cam);
+  else cubo.dibujar(cam);
+
+  // barra de progreso y textos
+  rectRedondo(BARRA_FONDO, ANCHO / 2 - 150, 14, 300, 14, 7);
+  if (progreso > 0) rectRedondo(BARRA, ANCHO / 2 - 150, 14, Math.max(14, Math.floor(300 * progreso)), 14, 7);
+  texto(Math.floor(progreso * 100) + '%', 44, 16);
+  texto('Nivel ' + (j.indice + 1) + '/' + NIVELES.length, 22, 16, BLANCO, 90);
+  texto('Intento ' + j.intentos, 22, 16, BLANCO, ANCHO - 90);
+
+  if (j.estado === 'inicio') {
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, ANCHO, ALTO);
+    texto('SALTO', ALTO / 2 - 90, 48, AMARILLO);
+    texto('El cubo corre solo. Tú decides cuándo saltar.', ALTO / 2 - 30, 15);
+    texto('ESPACIO / flecha arriba / toque: saltar', ALTO / 2 + 5, 15);
+    texto('R: reiniciar el nivel', ALTO / 2 + 35, 15);
+    const r1 = records.nivel1 ? records.nivel1 + ' intentos' : '—';
+    const r2 = records.nivel2 ? records.nivel2 + ' intentos' : '—';
+    texto('Récord nivel 1: ' + r1 + '   Récord nivel 2: ' + r2, ALTO / 2 + 70, 12, LINEA_PISO);
+    texto('ESPACIO o clic para empezar', ALTO / 2 + 115, 18, VERDE);
+  } else if (j.estado === 'completo') {
+    texto('¡NIVEL COMPLETO!', ALTO / 2 - 40, 44, VERDE);
+    if (j.nuevoRecord) texto('¡NUEVO RÉCORD: ' + j.intentos + ' intentos!', ALTO / 2 + 10, 18, AMARILLO);
+  } else if (j.estado === 'ganaste') {
+    texto('¡GANASTE TODO!', ALTO / 2 - 40, 44, VERDE);
+    texto('R o clic para jugar de nuevo', ALTO / 2 + 20, 18);
+  }
+}
+
+let acumulado = 0, ultimoTiempo = performance.now();
+function bucle(ahora) {
+  let dt = ahora - ultimoTiempo;
+  ultimoTiempo = ahora;
+  if (dt > 250) dt = 250;
+  acumulado += dt;
+  while (acumulado >= PASO) { paso(); acumulado -= PASO; }
+  dibujar();
+  requestAnimationFrame(bucle);
+}
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>

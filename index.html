@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Los mods de Manu</title>
+  <!-- Fuente pixelada: si no hay internet, el CSS usa una monoespaciada del computador -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    // Aplica el tema guardado antes de dibujar la página, para que no parpadee.
+    try {
+      const tema = localStorage.getItem('tema');
+      if (tema) document.documentElement.dataset.tema = tema;
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="cabecera">
+    <h1>⛏ Los mods de Manu</h1>
+    <p class="sub">Mods, datapacks y juegos hechos por Manu</p>
+    <div class="contadores">
+      <a class="contador" href="#mods"><span class="numero" data-hasta="5">0</span><span class="que">mods</span></a>
+      <a class="contador" href="#datapacks"><span class="numero" data-hasta="5">0</span><span class="que">datapacks</span></a>
+      <a class="contador" href="#juegos"><span class="numero" data-hasta="11">0</span><span class="que">juegos</span></a>
+      <a class="contador" href="#amongus"><span class="numero" data-hasta="4">0</span><span class="que">de Among Us</span></a>
+    </div>
+    <nav class="menu">
+      <a href="#novedades">Novedades</a>
+      <a href="#mods">Mods</a>
+      <a href="#packs">Texturas</a>
+      <a href="#datapacks">Datapacks</a>
+      <a href="#juegos">Juegos</a>
+      <a href="#records">Récords</a>
+      <a href="#amongus">Among Us</a>
+      <a href="#niveles">Tu nivel</a>
+      <a href="#favoritos">Favoritos</a>
+      <a href="#recomendados">Recomendados</a>
+      <a href="#instalar">Instalar</a>
+      <button class="tema" id="tema" title="Cambiar entre modo claro y oscuro">🌙 Modo oscuro</button>
+    </nav>
+    <div class="buscador">
+      <input type="search" id="buscar" placeholder="Buscar un mod o juego..." autocomplete="off">
+    </div>
+  </header>
+
+  <main>
+
+<section id="novedades" class="novedades">
+  <h2>📰 Novedades</h2>
+  <details class="dia" open>
+    <summary>17 de septiembre de 2026</summary>
+    <ul>
+      <li><b>¡Los 11 juegos se pueden jugar en el navegador!</b> Hoy se sumaron <b>Serpiente</b>, <b>Torres</b>, <b>Carreras</b>, <b>Silk</b>, <b>Escape de la Fábrica</b>, <b>Mina</b>, <b>Tanques</b> y <b>Criaturas</b>: botón 🎮 en cada tarjeta, sin instalar nada. En el navegador se guarda con <b>G</b> y se carga con <b>L</b> (F5 recargaría la página).</li>
+      <li>La página tiene <b>contadores</b> arriba con cuántos mods, datapacks y juegos hay (suben solos al abrirla), y una sección <b>🏆 Mis récords</b> con lo mejor que hiciste en cada juego. Para verla, abre la página con <code>abrir.sh</code>.</li>
+    </ul>
+  </details>
+  <details class="dia">
+    <summary>16 de septiembre de 2026</summary>
+    <ul>
+      <li><b>Mod de Manu</b> creció: ahora trae 11 cosas (Jetpack, Gancho, Botas Rápidas, Manzana Suprema, Bloque Bomba, Bloque Sorpresa, Esqueleto Rey y más).</li>
+      <li><b>Mod de Manu</b> ahora tiene <b>texturas propias</b> (ya no prestadas). Y nace <b>Manu Pack</b>, un resource pack con 26 texturas pixel art.</li>
+      <li>Juegos nuevos: <b>Salto</b> (runner rítmico), <b>Torres</b> (tower defense), <b>Carreras</b> (autos desde arriba con 3 pistas), <b>Mina</b> (mundo 2D de bloques con crafteo y noche) y <b>Serpiente</b> (snake para 1 o 2 jugadores con power-ups).</li>
+      <li>Mods nuevos: <b>Manu Magia</b> (6 varitas, Bastón de Gravedad, Poción de Invisibilidad Total y Altar Mágico) y <b>Manu Comandos</b> (<code>/hogar</code>, <code>/vuelo</code>, <code>/kit</code>, <code>/tpa</code>, <code>/gigante</code>... sin ser OP).</li>
+      <li>Juego nuevo: <b>Criaturas</b> (RPG por turnos con 12 criaturas inventadas de 6 tipos, evolución, captura con esferas y el Campeón Orión).</li>
+      <li>Juego nuevo: <b>Tanques</b> (batalla desde arriba, 2 jugadores o contra la IA, 4 arenas, balas que rebotan y power-ups).</li>
+      <li><b>Impostor</b> también se puede <b>jugar en el navegador</b>.</li>
+      <li>Datapack nuevo: <b>Dimensión Dulce</b>, una dimensión entera de caramelo (colinas rosas, lagos de miel, cerezos, conejos y abejas). Se va con <code>/function dulce:ir</code>.</li>
+      <li>Datapacks nuevos: <b>Rey Zombie</b> (un jefe con barra de vida y cofre de tesoro) y <b>Tienda con monedas</b> (gana monedas minando y compra kits con <code>/trigger tienda</code>).</li>
+      <li><b>Flappy</b> y <b>Salto</b> ahora se pueden <b>jugar en el navegador</b>, sin instalar nada: botón 🎮 en su tarjeta.</li>
+      <li>Mods de Among Us nuevos: <b>Ingeniero</b> (tripulante que usa las ventilaciones) y <b>Doctor</b> (revive a un jugador muerto).</li>
+      <li><b>Impostor</b>: ventilaciones, bots que hacen tareas de verdad, 2 mapas, 3 dificultades y sonidos.</li>
+      <li><b>Escape de la Fábrica</b>: 3 niveles, linterna con batería, puertas de colores, espectro que se congela con la luz.</li>
+      <li><b>Flappy</b>: récord, 3 pájaros, dificultad progresiva y sonidos. <b>Silk</b>: 5 niveles, checkpoints, dash, enemigos voladores, 2 jefes y récord.</li>
+      <li>La página: modo claro/oscuro, una página por juego, sección <b>Haz tu propio nivel</b>, capturas nuevas.</li>
+    </ul>
+  </details>
+  <details class="dia">
+    <summary>15 de septiembre de 2026</summary>
+    <ul>
+      <li>Nace la página. Mods para descargar: <b>Mod de Manu</b>, <b>Manu Tweaks 1.21.4</b> y <b>Manu Tweaks 26.2</b>.</li>
+      <li>Datapacks: <b>Recetas Locas</b> y <b>Parkour</b>.</li>
+      <li>Juegos en Python: <b>Flappy</b>, <b>Escape de la Fábrica</b>, <b>Impostor</b> y <b>Silk</b>, con captura y <code>controles.txt</code> para cambiar las teclas.</li>
+      <li>Mods de Among Us: <b>Sheriff</b> y <b>Parásito</b>.</li>
+      <li>52 juegos favoritos con filtro gratis/pago, 43 mods recomendados por tipo, buscador arriba y botón <b>Descargar todo</b>.</li>
+    </ul>
+  </details>
+  <a class="boton" href="descargas/todo.zip" download>⬇ Descargar todo (.zip con las 26 descargas, 366 KB)</a>
+</section>
+
+<section id="mods">
+  <h2>Mis mods</h2>
+  <div class="tarjetas">
+<article class="tarjeta">
+  <div class="icono">⚡</div>
+  <h3>Mod de Manu</h3>
+  <p class="version">Minecraft 1.21.4 · Fabric · Java 21</p>
+  <img class="captura" src="img/mod-de-manu.png" alt="Texturas de Mod de Manu" loading="lazy">
+<p class="subtitulo">Ítems</p>
+<ul class="lista">
+  <li><b>Espada de Rayos:</b> clic derecho = rayo donde miras.</li>
+  <li><b>Poción de Lava:</b> 30 s de resistencia al fuego.</li>
+  <li><b>Jetpack:</b> pechera; mantén el salto para volar, con fuego y humo.</li>
+  <li><b>Botas Rápidas:</b> velocidad III y salto II al llevarlas.</li>
+  <li><b>Gancho:</b> clic derecho a un bloque y te lanza hacia allá (40 bloques).</li>
+  <li><b>Manzana Suprema:</b> regeneración IV, resistencia, fuerza, absorción y anti-fuego por 5 min.</li>
+</ul>
+<p class="subtitulo">Bloques</p>
+<ul class="lista">
+  <li><b>Trampolín:</b> te lanza al aire, sin daño de caída.</li>
+  <li><b>Bloque Bomba:</b> explota con redstone, radio 12.</li>
+  <li><b>Bloque Sorpresa:</b> al romperlo suelta 1 cosa al azar (de cobblestone a netherita o tótem).</li>
+</ul>
+<p class="subtitulo">Mobs</p>
+<ul class="lista">
+  <li><b>Zombie de Diamante:</b> suelta 1-3 diamantes y no se quema de día.</li>
+  <li><b>Esqueleto Rey:</b> 60 de vida, más rápido, suelta esmeraldas y a veces un arco encantado nivel 30.</li>
+  <li>Los dos aparecen de noche en el Overworld y tienen huevo en creativo.</li>
+</ul>
+<p class="nota">Todo tiene receta de crafteo: míralas en el libro de recetas.</p>
+  <p class="necesita">Necesita: Fabric Loader + Fabric API</p>
+<a class="boton" href="descargas/mod-de-manu-1.21.4.jar" download>⬇ Descargar .jar (42 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Instala Fabric Loader para 1.21.4 (ver abajo).</li>
+    <li>Baja Fabric API para 1.21.4 y ponlo en la carpeta <code>mods</code>.</li>
+    <li>Pon <code>mod-de-manu-1.21.4.jar</code> en la misma carpeta.</li>
+    <li>Abre Minecraft 1.21.4 con el perfil Fabric.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta">
+  <div class="icono">🪄</div>
+  <h3>Manu Magia</h3>
+  <p class="version">Minecraft 1.21.4 · Fabric · Java 21</p>
+<p class="subtitulo">Varitas</p>
+<ul class="lista">
+  <li><b>Varita de Fuego:</b> lanza una bola de fuego.</li>
+  <li><b>Varita de Hielo:</b> congela el agua y ralentiza a los mobs.</li>
+  <li><b>Varita de Teletransporte:</b> te lleva al bloque que miras (hasta 64 bloques).</li>
+  <li><b>Varita de Curación:</b> te cura a ti y a los animales cerca.</li>
+  <li><b>Varita de Rayo en Cadena:</b> un rayo a cada mob hostil a 10 bloques.</li>
+  <li><b>Bastón de Gravedad:</b> lanza a los mobs por el aire.</li>
+</ul>
+<p class="subtitulo">Más</p>
+<ul class="lista">
+  <li><b>Poción de Invisibilidad Total.</b></li>
+  <li><b>Altar Mágico:</b> recarga las varitas y lanza fuegos artificiales.</li>
+</ul>
+<p class="nota">Recetas: cada varita = su ingrediente arriba (vara de blaze / hielo compacto / perla de ender / manzana dorada / pararrayos / vara de brisa) y dos palos debajo. Altar = amatista arriba, obsidiana-libro-obsidiana al medio, 3 obsidianas abajo. Poción = ojo de araña fermentado + azúcar + botella.</p>
+  <p class="necesita">Necesita: Fabric Loader + Fabric API</p>
+<a class="boton" href="descargas/manu-magia-1.21.4.jar" download>⬇ Descargar .jar (36 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Instala Fabric Loader para 1.21.4 (ver abajo).</li>
+    <li>Baja Fabric API para 1.21.4 y ponlo en la carpeta <code>mods</code>.</li>
+    <li>Pon <code>manu-magia-1.21.4.jar</code> en la misma carpeta.</li>
+    <li>Abre Minecraft 1.21.4 con el perfil Fabric.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta">
+  <div class="icono">⌨️</div>
+  <h3>Manu Comandos</h3>
+  <p class="version">Minecraft 1.21.4 · Fabric · Java 21</p>
+<ul class="lista">
+  <li>Comandos para todos, <b>sin ser OP</b>.</li>
+  <li><code>/hogar set</code> guarda tu casa y <code>/hogar</code> te lleva.</li>
+  <li><code>/vuelo</code>, <code>/curar</code>, <code>/velocidad 1-5</code>, <code>/gigante</code>, <code>/pequeno</code>, <code>/mascota</code>.</li>
+  <li><code>/dia</code>, <code>/noche</code>, <code>/sol</code>, <code>/lluvia</code>.</li>
+  <li><code>/kit inicial</code>, <code>guerrero</code>, <code>minero</code> o <code>mago</code>.</li>
+  <li><code>/tpa &lt;jugador&gt;</code> pide ir donde alguien y <code>/tpaceptar</code> lo acepta.</li>
+  <li><code>/explotar</code>: una explosión que no hace daño.</li>
+</ul>
+  <p class="necesita">Necesita: Fabric Loader + Fabric API</p>
+<a class="boton" href="descargas/manu-comandos-1.21.4.jar" download>⬇ Descargar .jar (22 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Instala Fabric Loader para 1.21.4 (ver abajo).</li>
+    <li>Baja Fabric API para 1.21.4 y ponlo en la carpeta <code>mods</code>.</li>
+    <li>Pon <code>manu-comandos-1.21.4.jar</code> en la misma carpeta.</li>
+    <li>Abre Minecraft 1.21.4 con el perfil Fabric.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta">
+  <div class="icono">🏷️</div>
+  <h3>Manu Tweaks</h3>
+  <p class="version">Minecraft 1.21.4 · Fabric · Java 21</p>
+<ul class="lista">
+  <li><b>Stackear todo</b> hasta 99, incluso tótems. Se cambia con <code>/stack &lt;1-99&gt;</code>.</li>
+  <li><b>Tu nametag:</b> ves tu propio nombre como lo ven los demás.</li>
+</ul>
+  <p class="necesita">Necesita: Fabric Loader + Fabric API</p>
+<a class="boton" href="descargas/manu-tweaks-1.21.4.jar" download>⬇ Descargar .jar (19 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Instala Fabric Loader para 1.21.4 (ver abajo).</li>
+    <li>Baja Fabric API para 1.21.4 y ponlo en la carpeta <code>mods</code>.</li>
+    <li>Pon <code>manu-tweaks-1.21.4.jar</code> en la misma carpeta.</li>
+    <li>Abre Minecraft 1.21.4 con el perfil Fabric.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta">
+  <div class="icono">📦</div>
+  <h3>Manu Tweaks</h3>
+  <p class="version">Minecraft 26.2 · Fabric · Java 25</p>
+<ul class="lista">
+  <li><b>Tu nametag:</b> ves tu propio nombre como lo ven los demás.</li>
+  <li><b>PV:</b> cofres personales con <code>/pv</code>.</li>
+</ul>
+  <p class="necesita">Necesita: Fabric Loader + Fabric API + Java 25</p>
+<a class="boton" href="descargas/manu-tweaks-26.2.jar" download>⬇ Descargar .jar (14 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Instala Fabric Loader para 26.2 (ver abajo).</li>
+    <li>Baja Fabric API para 26.2 y ponlo en la carpeta <code>mods</code>.</li>
+    <li>Pon <code>manu-tweaks-26.2.jar</code> en la misma carpeta.</li>
+    <li>Abre Minecraft 26.2 con el perfil Fabric.</li>
+  </ol>
+</details>
+</article>
+  </div>
+</section>
+
+<section id="packs">
+  <h2>Mis resource packs</h2>
+  <p class="nota">Un resource pack cambia cómo se ven las cosas (texturas). No necesita Fabric.</p>
+  <div class="tarjetas">
+<article class="tarjeta rp">
+  <div class="icono">🎨</div>
+  <h3>Manu Pack</h3>
+  <p class="version">Minecraft 1.21.4 · Resource pack (pack_format 46)</p>
+  <img class="captura" src="img/manu-pack.png" alt="Texturas de Manu Pack" loading="lazy">
+<ul class="lista">
+  <li><b>26 texturas pixel art</b> dibujadas por código.</li>
+  <li>Espada, pico, diamante, bloque de diamante y menas rediseñados.</li>
+  <li>Manzana dorada, perla de ender con ojo, <b>tótem sonriente</b>, <b>TNT con calavera</b>, mesa de crafteo.</li>
+  <li>Pasto, piedra, tierra, tablas, glowstone, comida y el corazón del HUD.</li>
+</ul>
+  <p class="necesita">Necesita: nada, solo Minecraft 1.21.4</p>
+<a class="boton" href="descargas/manu-pack.zip" download>⬇ Descargar .zip (14 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Copia el <code>.zip</code> tal cual a la carpeta <code>resourcepacks</code> de tu Minecraft.</li>
+    <li>En Linux (Flatpak): <code>~/.var/app/com.mojang.Minecraft/.minecraft/resourcepacks/</code> (o la carpeta resourcepacks de tu launcher).</li>
+    <li>En el juego: Opciones → Paquetes de recursos → mueve Manu Pack a la derecha → Listo.</li>
+  </ol>
+</details>
+</article>
+  </div>
+</section>
+
+<section id="datapacks">
+  <h2>Mis datapacks</h2>
+  <p class="nota">Un datapack no es un mod: no necesita Fabric. Va dentro de la carpeta de tu mundo.</p>
+  <div class="tarjetas">
+<article class="tarjeta pack">
+  <div class="icono">💎</div>
+  <h3>Recetas Locas</h3>
+  <p class="version">Minecraft 1.21.4 · Datapack</p>
+<ul class="lista">
+  <li>Nueva receta: 8 esmeraldas alrededor de una manzana en la mesa de crafteo = <b>Tótem de la Inmortalidad</b>.</li>
+  <li>Aparece también en el libro de recetas.</li>
+</ul>
+  <p class="necesita">Necesita: nada, solo Minecraft 1.21.4</p>
+<a class="boton" href="descargas/recetas-locas.zip" download>⬇ Descargar .zip (1 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Copia el <code>.zip</code> tal cual (sin descomprimir) a la carpeta <code>datapacks</code> de tu mundo.</li>
+    <li>En Linux (Flatpak): <code>~/.var/app/com.mojang.Minecraft/.minecraft/saves/&lt;tu mundo&gt;/datapacks/</code></li>
+    <li>Entra al mundo y escribe <code>/reload</code>.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta pack">
+  <div class="icono">⏱️</div>
+  <h3>Parkour</h3>
+  <p class="version">Minecraft 1.21.4 · Datapack</p>
+<ul class="lista">
+  <li>Minijuego con <b>cronómetro</b>. Pon una placa de presión de oro al inicio y otra al final.</li>
+  <li>Al pisar la primera arranca el reloj (a la derecha de la pantalla). Al pisar la segunda te muestra tu tiempo.</li>
+  <li>Guarda tu récord. Si te caes: <code>/function parkour:reiniciar</code>.</li>
+</ul>
+  <p class="necesita">Necesita: nada, solo Minecraft 1.21.4</p>
+<a class="boton" href="descargas/parkour.zip" download>⬇ Descargar .zip (5 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Copia el <code>.zip</code> tal cual (sin descomprimir) a la carpeta <code>datapacks</code> de tu mundo.</li>
+    <li>En Linux (Flatpak): <code>~/.var/app/com.mojang.Minecraft/.minecraft/saves/&lt;tu mundo&gt;/datapacks/</code></li>
+    <li>Entra al mundo y escribe <code>/reload</code>.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta pack">
+  <div class="icono">👑</div>
+  <h3>Rey Zombie</h3>
+  <p class="version">Minecraft 1.21.4 · Datapack</p>
+<ul class="lista">
+  <li>Un <b>jefe</b>: 200 de vida, armadura de netherita, grande y fuerte, con barra de jefe arriba.</li>
+  <li>Cada 20 segundos llama a 3 esbirros.</li>
+  <li>Al derrotarlo suelta un <b>cofre de tesoro</b> (diamantes, netherita, manzanas encantadas, la Corona del Rey, espada de netherita afilada, tótem) con fuegos artificiales.</li>
+  <li><code>/function jefe:invocar</code> lo hace aparecer · <code>/function jefe:quitar</code> cancela la pelea.</li>
+</ul>
+  <p class="necesita">Necesita: nada, solo Minecraft 1.21.4</p>
+<a class="boton" href="descargas/jefe-zombie.zip" download>⬇ Descargar .zip (6 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Copia el <code>.zip</code> tal cual (sin descomprimir) a la carpeta <code>datapacks</code> de tu mundo.</li>
+    <li>En Linux (Flatpak): <code>~/.var/app/com.mojang.Minecraft/.minecraft/saves/&lt;tu mundo&gt;/datapacks/</code></li>
+    <li>Entra al mundo y escribe <code>/reload</code>.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta pack">
+  <div class="icono">🍬</div>
+  <h3>Dimensión Dulce</h3>
+  <p class="version">Minecraft 1.21.4 · Datapack</p>
+<ul class="lista">
+  <li>Una <b>dimensión nueva</b> de caramelo: colinas de pasto rosado con lana rosa, roca de panal, <b>lagos de miel</b> en los valles, cielo y agua rosados.</li>
+  <li>Cerezos, conejos, abejas y ovejas. <b>Nada de monstruos</b>, y allá te curas solo (regeneración).</li>
+  <li><code>/function dulce:ir</code> te lleva (a altura 100, sobre una plataforma de miel) · <code>/function dulce:volver</code> te devuelve justo donde estabas.</li>
+  <li>Logro <b>¡Bienvenido a la Dimensión Dulce!</b> al entrar por primera vez: te regala miel y azúcar.</li>
+  <li>Recetas nuevas: <b>Caramelo dorado</b> (manzana + 4 frascos de miel + 4 azúcar = manzana dorada) y <b>bloque de miel barato</b> (2 frascos en vez de 4).</li>
+  <li>Cuidado: la miel es pegajosa, en los lagos no puedes saltar.</li>
+</ul>
+  <p class="necesita">Necesita: nada, solo Minecraft 1.21.4</p>
+<a class="boton" href="descargas/dimension-dulce.zip" download>⬇ Descargar .zip (13 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Copia el <code>.zip</code> tal cual (sin descomprimir) a la carpeta <code>datapacks</code> de tu mundo.</li>
+    <li>En Linux (Flatpak): <code>~/.var/app/com.mojang.Minecraft/.minecraft/saves/&lt;tu mundo&gt;/datapacks/</code></li>
+    <li><b>Sal del mundo y vuelve a entrar</b> (Guardar y salir). Con <code>/reload</code> NO basta: las dimensiones solo se cargan al abrir el mundo.</li>
+    <li>Al entrar debería salir <code>[Dulce] listo...</code> en el chat. Si no, revisa con <code>/datapack list</code> que aparezca en verde.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta pack">
+  <div class="icono">🪙</div>
+  <h3>Tienda con monedas</h3>
+  <p class="version">Minecraft 1.21.4 · Datapack</p>
+<ul class="lista">
+  <li>Ganas <b>monedas</b> minando minerales (carbón 1, hierro 2, oro 3, esmeralda 8, diamante 10, restos antiguos 20...) y matando monstruos (zombie 5, creeper 8, enderman 15, bruja 12...).</li>
+  <li>Al entrar por primera vez te regala 50. Las monedas se ven en la lista de jugadores (<b>TAB</b>).</li>
+  <li><code>/trigger tienda</code> abre un menú en el chat con botones <b>[COMPRAR]</b>. Funciona sin ser operador.</li>
+  <li>Kits: comida (20), herramientas de hierro (60), armadura de hierro con Protección I (120), diamante con espada Filo II y pico Eficiencia III (300).</li>
+</ul>
+  <p class="necesita">Necesita: nada, solo Minecraft 1.21.4</p>
+<a class="boton" href="descargas/tienda.zip" download>⬇ Descargar .zip (18 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Copia el <code>.zip</code> tal cual (sin descomprimir) a la carpeta <code>datapacks</code> de tu mundo.</li>
+    <li>En Linux (Flatpak): <code>~/.var/app/com.mojang.Minecraft/.minecraft/saves/&lt;tu mundo&gt;/datapacks/</code></li>
+    <li>Entra al mundo y escribe <code>/reload</code>.</li>
+  </ol>
+</details>
+</article>
+  </div>
+</section>
+
+<section id="juegos">
+  <h2>Mis juegos</h2>
+  <p class="nota">Hechos en Python con pygame. Toca la captura para ver la página de cada juego.</p>
+  <div class="tarjetas">
+<article class="tarjeta juego">
+  <div class="icono">🐦</div>
+  <h3>Flappy</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="juegos/flappy.html"><img class="captura" src="img/flappy.png" alt="Captura de Flappy" loading="lazy"></a>
+  <p>Un Flappy Bird hecho en Python.</p>
+<ul class="lista">
+  <li><b>ESPACIO</b> salta, <b>R</b> reinicia.</li>
+  <li>Elige tu pájaro con <b>1 / 2 / 3</b> (Clásico, Azulito o Fueguito).</li>
+  <li>La dificultad sube de a poco: los tubos van más rápido y el hueco se achica.</li>
+  <li>Guarda tu <b>récord</b> en <code>record.txt</code>. Sonidos hechos con números.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="descargas/flappy.zip" download>⬇ Descargar .zip (7 KB)</a>
+  <a class="boton jugar" href="jugar/flappy.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="juegos/flappy.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 flappy.py</code> (en Windows: <code>python flappy.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🔦</div>
+  <h3>Escape de la Fábrica</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="juegos/escape.html"><img class="captura" src="img/escape.png" alt="Captura de Escape de la Fábrica" loading="lazy"></a>
+  <p>Estás encerrado en una fábrica oscura y solo ves lo que alumbra tu linterna.</p>
+<ul class="lista">
+  <li><b>3 niveles</b>. En cada uno junta las 3 llaves, abre las puertas de colores y llega a la salida.</li>
+  <li>La <b>linterna</b> gasta batería; las pilas verdes la recargan. Con luz ves lejos... y el monstruo también te ve.</li>
+  <li>El <b>monstruo</b> patrulla; si te ve, te persigue (la pantalla tiembla y suena un zumbido).</li>
+  <li>En el nivel 3 hay un <b>espectro</b> que solo se mueve cuando no lo alumbras.</li>
+  <li>Dificultad Fácil / Normal / Difícil al empezar.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="descargas/escape.zip" download>⬇ Descargar .zip (13 KB)</a>
+  <a class="boton jugar" href="jugar/escape.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="juegos/escape.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 escape.py</code> (en Windows: <code>python escape.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🔪</div>
+  <h3>Impostor</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="juegos/impostor.html"><img class="captura" src="img/impostor.png" alt="Captura de Impostor" loading="lazy"></a>
+  <p>Mini Among Us para un jugador. Tú eres el impostor.</p>
+<ul class="lista">
+  <li>6 tripulantes bots caminan entre tareas y las <b>hacen de verdad</b>: si llenan la barra de tareas, perdiste.</li>
+  <li>Mátalos con <b>ESPACIO</b> sin que te vean. Apaga las luces con <b>S</b>. Salta entre salas por las <b>ventilaciones</b> con <b>V</b>.</li>
+  <li>Si un bot ve un cuerpo o te ve, corre al botón y hay <b>reunión</b>: votan por sospecha y te pueden expulsar.</li>
+  <li>2 mapas (nave chica y nave grande con cámara que te sigue) y dificultad Fácil / Normal / Difícil.</li>
+  <li>Sonidos hechos con números: kill, alarma, reunión, vent, luces.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="descargas/impostor.zip" download>⬇ Descargar .zip (13 KB)</a>
+  <a class="boton jugar" href="jugar/impostor.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="juegos/impostor.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 impostor.py</code> (en Windows: <code>python impostor.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🪡</div>
+  <h3>Silk</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="juegos/silk.html"><img class="captura" src="img/silk.png" alt="Captura de Silk" loading="lazy"></a>
+  <p>Plataformas con un bichito armado con una aguja. Dibujos hechos por Manu.</p>
+<ul class="lista">
+  <li><b>5 niveles</b> encadenados con <b>checkpoints</b> (banderas grises).</li>
+  <li>Corre, salta (¡doble salto!), haz <b>dash</b> y ataca con la aguja.</li>
+  <li>Desde el nivel 4 hay <b>enemigos voladores</b>.</li>
+  <li>Dos <b>jefes</b>: uno en el nivel 3 (5 golpes de aguja, pégale por el lado) y una <b>polilla</b> que se lanza en picada en el nivel 5.</li>
+  <li>Cronómetro y <b>récord</b> de tiempo en <code>record.txt</code>.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="descargas/silk.zip" download>⬇ Descargar .zip (12 KB)</a>
+  <a class="boton jugar" href="jugar/silk.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="juegos/silk.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 silk.py</code> (en Windows: <code>python silk.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🟨</div>
+  <h3>Salto</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="juegos/salto.html"><img class="captura" src="img/salto.png" alt="Captura de Salto" loading="lazy"></a>
+  <p>Runner rítmico: un cubo que corre solo y tú decides cuándo saltar.</p>
+<ul class="lista">
+  <li>Pinchos y bloques de frente te hacen <b>explotar</b>, y reinicias al tiro.</li>
+  <li>Barra de <b>porcentaje</b> del nivel y contador de <b>intentos</b>.</li>
+  <li><b>2 niveles</b> dibujados en texto que puedes editar.</li>
+  <li>El fondo cambia de color según cuánto llevas del nivel.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="descargas/salto.zip" download>⬇ Descargar .zip (7 KB)</a>
+  <a class="boton jugar" href="jugar/salto.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="juegos/salto.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 salto.py</code> (en Windows: <code>python salto.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🏰</div>
+  <h3>Torres</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="juegos/torres.html"><img class="captura" src="img/torres.png" alt="Captura de Torres" loading="lazy"></a>
+  <p>Tower defense: los enemigos caminan por el camino hacia tu base y tú pones torres en el pasto.</p>
+<ul class="lista">
+  <li>Enemigos: <b>rojos</b> normales, <b>amarillos</b> rápidos, <b>grises</b> tanques.</li>
+  <li>3 torres: <b>Rápida</b> (celeste, $50), <b>Fuerte</b> (naranja, $90) y <b>Bomba</b> (morada, $120, daña en área).</li>
+  <li><b>10 oleadas</b> cada vez más duras, 10 vidas, monedas por cada enemigo.</li>
+  <li>Pantalla de ganaste / perdiste.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="descargas/torres.zip" download>⬇ Descargar .zip (9 KB)</a>
+  <a class="boton jugar" href="jugar/torres.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="juegos/torres.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 torres.py</code> (en Windows: <code>python torres.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🏎️</div>
+  <h3>Carreras</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="juegos/carreras.html"><img class="captura" src="img/carreras.png" alt="Captura de Carreras" loading="lazy"></a>
+  <p>Carreras de autos vistas desde arriba. Eres el auto rojo.</p>
+<ul class="lista">
+  <li><b>3 vueltas</b> contra 5 rivales con IA en <b>3 pistas</b>: Óvalo, Chicanas y Gran Premio.</li>
+  <li>Física con aceleración, freno y <b>derrape</b>. El pasto frena y los muros rebotan.</li>
+  <li>Ítems en la pista: <b>turbo</b> (flecha verde) y <b>aceite</b> (mancha negra).</li>
+  <li>Posición en vivo, cronómetro y <b>mejor vuelta</b> guardada. Sonidos hechos con matemáticas.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="descargas/carreras.zip" download>⬇ Descargar .zip (11 KB)</a>
+  <a class="boton jugar" href="jugar/carreras.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="juegos/carreras.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 carreras.py</code> (en Windows: <code>python carreras.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">⛏️</div>
+  <h3>Mina</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="juegos/mina.html"><img class="captura" src="img/mina.png" alt="Captura de Mina" loading="lazy"></a>
+  <p>Un mundo 2D de bloques generado al azar. Pica, construye y sobrevive a la noche.</p>
+<ul class="lista">
+  <li>Mundo con cielo, pasto, tierra, piedra, <b>cuevas</b>, árboles con manzanas y minerales (carbón, hierro, oro, diamante).</li>
+  <li><b>Pica</b> con clic izquierdo (los bloques duros necesitan mejor pico) y <b>pon</b> bloques con clic derecho. Inventario de 9 casillas.</li>
+  <li><b>Crafteo</b> con C: tablas, palos, mesa, antorchas que iluminan, picos de piedra / hierro / diamante.</li>
+  <li><b>Día y noche</b> con oscuridad real en cuevas. De noche salen <b>zombies</b> que te persiguen.</li>
+  <li>Vida y comida (manzanas). Guarda y carga tu mundo con F5 / F9 en <code>mundo.json</code>.</li>
+  <li>Todo dibujado con rectángulos, sin imágenes.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="descargas/mina.zip" download>⬇ Descargar .zip (14 KB)</a>
+  <a class="boton jugar" href="jugar/mina.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="juegos/mina.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 mina.py</code> (en Windows: <code>python mina.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🐍</div>
+  <h3>Serpiente</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="juegos/serpiente.html"><img class="captura" src="img/serpiente.png" alt="Captura de Serpiente" loading="lazy"></a>
+  <p>Snake para 1 o 2 jugadores en el mismo teclado.</p>
+<ul class="lista">
+  <li>Come manzanas para crecer sin chocar con paredes, obstáculos, tu cola ni la otra serpiente.</li>
+  <li>Cada 5 manzanas sube el nivel y cambian los obstáculos: <b>5 niveles</b> dibujados en <code>niveles.txt</code>.</li>
+  <li><b>Power-ups</b> que aparecen y se van: <b>R</b> rayo (rápido y doble puntos), <b>T</b> tortuga (lento), <b>E</b> estrella (x3), <b>X</b> tijeras (cola más corta), <b>F</b> fantasma (atraviesas paredes).</li>
+  <li>Con 1 jugador guarda el récord en <code>record.txt</code>; con 2, gana el que no choca y lleva el marcador de victorias.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="descargas/serpiente.zip" download>⬇ Descargar .zip (9 KB)</a>
+  <a class="boton jugar" href="jugar/serpiente.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="juegos/serpiente.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 serpiente.py</code> (en Windows: <code>python serpiente.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🛡️</div>
+  <h3>Tanques</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="juegos/tanques.html"><img class="captura" src="img/tanques.png" alt="Captura de Tanques" loading="lazy"></a>
+  <p>Batalla de tanques vista desde arriba. 2 jugadores en el mismo teclado o tú contra la IA.</p>
+<ul class="lista">
+  <li><b>IA con 3 niveles</b>: patrulla, persigue o esquiva tus balas y agarra power-ups.</li>
+  <li><b>4 arenas</b> dibujadas en texto (<code>arena1.txt</code> a <code>arena4.txt</code>).</li>
+  <li>Las balas <b>rebotan</b> en los muros, los <b>ladrillos</b> se rompen, el agua no se cruza y en los arbustos te escondes.</li>
+  <li>Power-ups: <b>E</b> escudo, <b>3</b> triple disparo, <b>V</b> velocidad, <b>M</b> mina.</li>
+  <li>3 vidas por ronda, tanques con inercia, gana el primero con 3 rondas (<b>mejor de 5</b>).</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="descargas/tanques.zip" download>⬇ Descargar .zip (20 KB)</a>
+  <a class="boton jugar" href="jugar/tanques.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="juegos/tanques.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 tanques.py</code> (en Windows: <code>python tanques.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta juego">
+  <div class="icono">🐉</div>
+  <h3>Criaturas</h3>
+  <p class="version">Python + pygame · Linux, Windows y Mac</p>
+  <a href="juegos/criaturas.html"><img class="captura" src="img/criaturas.png" alt="Captura de Criaturas" loading="lazy"></a>
+  <p>RPG de batallas por turnos con criaturas inventadas por Manu.</p>
+<ul class="lista">
+  <li><b>12 criaturas</b> de 6 tipos (Fuego, Agua, Planta, Eléctrico, Roca, Fantasma) con tabla de tipos: unos pegan fuerte a otros.</li>
+  <li><b>Evolucionan</b> al nivel 16. Captúralas en el pasto con <b>esferas</b>; equipo de 6, las demás van a la caja.</li>
+  <li><b>Mochila</b> con pociones y centro de curación en el mapa.</li>
+  <li>3 entrenadores y el <b>Campeón Orión</b> al final.</li>
+  <li>Guarda con <b>F5</b> y carga con <b>F9</b>. Sonidos hechos con números.</li>
+</ul>
+  <p class="necesita">Necesita: Python 3 + pygame</p>
+<a class="boton" href="descargas/criaturas.zip" download>⬇ Descargar .zip (37 KB)</a>
+  <a class="boton jugar" href="jugar/criaturas.html">🎮 Jugar en el navegador</a>
+  <a class="boton enlace" href="juegos/criaturas.html">Ver página del juego →</a>
+<details>
+  <summary>Cómo jugar</summary>
+  <ol>
+    <li>Descarga y descomprime el zip.</li>
+    <li>Instala pygame: <code>pip install pygame</code></li>
+    <li>Corre <code>python3 criaturas.py</code> (en Windows: <code>python criaturas.py</code>; en Linux/Mac también sirve <code>./jugar.sh</code>).</li>
+  </ol>
+</details>
+</article>
+  </div>
+</section>
+
+<section id="records">
+  <h2>🏆 Mis récords</h2>
+  <p class="nota">Lo que cada juego del navegador guardó en este computador. Juega y vuelve aquí: se actualiza solo. (Para que se vean, abre la página con <code>abrir.sh</code>, no como archivo suelto.)</p>
+  <div class="bloque">
+    <table class="records" id="tabla-records">
+      <thead><tr><th>Juego</th><th>Récord</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="nota" id="records-vacio">Todavía no hay récords. ¡Juega algo con el botón 🎮 y vuelve!</p>
+  </div>
+</section>
+
+<section id="amongus">
+  <h2>Mods de Among Us</h2>
+  <p class="nota">Solo para Among Us 2026.6.5 en Steam (Windows). Funcionan en salas privadas y todos los jugadores necesitan el mod.</p>
+  <div class="tarjetas">
+<article class="tarjeta amongus">
+  <div class="icono">🔫</div>
+  <h3>Sheriff</h3>
+  <p class="version">Among Us 2026.6.5 · Steam · Windows</p>
+<ul class="lista">
+  <li>Tripulante con botón <b>DISPARAR</b>.</li>
+  <li>Si le dispara a un impostor, muere el impostor.</li>
+  <li>Si le dispara a un inocente, muere el Sheriff.</li>
+</ul>
+  <p class="necesita">Necesita: BepInEx 6 + Reactor 2.5.1</p>
+<a class="boton" href="descargas/sheriff.zip" download>⬇ Descargar .zip (12 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Baja <a href="https://builds.bepinex.dev/projects/bepinex_be" target="_blank" rel="noopener">BepInEx 6 IL2CPP be.735 win-x86</a> y descomprímelo en la carpeta del juego.</li>
+    <li>Abre y cierra Among Us una vez.</li>
+    <li>Baja <a href="https://github.com/NuclearPowered/Reactor/releases/tag/2.5.1" target="_blank" rel="noopener">Reactor 2.5.1</a>.</li>
+    <li>Copia <code>Reactor.dll</code> y <code>Sheriff.dll</code> a <code>Among Us/BepInEx/plugins/</code>.</li>
+    <li>El host activa el rol en Ajustes de Roles → pestaña tripulantes → Sheriff, probabilidad 100.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta amongus">
+  <div class="icono">🦠</div>
+  <h3>Parásito</h3>
+  <p class="version">Among Us 2026.6.5 · Steam · Windows</p>
+<ul class="lista">
+  <li>Impostor que <b>infecta</b> a un tripulante.</li>
+  <li>Si lo echan en votación, se traspasa al cuerpo del infectado y sigue jugando.</li>
+</ul>
+  <p class="necesita">Necesita: BepInEx 6 + Reactor 2.5.1</p>
+<a class="boton" href="descargas/parasito.zip" download>⬇ Descargar .zip (12 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Baja <a href="https://builds.bepinex.dev/projects/bepinex_be" target="_blank" rel="noopener">BepInEx 6 IL2CPP be.735 win-x86</a> y descomprímelo en la carpeta del juego.</li>
+    <li>Abre y cierra Among Us una vez.</li>
+    <li>Baja <a href="https://github.com/NuclearPowered/Reactor/releases/tag/2.5.1" target="_blank" rel="noopener">Reactor 2.5.1</a>.</li>
+    <li>Copia <code>Reactor.dll</code> y <code>Parasito.dll</code> a <code>Among Us/BepInEx/plugins/</code>.</li>
+    <li>El host activa el rol en Ajustes de Roles → pestaña impostores → Parásito, probabilidad 100.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta amongus">
+  <div class="icono">🔧</div>
+  <h3>Ingeniero</h3>
+  <p class="version">Among Us 2026.6.5 · Steam · Windows</p>
+<ul class="lista">
+  <li>Tripulante que puede meterse a las <b>ventilaciones</b> como un impostor (le aparece el botón VENT).</li>
+  <li>Al salir de una, espera 20 s para volver a entrar.</li>
+</ul>
+  <p class="necesita">Necesita: BepInEx 6 + Reactor 2.5.1</p>
+<a class="boton" href="descargas/ingeniero.zip" download>⬇ Descargar .zip (9 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Baja <a href="https://builds.bepinex.dev/projects/bepinex_be" target="_blank" rel="noopener">BepInEx 6 IL2CPP be.735 win-x86</a> y descomprímelo en la carpeta del juego.</li>
+    <li>Abre y cierra Among Us una vez.</li>
+    <li>Baja <a href="https://github.com/NuclearPowered/Reactor/releases/tag/2.5.1" target="_blank" rel="noopener">Reactor 2.5.1</a>.</li>
+    <li>Copia <code>Reactor.dll</code> y <code>Ingeniero.dll</code> a <code>Among Us/BepInEx/plugins/</code>.</li>
+    <li>El host activa el rol en Ajustes de Roles → pestaña tripulantes → Ingeniero, probabilidad 100.</li>
+  </ol>
+</details>
+</article>
+<article class="tarjeta amongus">
+  <div class="icono">🩺</div>
+  <h3>Doctor</h3>
+  <p class="version">Among Us 2026.6.5 · Steam · Windows</p>
+<ul class="lista">
+  <li>Tripulante que puede <b>REVIVIR</b> a un jugador muerto: se acerca al cuerpo y aprieta el botón.</li>
+  <li>Una vez por partida. El revivido vuelve con el rol que tenía (si era impostor, sigue siéndolo).</li>
+</ul>
+  <p class="necesita">Necesita: BepInEx 6 + Reactor 2.5.1</p>
+<a class="boton" href="descargas/doctor.zip" download>⬇ Descargar .zip (12 KB)</a>
+<details>
+  <summary>Cómo instalar</summary>
+  <ol>
+    <li>Baja <a href="https://builds.bepinex.dev/projects/bepinex_be" target="_blank" rel="noopener">BepInEx 6 IL2CPP be.735 win-x86</a> y descomprímelo en la carpeta del juego.</li>
+    <li>Abre y cierra Among Us una vez.</li>
+    <li>Baja <a href="https://github.com/NuclearPowered/Reactor/releases/tag/2.5.1" target="_blank" rel="noopener">Reactor 2.5.1</a>.</li>
+    <li>Copia <code>Reactor.dll</code> y <code>Doctor.dll</code> a <code>Among Us/BepInEx/plugins/</code>.</li>
+    <li>El host activa el rol en Ajustes de Roles → pestaña tripulantes → Doctor, probabilidad 100.</li>
+  </ol>
+</details>
+</article>
+  </div>
+</section>
+
+<section id="niveles">
+  <h2>Haz tu propio nivel</h2>
+  <p class="nota">Los niveles de estos juegos son dibujos de texto. Ábrelos con cualquier editor, cambia letras, guarda y juega.</p>
+  <div class="tarjetas">
+<article class="tarjeta juego nivel">
+  <div class="icono">🔦</div>
+  <h3>Escape de la Fábrica</h3>
+  <p>Archivos: laberinto1.txt, laberinto2.txt y laberinto3.txt. Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>pared</td></tr>
+  <tr><td><code>.</code></td><td>piso</td></tr>
+  <tr><td><code>P</code></td><td>tú</td></tr>
+  <tr><td><code>M</code></td><td>monstruo</td></tr>
+  <tr><td><code>E</code></td><td>espectro (se congela con la luz)</td></tr>
+  <tr><td><code>K</code></td><td>llave de salida</td></tr>
+  <tr><td><code>D</code></td><td>puerta de salida (se abre con todas las K)</td></tr>
+  <tr><td><code>B</code></td><td>pila</td></tr>
+  <tr><td><code>r v a</code></td><td>llave roja / verde / azul</td></tr>
+  <tr><td><code>R V A</code></td><td>puerta roja / verde / azul</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 escape.py mi_laberinto.txt</code></p>
+  <ul class="lista">
+  <li>Tiene que haber una <b>P</b> y una <b>D</b>. Lo demás es opcional.</li>
+  <li>Puedes pasar varios archivos y se juegan en orden: <code>python3 escape.py uno.txt dos.txt</code>.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🪡</div>
+  <h3>Silk</h3>
+  <p>Archivos: nivel1.txt a nivel5.txt (lista <code>NIVELES</code> arriba de <code>silk.py</code>). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>bloque</td></tr>
+  <tr><td><code>E</code></td><td>enemigo</td></tr>
+  <tr><td><code>^</code></td><td>pincho</td></tr>
+  <tr><td><code>C</code></td><td>checkpoint</td></tr>
+  <tr><td><code>M</code></td><td>meta</td></tr>
+  <tr><td><code>P</code></td><td>donde empiezas</td></tr>
+  <tr><td><code>J</code></td><td>jefe</td></tr>
+  <tr><td><code>.</code></td><td>nada</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 silk.py</code></p>
+  <ul class="lista">
+  <li>Los enemigos y el jugador necesitan un <code>#</code> debajo, si no se caen.</li>
+  <li>Con doble salto llegas a unos 5 cuadritos de alto y unos 8 de largo.</li>
+  <li>Con <b>J</b> la meta se abre solo al vencer al jefe.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🟨</div>
+  <h3>Salto</h3>
+  <p>Archivos: nivel1.txt y nivel2.txt (lista <code>NIVELES</code> arriba de <code>salto.py</code>). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>bloque (te paras encima; de frente te mata)</td></tr>
+  <tr><td><code>^</code></td><td>pincho (te mata)</td></tr>
+  <tr><td><code>.</code></td><td>nada</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 salto.py</code></p>
+  <ul class="lista">
+  <li><b>La última fila es la que va pegada al piso.</b> El nivel termina donde termina el texto.</li>
+  <li>Un salto pasa por encima de hasta 3 pinchos seguidos.</li>
+  <li>Puedes subirte a un bloque de 2 de alto, pero no a uno de 3 (salvo desde otro bloque).</li>
+  <li>Si un pincho va encima de un bloque, escríbelo en la fila de arriba.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🏰</div>
+  <h3>Torres</h3>
+  <p>Archivos: camino.txt. Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>.</code></td><td>pasto (aquí puedes construir)</td></tr>
+  <tr><td><code>=</code></td><td>camino</td></tr>
+  <tr><td><code>S</code></td><td>donde salen los enemigos</td></tr>
+  <tr><td><code>B</code></td><td>tu base</td></tr>
+  <tr><td><code>#</code></td><td>roca (no se puede construir)</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 torres.py mi_mapa.txt</code></p>
+  <ul class="lista">
+  <li>El camino <code>=</code> tiene que conectar la <b>S</b> con la <b>B</b>.</li>
+  <li>Mientras más largo el camino, más tiempo tienen tus torres para disparar.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🏎️</div>
+  <h3>Carreras</h3>
+  <p>Archivos: la lista <code>PISTAS</code> dentro de <code>carreras.py</code> (dibujos de 30 x 20 letras). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>muro</td></tr>
+  <tr><td><code>.</code></td><td>asfalto</td></tr>
+  <tr><td><code>g</code></td><td>pasto (frena)</td></tr>
+  <tr><td><code>1-9</code></td><td>checkpoints en orden</td></tr>
+  <tr><td><code>M</code></td><td>meta</td></tr>
+  <tr><td><code>S</code></td><td>largada (pon al menos 6)</td></tr>
+  <tr><td><code>T</code></td><td>turbo</td></tr>
+  <tr><td><code>O</code></td><td>aceite</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 carreras.py</code></p>
+  <ul class="lista">
+  <li>Copia una pista, cámbiale el dibujo y el nombre, y ponle los <code>puntos</code> por donde van a manejar los rivales (columna, fila; <code>.5</code> es el centro del cuadrito).</li>
+  <li>Los checkpoints tienen que cruzar la pista completa, si no los autos se los saltan.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🐍</div>
+  <h3>Serpiente</h3>
+  <p>Archivos: niveles.txt (5 dibujos de 32 x 24, separados por una línea vacía). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>.</code></td><td>casilla libre</td></tr>
+  <tr><td><code>#</code></td><td>obstáculo</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 serpiente.py</code></p>
+  <ul class="lista">
+  <li>Agrega un dibujo más al final del archivo (con su línea vacía antes) y tendrás un nivel 6.</li>
+  <li>Deja libre el centro: ahí salen las serpientes.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🛡️</div>
+  <h3>Tanques</h3>
+  <p>Archivos: arena1.txt a arena4.txt (14 filas de 20 letras). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>muro (las balas rebotan)</td></tr>
+  <tr><td><code>L</code></td><td>ladrillo (se rompe de un tiro)</td></tr>
+  <tr><td><code>A</code></td><td>agua (las balas pasan, los tanques no)</td></tr>
+  <tr><td><code>B</code></td><td>arbusto (esconde al tanque)</td></tr>
+  <tr><td><code>.</code></td><td>piso</td></tr>
+  <tr><td><code>1</code></td><td>donde empieza el jugador 1</td></tr>
+  <tr><td><code>2</code></td><td>donde empieza el jugador 2</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 tanques.py</code></p>
+  <ul class="lista">
+  <li>Copia <code>arena1.txt</code> a <code>arena5.txt</code>, edítalo, y el menú lo encuentra solo.</li>
+  <li>Las líneas que empiezan con <code># </code> (con espacio) son comentarios.</li>
+  </ul>
+</article>
+<article class="tarjeta juego nivel">
+  <div class="icono">🐉</div>
+  <h3>Criaturas</h3>
+  <p>Archivos: mapa.txt (la leyenda está arriba del archivo). Cada letra es un cuadrito:</p>
+  <table class="leyenda">
+  <tr><td><code>#</code></td><td>árbol (no se pasa)</td></tr>
+  <tr><td><code>~</code></td><td>agua (no se pasa)</td></tr>
+  <tr><td><code>H</code></td><td>casa (no se pasa)</td></tr>
+  <tr><td><code>.</code></td><td>camino</td></tr>
+  <tr><td><code>+</code></td><td>centro de curación</td></tr>
+  <tr><td><code>L</code></td><td>letrero (choca para leer)</td></tr>
+  <tr><td><code>,</code></td><td>pasto bajo (criaturas nivel 3-6)</td></tr>
+  <tr><td><code>;</code></td><td>pasto medio (8-12)</td></tr>
+  <tr><td><code>"</code></td><td>pasto alto (13-18)</td></tr>
+  <tr><td><code>P</code></td><td>donde empiezas</td></tr>
+  <tr><td><code>1 2 3</code></td><td>entrenadores</td></tr>
+  <tr><td><code>K</code></td><td>el campeón</td></tr>
+  </table>
+  <p>Edita el dibujo, guarda, y corre: <code>python3 criaturas.py</code></p>
+  <ul class="lista">
+  <li>Puedes mover a los entrenadores y al campeón a donde quieras.</li>
+  <li>Las criaturas, sus ataques y los equipos de los entrenadores están en <code>datos.py</code>; el dibujo de cada una es una función en <code>dibujos.py</code>.</li>
+  </ul>
+</article>
+  </div>
+</section>
+
+<section id="favoritos">
+  <h2>Juegos que me gustan</h2>
+  <p class="nota">Aquí no hay descargas: los enlaces van a la tienda o página oficial de cada juego.</p>
+  <div class="filtro">
+    <button class="activo" data-filtro="todos">Todos</button>
+    <button data-filtro="gratis">Gratis</button>
+    <button data-filtro="pago">De pago</button>
+  </div>
+  <div class="tarjetas">
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🗡️</div>
+  <h3>Hollow Knight: Silksong <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Aventura de Hornet en un reino lleno de bichos. Difícil y precioso.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/1030300/Hollow_Knight_Silksong/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🐛</div>
+  <h3>Hollow Knight <span class="etiqueta pago">juego de pago</span></h3>
+  <p>El primero: explora Hallownest como el Caballero.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/367520/Hollow_Knight/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🧸</div>
+  <h3>Poppy Playtime <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Terror en una fábrica de juguetes abandonada.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/1721470/Poppy_Playtime/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">🎪</div>
+  <h3>Project Playtime <span class="etiqueta gratis">gratis</span></h3>
+  <p>Multijugador: 6 sobrevivientes contra 1 monstruo.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/1607550/Project_Playtime/" target="_blank" rel="noopener">Juégalo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🚀</div>
+  <h3>Among Us <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Encuentra al impostor antes de que acabe con la tripulación.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/945360/Among_Us/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🟩</div>
+  <h3>Minecraft <span class="etiqueta pago">juego de pago</span></h3>
+  <p>El juego de bloques. Aquí es donde corren mis mods.</p>
+  <a class="boton enlace" href="https://www.minecraft.net/" target="_blank" rel="noopener">Cómpralo en minecraft.net ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">🟥</div>
+  <h3>Roblox <span class="etiqueta gratis">gratis</span></h3>
+  <p>Miles de juegos hechos por otros jugadores. En Linux se juega con Sober.</p>
+  <a class="boton enlace" href="https://www.roblox.com/" target="_blank" rel="noopener">Juégalo en roblox.com ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">🔴</div>
+  <h3>PokeMMO <span class="etiqueta gratis">gratis</span></h3>
+  <p>Pokémon online con otros entrenadores.</p>
+  <a class="boton enlace" href="https://pokemmo.com/" target="_blank" rel="noopener">Juégalo en pokemmo.com ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">⛏️</div>
+  <h3>Terraria <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Cava, construye y pelea contra jefes en 2D.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/105600/Terraria/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🌾</div>
+  <h3>Stardew Valley <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Cuida tu granja y hazte amigo del pueblo.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/413150/Stardew_Valley/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🔷</div>
+  <h3>Geometry Dash <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Salta al ritmo de la música. Un toque y a empezar de nuevo.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/322170/Geometry_Dash/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">🫘</div>
+  <h3>Fall Guys <span class="etiqueta gratis">gratis</span></h3>
+  <p>Carreras de obstáculos con 60 frijolitos.</p>
+  <a class="boton enlace" href="https://store.epicgames.com/p/fall-guys" target="_blank" rel="noopener">Juégalo en Epic Games ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">🚗</div>
+  <h3>Rocket League <span class="etiqueta gratis">gratis</span></h3>
+  <p>Fútbol con autos que vuelan.</p>
+  <a class="boton enlace" href="https://store.epicgames.com/p/rocket-league" target="_blank" rel="noopener">Juégalo en Epic Games ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">🪂</div>
+  <h3>Fortnite <span class="etiqueta gratis">gratis</span></h3>
+  <p>Battle royale: construye y sobrevive.</p>
+  <a class="boton enlace" href="https://store.epicgames.com/p/fortnite" target="_blank" rel="noopener">Juégalo en Epic Games ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">⭐</div>
+  <h3>Brawl Stars <span class="etiqueta gratis">gratis</span></h3>
+  <p>Peleas rápidas de 3 contra 3 en el celular.</p>
+  <a class="boton enlace" href="https://supercell.com/en/games/brawlstars/" target="_blank" rel="noopener">Juégalo en supercell.com ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🌙</div>
+  <h3>Lethal Company <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Junta chatarra en lunas abandonadas con tus amigos... si sobreviven.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/1966720/Lethal_Company/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🐻</div>
+  <h3>Five Nights at Freddy's <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Sobrevive 5 noches vigilando cámaras en la pizzería.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/319510/Five_Nights_at_Freddys/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">👵</div>
+  <h3>Granny <span class="etiqueta gratis">gratis</span></h3>
+  <p>Escapa de la casa en 5 días sin que Granny te escuche.</p>
+  <a class="boton enlace" href="https://play.google.com/store/apps/details?id=com.dvloper.granny" target="_blank" rel="noopener">Juégalo en Google Play ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">☕</div>
+  <h3>Cuphead <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Jefes dibujados como caricatura de los años 30.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/268910/Cuphead/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🏔️</div>
+  <h3>Celeste <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Sube la montaña con Madeline. Plataformas muy precisas.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/504230/Celeste/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🍕</div>
+  <h3>Pizza Tower <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Corre por una torre a toda velocidad para salvar tu pizzería.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/2231450/Pizza_Tower/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">❤️</div>
+  <h3>Undertale <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Un RPG donde no tienes que matar a nadie.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/391540/UNDERTALE/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🟣</div>
+  <h3>Slime Rancher <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Cría slimes en un rancho de otro planeta.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/433340/Slime_Rancher/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🌻</div>
+  <h3>Plants vs. Zombies GOTY <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Planta girasoles y lanzaguisantes para frenar a los zombis.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/3590/Plants_vs_Zombies_GOTY_Edition/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🌊</div>
+  <h3>Subnautica <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Sobrevive en un océano alienígena. Construye tu base bajo el agua.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/264710/Subnautica/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🌀</div>
+  <h3>Portal 2 <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Puzzles con portales y un robot muy sarcástico.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/620/Portal_2/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🤸</div>
+  <h3>Human: Fall Flat <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Puzzles con un muñeco torpe que se cae de todo.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/477160/Human_Fall_Flat/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🥊</div>
+  <h3>Gang Beasts <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Peleas de gelatina entre amigos.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/285900/Gang_Beasts/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🐐</div>
+  <h3>Goat Simulator 3 <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Eres una cabra y puedes romper todo.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/2159960/Goat_Simulator_3/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">🏃</div>
+  <h3>Stumble Guys <span class="etiqueta gratis">gratis</span></h3>
+  <p>Carreras de obstáculos con 32 jugadores.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/1677740/Stumble_Guys/" target="_blank" rel="noopener">Juégalo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🪿</div>
+  <h3>Untitled Goose Game <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Eres un ganso malvado que molesta a un pueblo.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/837470/Untitled_Goose_Game/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🎩</div>
+  <h3>A Hat in Time <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Plataformas 3D con una niña y su sombrero mágico.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/253230/A_Hat_in_Time/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">💨</div>
+  <h3>Sonic Mania <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Sonic clásico en 2D a toda velocidad.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/584400/Sonic_Mania/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🕯️</div>
+  <h3>Spelunky 2 <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Explora cuevas que cambian cada vez. Cada muerte enseña algo.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/418530/Spelunky_2/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🎵</div>
+  <h3>Rayman Legends <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Plataformas con niveles musicales geniales.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/242550/Rayman_Legends/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🍃</div>
+  <h3>Ori and the Blind Forest <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Un bosque mágico y un espíritu que salta por todos lados.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/387290/Ori_and_the_Blind_Forest_Definitive_Edition/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🕯️</div>
+  <h3>Little Nightmares <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Escapa de un barco lleno de gigantes horribles.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/424840/Little_Nightmares/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🖋️</div>
+  <h3>Bendy and the Ink Machine <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Terror en un estudio de dibujos animados.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/622650/Bendy_and_the_Ink_Machine/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🏠</div>
+  <h3>Hello Neighbor <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Entra a la casa del vecino sin que te atrape.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/521890/Hello_Neighbor/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">📏</div>
+  <h3>Baldi's Basics Classic <span class="etiqueta gratis">gratis</span></h3>
+  <p>Junta los cuadernos y escapa de la escuela de Baldi.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/1275890/Baldis_Basics_Classic_Remastered/" target="_blank" rel="noopener">Juégalo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">🟡</div>
+  <h3>Garten of Banban <span class="etiqueta gratis">gratis</span></h3>
+  <p>Explora un jardín infantil abandonado.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/2232840/Garten_of_Banban/" target="_blank" rel="noopener">Juégalo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🍳</div>
+  <h3>Overcooked! 2 <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Cocina con amigos en cocinas locas.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/728880/Overcooked_2/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">🦊</div>
+  <h3>Super Animal Royale <span class="etiqueta gratis">gratis</span></h3>
+  <p>Battle royale 2D con animalitos.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/843380/Super_Animal_Royale/" target="_blank" rel="noopener">Juégalo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🎈</div>
+  <h3>Bloons TD 6 <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Torres de monos que revientan globos.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/960090/Bloons_TD_6/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🧛</div>
+  <h3>Vampire Survivors <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Sobrevive a oleadas de monstruos. Muy adictivo.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/1794680/Vampire_Survivors/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🥔</div>
+  <h3>Brotato <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Una papa con 6 armas contra aliens.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/1942280/Brotato/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="pago">
+  <div class="icono">🎯</div>
+  <h3>Peggle Deluxe <span class="etiqueta pago">juego de pago</span></h3>
+  <p>Lanza bolitas y revienta clavijas.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/3480/Peggle_Deluxe/" target="_blank" rel="noopener">Cómpralo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">🏎️</div>
+  <h3>Trackmania <span class="etiqueta gratis">gratis</span></h3>
+  <p>Carreras de tiempo en pistas locas.</p>
+  <a class="boton enlace" href="https://store.steampowered.com/app/2225070/Trackmania/" target="_blank" rel="noopener">Juégalo en Steam ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">📱</div>
+  <h3>Rocket League Sideswipe <span class="etiqueta gratis">gratis</span></h3>
+  <p>Rocket League para el celular, en 2D.</p>
+  <a class="boton enlace" href="https://www.rocketleague.com/sideswipe" target="_blank" rel="noopener">Juégalo en rocketleague.com ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">👑</div>
+  <h3>Clash Royale <span class="etiqueta gratis">gratis</span></h3>
+  <p>Cartas y torres en partidas de 3 minutos.</p>
+  <a class="boton enlace" href="https://supercell.com/en/games/clashroyale/" target="_blank" rel="noopener">Juégalo en supercell.com ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">🃏</div>
+  <h3>Pokémon TCG Live <span class="etiqueta gratis">gratis</span></h3>
+  <p>El juego de cartas de Pokémon, oficial y digital.</p>
+  <a class="boton enlace" href="https://tcg.pokemon.com/" target="_blank" rel="noopener">Juégalo en pokemon.com ↗</a>
+</article>
+<article class="tarjeta favorito" data-tipo="gratis">
+  <div class="icono">🌟</div>
+  <h3>Genshin Impact <span class="etiqueta gratis">gratis</span></h3>
+  <p>Mundo abierto gigante con personajes elementales.</p>
+  <a class="boton enlace" href="https://genshin.hoyoverse.com/" target="_blank" rel="noopener">Juégalo en hoyoverse.com ↗</a>
+</article>
+  </div>
+</section>
+
+<section id="recomendados">
+  <h2>Mods recomendados</h2>
+  <p class="nota">Mods populares para Fabric 1.21.4. Los enlaces van a Modrinth, su página oficial. Casi todos necesitan Fabric API.</p>
+  <h3 class="grupo">⚡ Rendimiento</h3>
+  <p class="nota">Para que el juego vaya más fluido y con más FPS.</p>
+  <div class="tarjetas">
+<article class="tarjeta reco">
+  <h3>Sodium</h3>
+  <p>Muchos más FPS. Mejora el renderizado del juego.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/sodium" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Lithium</h3>
+  <p>Hace que el juego y el servidor vayan más fluidos.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/lithium" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Entity Culling</h3>
+  <p>No dibuja los mobs que no puedes ver.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/entityculling" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>FerriteCore</h3>
+  <p>Usa menos memoria RAM.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/ferrite-core" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>ImmediatelyFast</h3>
+  <p>Acelera el dibujado del HUD y los textos.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/immediatelyfast" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Krypton</h3>
+  <p>Mejora la conexión de red.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/krypton" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>C2ME</h3>
+  <p>Carga chunks más rápido usando varios núcleos.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/c2me-fabric" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Dynamic FPS</h3>
+  <p>Baja los FPS cuando el juego está minimizado.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/dynamic-fps" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Reese's Sodium Options</h3>
+  <p>Un menú de opciones mejor para Sodium.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/reeses-sodium-options" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Sodium Extra</h3>
+  <p>Más opciones para Sodium (partículas, niebla, etc).</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/sodium-extra" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Indium</h3>
+  <p>Hace que otros mods de renderizado funcionen con Sodium.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/indium" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+  </div>
+  <h3 class="grupo">🗺️ Mapas</h3>
+  <p class="nota">Para no perderte.</p>
+  <div class="tarjetas">
+<article class="tarjeta reco">
+  <h3>Xaero's Minimap</h3>
+  <p>Minimapa en la esquina de la pantalla.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/xaeros-minimap" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Xaero's World Map</h3>
+  <p>Mapa completo del mundo. Va con el Minimap.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/xaeros-world-map" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>JourneyMap</h3>
+  <p>Otro mapa completo, con waypoints y versión web.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/journeymap" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+  </div>
+  <h3 class="grupo">🧰 Utilidad</h3>
+  <p class="nota">Herramientas y librerías que otros mods necesitan.</p>
+  <div class="tarjetas">
+<article class="tarjeta reco">
+  <h3>Fabric API</h3>
+  <p>Obligatorio. Casi todos los mods de Fabric lo necesitan.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/fabric-api" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Mod Menu</h3>
+  <p>Un menú dentro del juego para ver y configurar tus mods.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/modmenu" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Roughly Enough Items (REI)</h3>
+  <p>Ver todas las recetas de todos los ítems.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/rei" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Mouse Tweaks</h3>
+  <p>Arrastra el mouse para mover ítems más rápido.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/mouse-tweaks" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Inventory Profiles Next</h3>
+  <p>Ordena tu inventario con un botón.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/inventory-profiles-next" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Cloth Config API</h3>
+  <p>Librería de configuración. Muchos mods la piden.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/cloth-config" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>YetAnotherConfigLib</h3>
+  <p>Otra librería de configuración. Algunos mods la piden.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/yacl" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Architectury API</h3>
+  <p>Librería para mods que salen en Fabric y Forge.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/architectury-api" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Simple Voice Chat</h3>
+  <p>Hablar por voz dentro del juego.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/simple-voice-chat" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Carpet</h3>
+  <p>Comandos técnicos para servidores y granjas.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/carpet" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>AppleSkin</h3>
+  <p>Muestra cuánta hambre y saturación da cada comida.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/appleskin" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Replay Mod</h3>
+  <p>Graba tus partidas y haz videos con cámara libre.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/replaymod" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Chunky</h3>
+  <p>Genera chunks del mundo por adelantado (servidores).</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/chunky" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Zoomify</h3>
+  <p>Zoom con una tecla, como en OptiFine.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/zoomify" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+  </div>
+  <h3 class="grupo">🎨 Visual</h3>
+  <p class="nota">Para que el juego se vea más bonito.</p>
+  <div class="tarjetas">
+<article class="tarjeta reco">
+  <h3>Iris Shaders</h3>
+  <p>Para usar shaders. Necesita Sodium.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/iris" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Complementary Shaders</h3>
+  <p>Un shader precioso y liviano. Va con Iris.</p>
+  <a class="boton enlace" href="https://modrinth.com/shader/complementary-reimagined" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Continuity</h3>
+  <p>Texturas conectadas (vidrio sin bordes).</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/continuity" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Falling Leaves</h3>
+  <p>Hojas que caen de los árboles.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/fallingleaves" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Distant Horizons</h3>
+  <p>Ver muchísimo más lejos sin perder FPS.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/distanthorizons" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Better Third Person</h3>
+  <p>Cámara en tercera persona que gira libre.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/better-third-person" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Not Enough Animations</h3>
+  <p>Animaciones nuevas para comer, remar, escalar...</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/not-enough-animations" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Physics Mod</h3>
+  <p>Bloques que se rompen en pedazos con física.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/physicsmod" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>LambDynamicLights</h3>
+  <p>Las antorchas en la mano iluminan.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/lambdynamiclights" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Presence Footsteps</h3>
+  <p>Sonidos de pasos distintos según el bloque.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/presence-footsteps" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Ambient Sounds</h3>
+  <p>Sonidos de ambiente: pájaros, viento, cuevas.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/ambientsounds" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+  </div>
+  <h3 class="grupo">🧱 Construcción</h3>
+  <p class="nota">Para construir cosas enormes más rápido.</p>
+  <div class="tarjetas">
+<article class="tarjeta reco">
+  <h3>Litematica</h3>
+  <p>Hologramas de construcciones para copiarlas bloque a bloque.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/litematica" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>MaLiLib</h3>
+  <p>Librería que Litematica y Tweakeroo necesitan.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/malilib" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>Tweakeroo</h3>
+  <p>Un montón de trucos para construir más cómodo.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/tweakeroo" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+<article class="tarjeta reco">
+  <h3>WorldEdit</h3>
+  <p>Comandos para copiar, pegar y rellenar zonas enteras.</p>
+  <a class="boton enlace" href="https://modrinth.com/mod/worldedit" target="_blank" rel="noopener">Ver en Modrinth ↗</a>
+</article>
+  </div>
+</section>
+
+<section id="instalar" class="instalar">
+  <h2>Cómo instalar un mod de Fabric</h2>
+  <ol>
+    <li>
+      <strong>Instala Fabric Loader.</strong>
+      Descárgalo desde <a href="https://fabricmc.net/use/installer/" target="_blank" rel="noopener">fabricmc.net</a>,
+      ábrelo y elige la versión de Minecraft del mod (por ejemplo 1.21.4).
+    </li>
+    <li>
+      <strong>Descarga Fabric API</strong> desde
+      <a href="https://modrinth.com/mod/fabric-api" target="_blank" rel="noopener">Modrinth</a>.
+      Elige la misma versión de Minecraft.
+    </li>
+    <li>
+      <strong>Copia los archivos .jar</strong> (el del mod y el de Fabric API)
+      a la carpeta <code>mods</code> de tu Minecraft:
+      <ul>
+        <li>Linux: <code>~/.minecraft/mods</code> (Flatpak: <code>~/.var/app/com.mojang.Minecraft/.minecraft/mods</code>)</li>
+        <li>Windows: <code>%APPDATA%\.minecraft\mods</code></li>
+        <li>Mac: <code>~/Library/Application Support/minecraft/mods</code></li>
+      </ul>
+      Si la carpeta <code>mods</code> no existe, créala.
+    </li>
+    <li>
+      <strong>Abre Minecraft</strong> con el perfil "fabric-loader". ¡Listo!
+    </li>
+  </ol>
+</section>
+
+  </main>
+
+  <footer>
+    <p>Hecho por Manu en su Game Studio</p>
+  </footer>
+
+  <script>
+    // Botón de tema: cambia entre claro y oscuro y lo recuerda.
+    const botonTema = document.getElementById('tema');
+    function pintarBotonTema() {
+      const oscuro = document.documentElement.dataset.tema === 'oscuro';
+      botonTema.textContent = oscuro ? '☀️ Modo claro' : '🌙 Modo oscuro';
+    }
+    botonTema.addEventListener('click', () => {
+      const nuevo = document.documentElement.dataset.tema === 'oscuro' ? 'claro' : 'oscuro';
+      document.documentElement.dataset.tema = nuevo;
+      try { localStorage.setItem('tema', nuevo); } catch (e) {}
+      pintarBotonTema();
+    });
+    pintarBotonTema();
+
+    // Contadores de la cabecera: suben de 0 al número real en 1,2 segundos.
+    // Empiezan rápido y frenan al final (como una barra de experiencia llenándose).
+    const DURACION = 1200;
+    const inicioContador = performance.now();
+    const numeros = document.querySelectorAll('.contador .numero');
+    function animarContadores(ahora) {
+      const t = Math.min(1, (ahora - inicioContador) / DURACION);
+      const suave = 1 - Math.pow(1 - t, 3);
+      numeros.forEach(n => { n.textContent = Math.round(Number(n.dataset.hasta) * suave); });
+      if (t < 1) requestAnimationFrame(animarContadores);
+    }
+    requestAnimationFrame(animarContadores);
+
+    // Tabla de récords: lee lo que cada juego guardó en localStorage.
+    function leer(clave) { try { return localStorage.getItem(clave); } catch (e) { return null; } }
+    function leerJSON(clave) { try { return JSON.parse(leer(clave)); } catch (e) { return null; } }
+    function tiempo(seg) { const m = Math.floor(seg / 60), s = seg - m * 60; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(2); }
+    function armarRecords() {
+      const filas = [];
+      const n = Number(leer('flappy-record')); if (n > 0) filas.push(['🐦 Flappy', n + ' puntos']);
+      const sp = Number(leer('serpiente-record')); if (sp > 0) filas.push(['🐍 Serpiente', sp + ' puntos']);
+      const si = Number(leer('silk-record')); if (si > 0) filas.push(['🕷️ Silk', 'los 5 niveles en ' + tiempo(si)]);
+      const im = leerJSON('impostor-record'); if (im && im.victorias) filas.push(['🔪 Impostor', im.victorias + ' victorias' + (im.mejorTiempo ? ' · mejor ' + im.mejorTiempo + ' s' : '')]);
+      const sa = leerJSON('salto-record'); if (sa && Object.keys(sa).length) filas.push(['🟨 Salto', Object.entries(sa).map(([k, v]) => k.replace('nivel', 'nivel ') + ': ' + v + ' intento' + (v === 1 ? '' : 's')).join(' · ')]);
+      const ca = leerJSON('carreras-mejores'); if (ca && Object.keys(ca).length) filas.push(['🏎️ Carreras', Object.entries(ca).map(([k, v]) => k + ' ' + tiempo(v)).join(' · ')]);
+      const cr = leerJSON('criaturas-partida'); if (cr && cr.equipo && cr.equipo.length) {
+        const vencidos = (cr.vencidos || []).filter(v => v !== 'K').length;
+        filas.push(['🐾 Criaturas', cr.equipo.length + ' en el equipo (' + cr.equipo.map(c => (c.apodo || c.especie) + ' Nv ' + c.nivel).join(', ') + ') · ' + vencidos + '/3 entrenadores' + (cr.campeon ? ' · ★ CAMPEÓN' : '')]);
+      }
+      const mi = leerJSON('mina-mundo'); if (mi && mi.filas) {
+        const cosas = (mi.inventario || []).filter(s => s[0]).map(s => s[1] + ' ' + s[0].replace('_', ' ')).join(', ');
+        filas.push(['⛏️ Mina', 'mundo guardado · día ' + (Math.floor((mi.tiempo || 0) / 180) + 1) + (cosas ? ' · ' + cosas : '')]);
+      }
+      const cuerpo = document.querySelector('#tabla-records tbody');
+      cuerpo.innerHTML = '';
+      for (const [juego, record] of filas) {
+        const tr = document.createElement('tr');
+        const a = document.createElement('td'), b = document.createElement('td');
+        a.textContent = juego; b.textContent = record;
+        tr.append(a, b); cuerpo.append(tr);
+      }
+      document.getElementById('records-vacio').style.display = filas.length ? 'none' : '';
+      document.getElementById('tabla-records').style.display = filas.length ? '' : 'none';
+    }
+    armarRecords();
+    window.addEventListener('focus', armarRecords);        // al volver de un juego, se actualiza
+    window.addEventListener('pageshow', armarRecords);
+
+    // Buscador: esconde las tarjetas cuyo nombre (el h3) no contiene lo escrito.
+    const buscar = document.getElementById('buscar');
+    const todasLasTarjetas = document.querySelectorAll('.tarjeta');
+
+    buscar.addEventListener('input', () => {
+      const texto = buscar.value.trim().toLowerCase();
+      todasLasTarjetas.forEach(tarjeta => {
+        const nombre = tarjeta.querySelector('h3').textContent.toLowerCase();
+        tarjeta.style.display = nombre.includes(texto) ? '' : 'none';
+      });
+    });
+
+    // Filtro de "Juegos que me gustan": esconde las tarjetas que no son de ese tipo.
+    const botones = document.querySelectorAll('.filtro button');
+    const favoritos = document.querySelectorAll('.tarjeta.favorito');
+
+    botones.forEach(boton => {
+      boton.addEventListener('click', () => {
+        const filtro = boton.dataset.filtro;   // "todos", "gratis" o "pago"
+        botones.forEach(b => b.classList.remove('activo'));
+        boton.classList.add('activo');
+        favoritos.forEach(tarjeta => {
+          const seMuestra = filtro === 'todos' || tarjeta.dataset.tipo === filtro;
+          tarjeta.style.display = seMuestra ? '' : 'none';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

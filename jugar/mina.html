@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mina de Manu</title>
+<style>
+  /* Colores de la página (style.css) */
+  :root {
+    --pasto: #5d9a3c; --pasto-oscuro: #3e6b28; --piedra: #7f7f7f; --piedra-oscura: #4f4f4f;
+    --cielo: #7fb2f0; --diamante: #4aedd9; --texto: #ffffff; --sombra: #1a1a1a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 16px;
+    background: var(--sombra); color: var(--texto);
+    font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 12px; line-height: 1.8;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  h1 { font-size: 18px; color: var(--diamante); text-shadow: 3px 3px 0 #000; margin: 8px 0 12px; text-align: center; }
+  canvas {
+    display: block; max-width: 100%; height: auto; background: #000;
+    border: 4px solid var(--piedra-oscura); box-shadow: 6px 6px 0 #000;
+    image-rendering: pixelated; touch-action: none; cursor: crosshair;
+  }
+  .ayuda { font-size: 9px; color: #dddddd; text-align: center; max-width: 640px; margin: 10px 0 0; }
+  .boton {
+    display: inline-block; margin: 16px 0; padding: 12px 16px; font-size: 11px;
+    background: #3c6ec9; border: 4px solid #244a8c; box-shadow: 4px 4px 0 #000;
+    color: var(--texto); text-decoration: none; text-shadow: 2px 2px 0 #000;
+  }
+  .boton:hover { background: #4a82e0; }
+  .boton:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+  /* Botones de celular: solo aparecen en pantallas táctiles */
+  .tactil { display: none; gap: 10px; margin-top: 12px; width: 100%; max-width: 960px; justify-content: space-between; flex-wrap: wrap; }
+  @media (pointer: coarse) { .tactil { display: flex; } }
+  .tactil div { display: flex; gap: 8px; }
+  .tactil button {
+    font-family: inherit; font-size: 14px; width: 56px; height: 56px;
+    background: var(--piedra-oscura); border: 4px solid #000; color: var(--texto);
+    box-shadow: 4px 4px 0 #000; touch-action: none; user-select: none;
+  }
+  .tactil button:active, .tactil button.activo { background: var(--piedra); }
+</style>
+</head>
+<body>
+<h1>MINA</h1>
+<canvas id="juego" width="960" height="600"></canvas>
+<div class="tactil">
+  <div><button data-tecla="a">◀</button><button data-tecla="d">▶</button><button data-tecla=" ">▲</button></div>
+  <div><button id="modoPoner">Poner</button><button data-tecla="c">C</button><button data-tecla="e">E</button><button data-tecla="[">◁</button><button data-tecla="]">▷</button></div>
+</div>
+<p class="ayuda">A / D o flechas: caminar &middot; ESPACIO: saltar &middot; clic izq: picar (mantén) / pegarle a un zombie &middot; clic der: poner bloque &middot; 1-9 o rueda: casilla &middot; C: crafteo &middot; E: comer &middot; G / L: guardar / cargar &middot; R: revivir</p>
+<a class="boton" href="../index.html">&larr; Volver a la página</a>
+
+<script>
+// ============================================================
+//  Mina — versión web del mina.py de Manu
+//  Todo se dibuja con canvas. Sin imágenes, sin internet.
+// ============================================================
+
+// ---------- Ajustes (los mismos que en mina.py) ----------
+const TILE = 24;
+const ANCHO = 960, ALTO = 600;
+const FPS = 60;
+const PASO = 1000 / FPS;
+const MUNDO_ANCHO = 240, MUNDO_ALTO = 90;
+
+const VELOCIDAD = 3.2;
+const GRAVEDAD = 0.45;
+const SALTO = -8.2;
+const ALCANCE = 5 * TILE;
+const VIDA_MAX = 10;
+const COMIDA_MAX = 10;
+const SEGUNDOS_POR_COMIDA = 25;
+const CAIDA_DANO = 11;
+
+const DIA_DURACION = 180;       // segundos que dura un día completo (día + noche)
+const ZOMBIES_MAX = 5;
+const ZOMBIE_VIDA = 3;
+const ZOMBIE_VEL = 1.4;
+
+// ---------- Bloques ----------
+const [AIRE, PASTO, TIERRA, PIEDRA, CARBON, HIERRO, ORO, DIAMANTE] = [0, 1, 2, 3, 4, 5, 6, 7];
+const [MADERA, HOJAS, TABLAS, MESA, ANTORCHA, HOJAS_MANZANA] = [8, 9, 10, 11, 12, 13];
+const CHARS = '0123456789ABCD';   // para guardar el mundo como texto
+
+const rgb = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
+const COLOR_BLOQUE = {
+  [PASTO]: [95, 170, 60], [TIERRA]: [130, 90, 55], [PIEDRA]: [120, 120, 125],
+  [CARBON]: [120, 120, 125], [HIERRO]: [120, 120, 125], [ORO]: [120, 120, 125], [DIAMANTE]: [120, 120, 125],
+  [MADERA]: [105, 75, 40], [HOJAS]: [50, 130, 45], [TABLAS]: [185, 140, 80],
+  [MESA]: [160, 115, 60], [HOJAS_MANZANA]: [50, 130, 45],
+};
+const COLOR_MINERAL = { [CARBON]: [35, 35, 35], [HIERRO]: [200, 160, 130], [ORO]: [255, 210, 50], [DIAMANTE]: [90, 230, 230] };
+const NOMBRE_BLOQUE = {
+  [PASTO]: 'pasto', [TIERRA]: 'tierra', [PIEDRA]: 'piedra', [CARBON]: 'carbón', [HIERRO]: 'hierro',
+  [ORO]: 'oro', [DIAMANTE]: 'diamante', [MADERA]: 'madera', [HOJAS]: 'hojas', [TABLAS]: 'tablas',
+  [MESA]: 'mesa', [ANTORCHA]: 'antorcha', [HOJAS_MANZANA]: 'hojas',
+};
+// cuántos "golpes de mano" aguanta cada bloque
+const DUREZA = {
+  [PASTO]: 15, [TIERRA]: 15, [MADERA]: 25, [HOJAS]: 5, [HOJAS_MANZANA]: 5, [TABLAS]: 15, [MESA]: 15,
+  [ANTORCHA]: 1, [PIEDRA]: 50, [CARBON]: 60, [HIERRO]: 80, [ORO]: 90, [DIAMANTE]: 120,
+};
+const PICO_MINIMO = { [HIERRO]: 1, [ORO]: 1, [DIAMANTE]: 2 };   // nivel mínimo de pico (0 = mano)
+const DROP = {
+  [PASTO]: 'tierra', [TIERRA]: 'tierra', [PIEDRA]: 'piedra', [CARBON]: 'carbon', [HIERRO]: 'hierro',
+  [ORO]: 'oro', [DIAMANTE]: 'diamante', [MADERA]: 'madera', [HOJAS]: null, [HOJAS_MANZANA]: 'manzana',
+  [TABLAS]: 'tablas', [MESA]: 'mesa', [ANTORCHA]: 'antorcha',
+};
+const NO_SOLIDOS = new Set([AIRE, ANTORCHA]);
+
+// ---------- Ítems ----------
+const BLOQUE_DE_ITEM = { tierra: TIERRA, piedra: PIEDRA, madera: MADERA, hojas: HOJAS, tablas: TABLAS, mesa: MESA, antorcha: ANTORCHA };
+const COLOR_ITEM = {
+  tierra: [130, 90, 55], piedra: [120, 120, 125], madera: [105, 75, 40], hojas: [50, 130, 45],
+  tablas: [185, 140, 80], palo: [150, 110, 60], mesa: [160, 115, 60], antorcha: [255, 200, 60],
+  carbon: [35, 35, 35], hierro: [200, 160, 130], oro: [255, 210, 50], diamante: [90, 230, 230],
+  manzana: [220, 40, 40], pico_piedra: [120, 120, 125], pico_hierro: [200, 160, 130], pico_diamante: [90, 230, 230],
+};
+const NOMBRE_ITEM = {
+  tierra: 'Tierra', piedra: 'Piedra', madera: 'Madera', hojas: 'Hojas', tablas: 'Tablas', palo: 'Palo',
+  mesa: 'Mesa', antorcha: 'Antorcha', carbon: 'Carbón', hierro: 'Hierro', oro: 'Oro', diamante: 'Diamante',
+  manzana: 'Manzana', pico_piedra: 'Pico de piedra', pico_hierro: 'Pico de hierro', pico_diamante: 'Pico de diamante',
+};
+const PICOS = { pico_piedra: [1, 2.5], pico_hierro: [2, 4.0], pico_diamante: [3, 7.0] };   // [nivel, poder]
+
+// Recetas: [nombre, {ingrediente: cantidad}, [item, cantidad], necesitaMesa]
+const RECETAS = [
+  ['4 Tablas', { madera: 1 }, ['tablas', 4], false],
+  ['4 Palos', { tablas: 2 }, ['palo', 4], false],
+  ['Mesa de crafteo', { tablas: 4 }, ['mesa', 1], false],
+  ['4 Antorchas', { carbon: 1, palo: 1 }, ['antorcha', 4], false],
+  ['Pico de piedra', { piedra: 3, palo: 2 }, ['pico_piedra', 1], true],
+  ['Pico de hierro', { hierro: 3, palo: 2 }, ['pico_hierro', 1], true],
+  ['Pico de diamante', { diamante: 3, palo: 2 }, ['pico_diamante', 1], true],
+];
+
+const CIELO_DIA = [120, 190, 240], CIELO_NOCHE = [15, 15, 40];
+const PIEL = 'rgb(240,200,160)', CAMISA = 'rgb(60,110,200)', PANTALON = 'rgb(50,50,90)';
+const ZOMBIE_COLOR = 'rgb(90,160,80)', BLANCO = 'rgb(255,255,255)', NEGRO = 'rgb(0,0,0)';
+const CORAZON = 'rgb(230,60,90)', CORAZON_VACIO = 'rgb(70,50,70)', COMIDA_COLOR = 'rgb(220,40,40)';
+
+// ---------- Utilidades ----------
+const azarEntre = (a, b) => a + Math.random() * (b - a);
+const azarEntero = (a, b) => Math.floor(azarEntre(a, b + 1));
+const elegir = (l) => l[Math.floor(Math.random() * l.length)];
+const trunc = Math.trunc;
+const div = (a, b) => Math.floor(a / b);
+
+class Rect {
+  constructor(x, y, w, h) { this.x = x; this.y = y; this.w = w; this.h = h; }
+  get left() { return this.x; }          set left(v) { this.x = v; }
+  get top() { return this.y; }           set top(v) { this.y = v; }
+  get right() { return this.x + this.w; } set right(v) { this.x = v - this.w; }
+  get bottom() { return this.y + this.h; } set bottom(v) { this.y = v - this.h; }
+  get centerx() { return this.x + this.w / 2; }
+  get centery() { return this.y + this.h / 2; }
+  colliderect(o) { return this.x < o.x + o.w && this.x + this.w > o.x && this.y < o.y + o.h && this.y + this.h > o.y; }
+  collidepoint(px, py) { return px >= this.x && px < this.x + this.w && py >= this.y && py < this.y + this.h; }
+  move(dx, dy) { return new Rect(this.x + dx, this.y + dy, this.w, this.h); }
+  inflate(dw, dh) { return new Rect(this.x - dw / 2, this.y - dh / 2, this.w + dw, this.h + dh); }
+}
+
+// ---------- Ruido: números "al azar pero suaves" para hacer el terreno ----------
+function ruido1d(x, escala, azar) {
+  return Math.sin(x / escala + azar[0]) + 0.5 * Math.sin(x / (escala / 2.3) + azar[1]) + 0.25 * Math.sin(x / (escala / 5.1) + azar[2]);
+}
+// Una rejilla de números al azar; entre medio se interpola (queda suave). Sirve para las cuevas.
+class Ruido2D {
+  constructor(paso) { this.paso = paso; this.rejilla = new Map(); }
+  punto(i, j) {
+    const k = i + ',' + j;
+    if (!this.rejilla.has(k)) this.rejilla.set(k, Math.random());
+    return this.rejilla.get(k);
+  }
+  valor(x, y) {
+    const i = div(x, this.paso), j = div(y, this.paso);
+    let fx = (x % this.paso) / this.paso, fy = (y % this.paso) / this.paso;
+    fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+    const a = this.punto(i, j) * (1 - fx) + this.punto(i + 1, j) * fx;
+    const b = this.punto(i, j + 1) * (1 - fx) + this.punto(i + 1, j + 1) * fx;
+    return a * (1 - fy) + b * fy;
+  }
+}
+
+// ---------- El mundo ----------
+class Mundo {
+  constructor(generar = true) {
+    this.ancho = MUNDO_ANCHO; this.alto = MUNDO_ALTO;
+    this.bloques = [];
+    for (let y = 0; y < this.alto; y++) this.bloques.push(new Array(this.ancho).fill(AIRE));
+    this.cieloY = new Array(this.ancho).fill(0);   // primer bloque sólido de cada columna (para la luz)
+    this.antorchas = new Set();
+    if (generar) this.generar();
+  }
+  get(x, y) {
+    if (x >= 0 && x < this.ancho && y >= 0 && y < this.alto) return this.bloques[y][x];
+    return y < 0 ? AIRE : PIEDRA;          // afuera: aire arriba, piedra en los bordes y abajo
+  }
+  set(x, y, b) {
+    if (!(x >= 0 && x < this.ancho && y >= 0 && y < this.alto)) return;
+    this.bloques[y][x] = b;
+    if (b === ANTORCHA) this.antorchas.add(x + ',' + y); else this.antorchas.delete(x + ',' + y);
+    this.recalcularCielo(x);
+  }
+  solido(x, y) { return !NO_SOLIDOS.has(this.get(x, y)); }
+  recalcularCielo(x) {
+    let y = 0;
+    while (y < this.alto && NO_SOLIDOS.has(this.bloques[y][x])) y++;
+    this.cieloY[x] = y;
+  }
+  recalcularTodo() {
+    this.antorchas = new Set();
+    for (let x = 0; x < this.ancho; x++) {
+      this.recalcularCielo(x);
+      for (let y = 0; y < this.alto; y++) if (this.bloques[y][x] === ANTORCHA) this.antorchas.add(x + ',' + y);
+    }
+  }
+  generar() {
+    const azar = [azarEntre(0, 100), azarEntre(0, 100), azarEntre(0, 100)];
+    const base = this.alto * 0.38;
+    const alturas = [];
+    for (let x = 0; x < this.ancho; x++) alturas.push(trunc(base + ruido1d(x, 22, azar) * 6));
+    const cuevas = new Ruido2D(7), cuevas2 = new Ruido2D(3);
+    for (let x = 0; x < this.ancho; x++) {
+      const h = alturas[x], grosorTierra = azarEntero(3, 6);
+      for (let y = 0; y < this.alto; y++) {
+        let b;
+        if (y < h) b = AIRE;
+        else if (y === h) b = PASTO;
+        else if (y <= h + grosorTierra) b = TIERRA;
+        else {
+          b = PIEDRA;
+          // cuevas: donde el ruido es alto, queda hueco
+          if (y > h + 4 && cuevas.valor(x, y) * 0.75 + cuevas2.valor(x, y) * 0.25 > 0.66) b = AIRE;
+        }
+        this.bloques[y][x] = b;
+      }
+    }
+    // minerales: pequeños grupitos dentro de la piedra
+    for (let n = 0; n < trunc(this.ancho * 2.5); n++) {
+      let x = azarEntero(0, this.ancho - 1);
+      let y = azarEntero(alturas[x] + 6, this.alto - 1);
+      const prof = y - alturas[x], r = Math.random();
+      let mineral;
+      if (prof > 45 && r < 0.06) mineral = DIAMANTE;
+      else if (prof > 25 && r < 0.18) mineral = ORO;
+      else if (prof > 10 && r < 0.45) mineral = HIERRO;
+      else mineral = CARBON;
+      for (let k = azarEntero(2, 5); k > 0; k--) {
+        if (x >= 0 && x < this.ancho && y >= 0 && y < this.alto && this.bloques[y][x] === PIEDRA) this.bloques[y][x] = mineral;
+        x += elegir([-1, 0, 1]); y += elegir([-1, 0, 1]);
+      }
+    }
+    // árboles sobre el pasto
+    let x = 3;
+    while (x < this.ancho - 3) {
+      const h = alturas[x];
+      if (this.bloques[h][x] === PASTO && Math.random() < 0.14) {
+        const tronco = azarEntero(4, 6);
+        for (let y = h - tronco; y < h; y++) this.bloques[y][x] = MADERA;
+        const copaY = h - tronco;
+        for (let dy = -2; dy < 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+          if (Math.abs(dx) === 2 && Math.abs(dy + 1) === 1) continue;
+          const yy = copaY + dy, xx = x + dx;
+          if (yy >= 0 && yy < this.alto && this.bloques[yy][xx] === AIRE) this.bloques[yy][xx] = Math.random() < 0.15 ? HOJAS_MANZANA : HOJAS;
+        }
+        x += azarEntero(4, 8);
+      } else x += 1;
+    }
+    this.recalcularTodo();
+  }
+  aTexto() { return this.bloques.map(fila => fila.map(b => CHARS[b]).join('')); }
+  desdeTexto(filas) {
+    this.alto = filas.length; this.ancho = filas[0].length;
+    this.bloques = filas.map(f => [...f].map(c => CHARS.indexOf(c)));
+    this.cieloY = new Array(this.ancho).fill(0);
+    this.recalcularTodo();
+  }
+  // Los bloques sólidos que están alrededor de un rect (para chocar).
+  rectsSolidos(rect) {
+    const x0 = div(rect.left, TILE) - 1, x1 = div(rect.right, TILE) + 1;
+    const y0 = div(rect.top, TILE) - 1, y1 = div(rect.bottom, TILE) + 1;
+    const lista = [];
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (this.solido(x, y)) lista.push(new Rect(x * TILE, y * TILE, TILE, TILE));
+    return lista;
+  }
+}
+
+function moverConChoques(rect, dx, dy, bloques) {
+  let tocaSuelo = false, tocaPared = false;
+  rect.x += dx;
+  for (const b of bloques) if (rect.colliderect(b)) { tocaPared = true; if (dx > 0) rect.right = b.left; else if (dx < 0) rect.left = b.right; }
+  rect.y += dy;
+  for (const b of bloques) if (rect.colliderect(b)) { if (dy > 0) { rect.bottom = b.top; tocaSuelo = true; } else if (dy < 0) rect.top = b.bottom; }
+  return [tocaSuelo, tocaPared];
+}
+
+// ---------- Cosas con gravedad (jugador y zombies comparten esto) ----------
+class Criatura {
+  constructor(x, y, ancho = 18, alto = 44) {
+    this.rect = new Rect(x, y, ancho, alto);
+    this.velY = 0; this.enSuelo = false; this.miraDerecha = true;
+  }
+  fisica(dx, mundo) {
+    this.velY = Math.min(this.velY + GRAVEDAD, 14);
+    let dy = trunc(this.velY);
+    if (this.velY > 0 && dy === 0) dy = 1;
+    const cayendoA = this.velY;
+    const solidos = mundo.rectsSolidos(this.rect.inflate(Math.abs(dx) * 2 + 4, Math.abs(dy) * 2 + 4));
+    let pared;
+    [this.enSuelo, pared] = moverConChoques(this.rect, trunc(dx), dy, solidos);
+    if (this.enSuelo) this.velY = 0;
+    if (this.rect.top < 0) this.rect.top = 0;
+    return [pared, cayendoA];
+  }
+}
+
+class Jugador extends Criatura {
+  constructor(x, y) {
+    super(x, y);
+    this.vida = VIDA_MAX; this.comida = COMIDA_MAX; this.invulnerable = 0;
+    this.inventario = []; for (let i = 0; i < 9; i++) this.inventario.push([null, 0]);
+    this.casilla = 0; this.golpeEspera = 0;
+  }
+  agregar(item, cantidad = 1) {
+    for (const s of this.inventario) if (s[0] === item && s[1] < 99) { s[1] += cantidad; return true; }
+    for (const s of this.inventario) if (s[0] === null) { s[0] = item; s[1] = cantidad; return true; }
+    return false;
+  }
+  cuantos(item) { return this.inventario.reduce((t, [i, c]) => t + (i === item ? c : 0), 0); }
+  quitar(item, cantidad = 1) {
+    for (const s of this.inventario) {
+      if (s[0] === item) {
+        const usa = Math.min(cantidad, s[1]);
+        s[1] -= usa; cantidad -= usa;
+        if (s[1] === 0) s[0] = null;
+        if (cantidad === 0) return;
+      }
+    }
+  }
+  itemEnMano() { return this.inventario[this.casilla][0]; }
+  pico() { return PICOS[this.itemEnMano()] || [0, 1.0]; }   // mano pelada = [0, 1]
+  herir(cuanto, desdeX = null) {
+    if (this.invulnerable > 0) return;
+    this.vida -= cuanto; this.invulnerable = 45;
+    if (desdeX !== null) this.velY = -4;
+  }
+  dibujar(cam) {
+    if (this.invulnerable > 0 && Math.floor(this.invulnerable / 4) % 2 === 0) return;
+    const r = this.rect.move(-cam[0], -cam[1]);
+    const lado = this.miraDerecha ? 1 : -1;
+    rect(r.left + 2, r.bottom - 16, 6, 16, PANTALON);
+    rect(r.right - 8, r.bottom - 16, 6, 16, PANTALON);
+    rect(r.left, r.top + 14, r.w, 16, CAMISA);
+    rect(r.left + 2, r.top, 14, 14, PIEL);
+    rect(r.centerx + 3 * lado, r.top + 5, 2, 2, NEGRO);
+    // brazo con la herramienta
+    const item = this.itemEnMano();
+    const bx = r.centerx + 10 * lado;
+    linea(r.centerx, r.top + 18, bx, r.top + 24, PIEL, 4);
+    if (item in PICOS) {
+      linea(bx, r.top + 24, bx + 8 * lado, r.top + 8, 'rgb(150,110,60)', 3);
+      rect(bx + 8 * lado - 5, r.top + 4, 10, 6, rgb(COLOR_ITEM[item]));
+    } else if (item) rect(bx - 4, r.top + 18, 8, 8, rgb(COLOR_ITEM[item]));
+  }
+}
+
+class Zombie extends Criatura {
+  constructor(x, y) { super(x, y); this.vida = ZOMBIE_VIDA; this.herido = 0; this.empujon = 0; }
+  actualizar(mundo, jugador) {
+    let dx = jugador.rect.centerx > this.rect.centerx ? ZOMBIE_VEL : -ZOMBIE_VEL;
+    this.miraDerecha = dx > 0;
+    if (Math.abs(jugador.rect.centerx - this.rect.centerx) < 6) dx = 0;
+    if (this.empujon) { dx = this.empujon; this.empujon = trunc(this.empujon * 0.7); }
+    const [pared] = this.fisica(dx, mundo);
+    if (pared && this.enSuelo) this.velY = SALTO;   // si choca con algo y está en el suelo, salta
+    else if (this.enSuelo && jugador.rect.bottom < this.rect.top && Math.abs(jugador.rect.centerx - this.rect.centerx) < TILE * 2) this.velY = SALTO;
+    if (this.herido > 0) this.herido -= 1;
+  }
+  golpear(cuanto, desdeX) {
+    this.vida -= cuanto; this.herido = 10;
+    this.empujon = this.rect.centerx > desdeX ? 6 : -6;
+    this.velY = -3;
+  }
+  dibujar(cam) {
+    const r = this.rect.move(-cam[0], -cam[1]);
+    const color = this.herido > 6 ? BLANCO : ZOMBIE_COLOR;
+    const lado = this.miraDerecha ? 1 : -1;
+    rect(r.left + 2, r.bottom - 16, 6, 16, 'rgb(40,70,40)');
+    rect(r.right - 8, r.bottom - 16, 6, 16, 'rgb(40,70,40)');
+    rect(r.left, r.top + 14, r.w, 16, color);
+    rect(r.left + 2, r.top, 14, 14, color);
+    rect(r.centerx + 3 * lado - 2, r.top + 5, 3, 3, NEGRO);
+    rect(r.centerx - 3 * lado - 2, r.top + 5, 3, 3, NEGRO);
+    linea(r.centerx, r.top + 18, r.centerx + 14 * lado, r.top + 18, color, 4);
+  }
+}
+
+// ---------- Día y noche ----------
+function luzDelDia(tiempo) {
+  const t = (tiempo % DIA_DURACION) / DIA_DURACION;
+  if (t < 0.42) return 1;
+  if (t < 0.5) return 1 - (t - 0.42) / 0.08;
+  if (t < 0.88) return 0;
+  return (t - 0.88) / 0.12;
+}
+const mezclar = (c1, c2, t) => c1.map((a, i) => trunc(a + (c2[i] - a) * t));
+
+// Cuánta luz (0 a 1) hay en cada bloque de la zona visible.
+function calcularLuz(mundo, x0, y0, w, h, luzDia) {
+  const luz = [];
+  const minimo = 0.22 + 0.78 * luzDia;      // de noche la superficie se ve poquito
+  for (let j = 0; j < h; j++) {
+    const fila = new Array(w).fill(0), y = y0 + j;
+    for (let i = 0; i < w; i++) { const x = x0 + i; if (x >= 0 && x < mundo.ancho && y <= mundo.cieloY[x]) fila[i] = minimo; }
+    luz.push(fila);
+  }
+  // antorchas: un círculo de luz que se apaga con la distancia
+  for (const k of mundo.antorchas) {
+    const [ax, ay] = k.split(',').map(Number);
+    if (ax >= x0 - 7 && ax < x0 + w + 7 && ay >= y0 - 7 && ay < y0 + h + 7) {
+      for (let j = Math.max(0, ay - 7 - y0); j < Math.min(h, ay + 8 - y0); j++)
+        for (let i = Math.max(0, ax - 7 - x0); i < Math.min(w, ax + 8 - x0); i++) {
+          const d = Math.hypot(x0 + i - ax, y0 + j - ay);
+          luz[j][i] = Math.max(luz[j][i], 1 - d / 7.5);
+        }
+    }
+  }
+  // la luz se "desparrama" a los vecinos (así las cuevas cerca de la entrada se ven)
+  for (let n = 0; n < 2; n++) {
+    for (let j = 0; j < h; j++) {
+      for (let i = 1; i < w; i++) luz[j][i] = Math.max(luz[j][i], luz[j][i - 1] - 0.18);
+      for (let i = w - 2; i >= 0; i--) luz[j][i] = Math.max(luz[j][i], luz[j][i + 1] - 0.18);
+    }
+    for (let i = 0; i < w; i++) {
+      for (let j = 1; j < h; j++) luz[j][i] = Math.max(luz[j][i], luz[j - 1][i] - 0.18);
+      for (let j = h - 2; j >= 0; j--) luz[j][i] = Math.max(luz[j][i], luz[j + 1][i] - 0.18);
+    }
+  }
+  return luz;
+}
+
+// ---------- Dibujos ----------
+const canvas = document.getElementById('juego');
+const ctx = canvas.getContext('2d');
+function rect(x, y, w, h, color) { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); }
+function rectBorde(x, y, w, h, color, g) { ctx.strokeStyle = color; ctx.lineWidth = g; ctx.strokeRect(x + g / 2, y + g / 2, w - g, h - g); }
+function linea(x1, y1, x2, y2, color, g) { ctx.strokeStyle = color; ctx.lineWidth = g; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+function circulo(x, y, r, color) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+function texto(msg, x, y, tam, color = BLANCO, centrado = false) {
+  ctx.font = tam + 'px sans-serif'; ctx.textAlign = centrado ? 'center' : 'left'; ctx.textBaseline = centrado ? 'middle' : 'top';
+  ctx.fillStyle = NEGRO; ctx.fillText(msg, x + 1, y + 1);
+  ctx.fillStyle = color; ctx.fillText(msg, x, y);
+}
+
+function dibujarBloque(b, px, py) {
+  if (b === ANTORCHA) {
+    rect(px + TILE / 2 - 2, py + 8, 4, TILE - 8, 'rgb(150,110,60)');
+    rect(px + TILE / 2 - 4, py + 2, 8, 8, 'rgb(255,200,60)');
+    rect(px + TILE / 2 - 2, py + 4, 4, 4, 'rgb(255,120,30)');
+    return;
+  }
+  const c = COLOR_BLOQUE[b], color = rgb(c);
+  const oscuro = rgb(c.map(v => Math.max(0, v - 35)));
+  rect(px, py, TILE, TILE, color);
+  if (b === PASTO) {
+    rect(px, py + 7, TILE, TILE - 7, rgb(COLOR_BLOQUE[TIERRA]));
+    rect(px, py, TILE, 7, color);
+    for (let k = 0; k < TILE; k += 6) rect(px + k, py + 7, 3, 3, color);
+  } else if (b in COLOR_MINERAL) {
+    const m = rgb(COLOR_MINERAL[b]);
+    for (const [dx, dy] of [[4, 5], [14, 4], [8, 14], [17, 15]]) rect(px + dx, py + dy, 5, 5, m);
+  } else if (b === MADERA) {
+    rect(px + 4, py, 3, TILE, oscuro); rect(px + 15, py, 3, TILE, oscuro);
+  } else if (b === HOJAS || b === HOJAS_MANZANA) {
+    rect(px + 3, py + 3, 5, 5, oscuro); rect(px + 14, py + 12, 5, 5, oscuro);
+    if (b === HOJAS_MANZANA) circulo(px + 15, py + 7, 4, COMIDA_COLOR);
+  } else if (b === TABLAS) {
+    linea(px, py + 8, px + TILE, py + 8, oscuro, 2); linea(px, py + 16, px + TILE, py + 16, oscuro, 2);
+  } else if (b === MESA) {
+    rect(px + 2, py + 8, 4, TILE - 8, oscuro); rect(px + TILE - 6, py + 8, 4, TILE - 8, oscuro);
+    rect(px + 8, py + 2, 8, 4, 'rgb(120,120,125)');
+  } else if (b === PIEDRA) {
+    rect(px + 3, py + 6, 8, 3, oscuro); rect(px + 13, py + 15, 7, 3, oscuro);
+  }
+  rectBorde(px, py, TILE, TILE, oscuro, 1);
+}
+
+function dibujarItem(item, cx, cy, tam = 16) {
+  const c = rgb(COLOR_ITEM[item]);
+  if (item in PICOS) { linea(cx - 6, cy + 7, cx + 6, cy - 5, 'rgb(150,110,60)', 3); rect(cx, cy - 9, 10, 6, c); }
+  else if (item === 'palo') linea(cx - 6, cy + 6, cx + 6, cy - 6, c, 3);
+  else if (item === 'manzana') { circulo(cx, cy + 1, 7, c); linea(cx, cy - 6, cx + 2, cy - 10, 'rgb(80,50,20)', 2); }
+  else if (item === 'antorcha') { rect(cx - 2, cy - 2, 4, 10, 'rgb(150,110,60)'); rect(cx - 4, cy - 8, 8, 7, c); }
+  else if (['carbon', 'hierro', 'oro', 'diamante'].includes(item)) {
+    rect(cx - tam / 2, cy - tam / 2, tam, tam, 'rgb(120,120,125)');
+    for (const [dx, dy] of [[-5, -5], [2, -3], [-3, 3], [4, 4]]) rect(cx + dx, cy + dy, 4, 4, c);
+  } else {
+    rect(cx - tam / 2, cy - tam / 2, tam, tam, c);
+    rectBorde(cx - tam / 2, cy - tam / 2, tam, tam, rgb(COLOR_ITEM[item].map(k => Math.max(0, k - 40))), 1);
+  }
+}
+
+// ---------- Crafteo ----------
+function mesaCerca(mundo, jugador) {
+  const cx = div(jugador.rect.centerx, TILE), cy = div(jugador.rect.centery, TILE);
+  for (let y = cy - 4; y <= cy + 4; y++) for (let x = cx - 5; x <= cx + 5; x++) if (mundo.get(x, y) === MESA) return true;
+  return false;
+}
+function puedeCraftear(receta, jugador, hayMesa) {
+  const [, ingredientes, , necesitaMesa] = receta;
+  if (necesitaMesa && !hayMesa) return false;
+  return Object.entries(ingredientes).every(([i, n]) => jugador.cuantos(i) >= n);
+}
+function craftear(receta, jugador, hayMesa) {
+  if (!puedeCraftear(receta, jugador, hayMesa)) return false;
+  const [, ingredientes, [item, cantidad]] = receta;
+  for (const [i, n] of Object.entries(ingredientes)) jugador.quitar(i, n);
+  jugador.agregar(item, cantidad);
+  return true;
+}
+
+// ---------- Guardar y cargar (localStorage en vez de mundo.json) ----------
+function guardarMundo() {
+  const datos = { filas: j.mundo.aTexto(), jugador: [j.jugador.rect.x, j.jugador.rect.y], inventario: j.jugador.inventario,
+                  vida: j.jugador.vida, comida: j.jugador.comida, tiempo: j.tiempo };
+  localStorage.setItem('mina-mundo', JSON.stringify(datos));
+}
+function cargarMundo() {
+  const datos = JSON.parse(localStorage.getItem('mina-mundo'));
+  if (!datos || !datos.filas) throw new Error('sin mundo');
+  const mundo = new Mundo(false);
+  mundo.desdeTexto(datos.filas);
+  const jugador = new Jugador(datos.jugador[0], datos.jugador[1]);
+  jugador.inventario = datos.inventario.map(([i, c]) => [i, c]);
+  jugador.vida = datos.vida; jugador.comida = datos.comida;
+  return { mundo, jugador, tiempo: datos.tiempo, zombies: [], picando: null, mensaje: ['', 0], crafteo: false, estado: 'jugando', comidaTimer: 0 };
+}
+function nuevoJuego() {
+  const mundo = new Mundo();
+  const x = div(mundo.ancho, 2);
+  const jugador = new Jugador(x * TILE + 3, (mundo.cieloY[x] - 2) * TILE);
+  return { mundo, jugador, tiempo: 0, zombies: [], picando: null, mensaje: ['', 0], crafteo: false, estado: 'jugando', comidaTimer: 0 };
+}
+function avisar(msg) { j.mensaje = [msg, 150]; }
+
+// ---------- Estado, mouse y teclas ----------
+let j = nuevoJuego();
+avisar('¡Bienvenido! Pica un árbol con clic izquierdo para empezar.');
+const teclas = {};
+let mouse = [-1000, -1000], botonIzq = false, modoPoner = false;
+
+function camara(mundo, p) {
+  return [Math.max(0, Math.min(trunc(p.rect.centerx - ANCHO / 2), mundo.ancho * TILE - ANCHO)),
+          Math.max(0, Math.min(trunc(p.rect.centery - ALTO / 2), mundo.alto * TILE - ALTO))];
+}
+
+function tecla(k) {
+  const mundo = j.mundo, p = j.jugador, hayMesa = mesaCerca(mundo, p);
+  const kk = k.length === 1 ? k.toLowerCase() : k;
+  if (kk === 'g') { try { guardarMundo(); avisar('Mundo guardado en el navegador'); } catch (e) { avisar('No se pudo guardar'); } }
+  else if (kk === 'l') {
+    try { j = cargarMundo(); avisar('Mundo cargado'); } catch (e) { avisar('No hay mundo guardado todavía (G guarda)'); }
+  } else if (j.estado === 'muerto') {
+    if (kk === 'r') {
+      const x = div(mundo.ancho, 2);
+      p.rect.x = x * TILE + 3; p.rect.y = (mundo.cieloY[x] - 2) * TILE;
+      p.vida = VIDA_MAX; p.comida = COMIDA_MAX; p.velY = 0;
+      j.zombies = []; j.estado = 'jugando';
+    }
+  } else if (kk === 'c') j.crafteo = !j.crafteo;
+  else if (kk >= '1' && kk <= '9') {
+    const n = Number(kk) - 1;
+    if (j.crafteo) {
+      if (n < RECETAS.length) {
+        if (craftear(RECETAS[n], p, hayMesa)) avisar('Crafteaste: ' + RECETAS[n][0]);
+        else if (RECETAS[n][3] && !hayMesa) avisar('Necesitas una mesa de crafteo cerca');
+        else avisar('Te faltan materiales');
+      }
+    } else p.casilla = n;
+  } else if (kk === '[') p.casilla = (p.casilla + 8) % 9;
+  else if (kk === ']') p.casilla = (p.casilla + 1) % 9;
+  else if (kk === ' ' && p.enSuelo) p.velY = SALTO;
+  else if (kk === 'e') {
+    if (p.cuantos('manzana') > 0) { p.quitar('manzana'); p.comida = Math.min(COMIDA_MAX, p.comida + 3); p.vida = Math.min(VIDA_MAX, p.vida + 1); avisar('Ñam'); }
+    else avisar('No tienes manzanas (están en los árboles)');
+  }
+}
+
+// clic derecho: poner bloque
+function ponerBloque(mx, my) {
+  if (j.estado !== 'jugando') return;
+  const mundo = j.mundo, p = j.jugador, cam = camara(mundo, p);
+  const tx = div(mx + cam[0], TILE), ty = div(my + cam[1], TILE);
+  const item = p.itemEnMano();
+  const destino = new Rect(tx * TILE, ty * TILE, TILE, TILE);
+  const cerca = Math.hypot(destino.centerx - p.rect.centerx, destino.centery - p.rect.centery) <= ALCANCE;
+  if (item in BLOQUE_DE_ITEM && cerca && mundo.get(tx, ty) === AIRE && !destino.colliderect(p.rect)) {
+    // tiene que apoyarse en algo (que no quede flotando)
+    const apoyo = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => mundo.get(tx + dx, ty + dy) !== AIRE);
+    if (apoyo) { mundo.set(tx, ty, BLOQUE_DE_ITEM[item]); p.quitar(item); }
+  }
+}
+
+function posCanvas(e) {
+  const r = canvas.getBoundingClientRect();
+  return [(e.clientX - r.left) * ANCHO / r.width, (e.clientY - r.top) * ALTO / r.height];
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault();
+  if (!e.repeat) tecla(e.key);
+  teclas[e.key] = true;
+});
+document.addEventListener('keyup', (e) => { teclas[e.key] = false; });
+canvas.addEventListener('pointermove', (e) => { mouse = posCanvas(e); });
+canvas.addEventListener('pointerdown', (e) => {
+  mouse = posCanvas(e);
+  if (e.button === 2 || (e.pointerType === 'touch' && modoPoner)) ponerBloque(mouse[0], mouse[1]);
+  else if (e.button === 0) botonIzq = true;
+});
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) canvas.addEventListener(ev, () => { botonIzq = false; });
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); j.jugador.casilla = (j.jugador.casilla + (e.deltaY > 0 ? 1 : -1) + 9) % 9; }, { passive: false });
+document.querySelectorAll('.tactil button[data-tecla]').forEach(b => {
+  const k = b.dataset.tecla;
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); teclas[k] = true; tecla(k); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { teclas[k] = false; });
+});
+const botonPoner = document.getElementById('modoPoner');
+if (botonPoner) botonPoner.addEventListener('click', () => { modoPoner = !modoPoner; botonPoner.classList.toggle('activo', modoPoner); botonPoner.textContent = modoPoner ? 'Poner' : 'Picar'; });
+
+// ---------- Lógica (un cuadro) ----------
+function actualizar() {
+  if (j.estado !== 'jugando') return;
+  const mundo = j.mundo, p = j.jugador;
+  const dt = 1 / FPS;
+  j.tiempo += dt;
+  let dx = 0;
+  if (teclas.a || teclas.A || teclas.ArrowLeft) { dx = -VELOCIDAD; p.miraDerecha = false; }
+  if (teclas.d || teclas.D || teclas.ArrowRight) { dx = VELOCIDAD; p.miraDerecha = true; }
+  if (teclas[' '] && p.enSuelo) p.velY = SALTO;
+  const [, cayendo] = p.fisica(dx, mundo);
+  if (p.enSuelo && cayendo > CAIDA_DANO) { p.herir(trunc((cayendo - CAIDA_DANO) / 1.5) + 1); avisar('¡Ay! Caída fuerte'); }
+  if (p.invulnerable > 0) p.invulnerable -= 1;
+  if (p.golpeEspera > 0) p.golpeEspera -= 1;
+
+  // comida: baja con el tiempo; si llega a 0 pierdes vida
+  j.comidaTimer += dt;
+  if (j.comidaTimer >= SEGUNDOS_POR_COMIDA) {
+    j.comidaTimer = 0;
+    if (p.comida > 0) p.comida -= 1; else { p.vida -= 1; avisar('¡Tienes hambre! Come manzanas (E)'); }
+  }
+
+  // clic izquierdo mantenido: picar o pegarle a un zombie
+  const cam = camara(mundo, p);
+  if (botonIzq && !j.crafteo && !modoPoner) {
+    const wx = mouse[0] + cam[0], wy = mouse[1] + cam[1];
+    const tx = div(wx, TILE), ty = div(wy, TILE);
+    const [nivel, poder] = p.pico();
+    const zombie = j.zombies.find(z => z.rect.collidepoint(wx, wy));
+    if (zombie && p.golpeEspera === 0 && Math.hypot(zombie.rect.centerx - p.rect.centerx, zombie.rect.centery - p.rect.centery) <= ALCANCE) {
+      zombie.golpear(1 + nivel, p.rect.centerx);
+      p.golpeEspera = 20;
+    } else {
+      const b = mundo.get(tx, ty);
+      const cerca = Math.hypot(tx * TILE + TILE / 2 - p.rect.centerx, ty * TILE + TILE / 2 - p.rect.centery) <= ALCANCE;
+      if (b !== AIRE && cerca) {
+        if ((PICO_MINIMO[b] || 0) > nivel) { avisar('Necesitas un pico mejor para el ' + NOMBRE_BLOQUE[b]); j.picando = null; }
+        else {
+          if (j.picando && j.picando[0][0] === tx && j.picando[0][1] === ty) j.picando[1] += poder;
+          else j.picando = [[tx, ty], poder];
+          if (j.picando[1] >= DUREZA[b]) {
+            mundo.set(tx, ty, AIRE);
+            const drop = DROP[b];
+            if (drop && !p.agregar(drop)) avisar('Inventario lleno');
+            j.picando = null;
+          }
+        }
+      } else j.picando = null;
+    }
+  } else j.picando = null;
+
+  // zombies: aparecen de noche, se van de día
+  const luz = luzDelDia(j.tiempo);
+  if (luz < 0.3 && j.zombies.length < ZOMBIES_MAX && Math.random() < 0.01) {
+    const zx = div(p.rect.centerx, TILE) + elegir([-1, 1]) * azarEntero(22, 30);
+    if (zx >= 0 && zx < mundo.ancho) j.zombies.push(new Zombie(zx * TILE + 3, (mundo.cieloY[zx] - 2) * TILE));
+  }
+  for (const z of j.zombies) { z.actualizar(mundo, p); if (z.rect.colliderect(p.rect)) p.herir(1, z.rect.centerx); }
+  j.zombies = j.zombies.filter(z => z.vida > 0 && (luz < 0.6 || Math.random() > 0.02) && Math.abs(z.rect.centerx - p.rect.centerx) < TILE * 60);
+
+  if (p.vida <= 0) j.estado = 'muerto';
+}
+
+// ---------- Dibujar ----------
+function dibujar() {
+  const mundo = j.mundo, p = j.jugador, hayMesa = mesaCerca(mundo, p);
+  const cam = camara(mundo, p);
+  const luzDia = luzDelDia(j.tiempo);
+
+  rect(0, 0, ANCHO, ALTO, rgb(mezclar(CIELO_NOCHE, CIELO_DIA, luzDia)));
+  // sol o luna
+  const t = (j.tiempo % DIA_DURACION) / DIA_DURACION;
+  const astroX = trunc(ANCHO * ((t * 2) % 1));
+  if (t < 0.5) circulo(astroX, 70, 22, 'rgb(255,240,120)'); else circulo(astroX, 70, 18, 'rgb(230,230,240)');
+  const x0 = div(cam[0], TILE), y0 = div(cam[1], TILE);
+  const w = div(ANCHO, TILE) + 2, h = div(ALTO, TILE) + 2;
+  for (let ty = y0; ty < y0 + h; ty++) for (let tx = x0; tx < x0 + w; tx++) {
+    const b = mundo.get(tx, ty);
+    if (b !== AIRE && tx >= 0 && tx < mundo.ancho && ty >= 0 && ty < mundo.alto) dibujarBloque(b, tx * TILE - cam[0], ty * TILE - cam[1]);
+  }
+  // grietas del bloque que estás picando
+  if (j.picando) {
+    const [[tx, ty], prog] = j.picando;
+    const b = mundo.get(tx, ty);
+    if (b !== AIRE) {
+      const frac = Math.min(1, prog / DUREZA[b]);
+      const px = tx * TILE - cam[0], py = ty * TILE - cam[1];
+      for (let k = 0; k < trunc(frac * 6); k++) linea(px + 4 + k * 3, py + 3, px + 12 - k * 2, py + 10 + k * 2, NEGRO, 1);
+    }
+  }
+  for (const z of j.zombies) z.dibujar(cam);
+  p.dibujar(cam);
+
+  // Oscuridad: noche y cuevas
+  const luz = calcularLuz(mundo, x0, y0, w, h, luzDia);
+  for (let jj = 0; jj < h; jj++) for (let ii = 0; ii < w; ii++) {
+    const a = (1 - luz[jj][ii]) * 235 / 255;
+    if (a > 0.004) rect((x0 + ii) * TILE - cam[0], (y0 + jj) * TILE - cam[1], TILE, TILE, `rgba(0,0,20,${a.toFixed(3)})`);
+  }
+
+  // marco del bloque bajo el mouse
+  const tx = div(mouse[0] + cam[0], TILE), ty = div(mouse[1] + cam[1], TILE);
+  const cerca = Math.hypot(tx * TILE + TILE / 2 - p.rect.centerx, ty * TILE + TILE / 2 - p.rect.centery) <= ALCANCE;
+  rectBorde(tx * TILE - cam[0], ty * TILE - cam[1], TILE, TILE, cerca ? BLANCO : 'rgb(120,120,120)', 2);
+
+  // HUD
+  for (let i = 0; i < VIDA_MAX; i++) rect(14 + i * 20, 14, 14, 14, i < p.vida ? CORAZON : CORAZON_VACIO);
+  for (let i = 0; i < COMIDA_MAX; i++) circulo(21 + i * 20, 44, 7, i < p.comida ? COMIDA_COLOR : CORAZON_VACIO);
+  texto(luzDia > 0.5 ? 'Día' : 'Noche', ANCHO - 70, 14, 17);
+  if (j.mensaje[1] > 0) { texto(j.mensaje[0], ANCHO / 2, 80, 17, BLANCO, true); j.mensaje[1] -= 1; }
+  // barra de inventario
+  const baseX = ANCHO / 2 - 9 * 46 / 2;
+  p.inventario.forEach(([item, cant], i) => {
+    const rx = baseX + i * 46, ry = ALTO - 52;
+    rect(rx, ry, 42, 42, 'rgb(30,30,40)');
+    rectBorde(rx, ry, 42, 42, i === p.casilla ? BLANCO : 'rgb(90,90,100)', i === p.casilla ? 3 : 1);
+    texto(String(i + 1), rx + 3, ry + 2, 15, 'rgb(170,170,170)');
+    if (item) {
+      dibujarItem(item, rx + 21, ry + 21);
+      if (cant > 1) texto(String(cant), rx + 42 - 16, ry + 42 - 16, 15);
+    }
+  });
+  const item = p.itemEnMano();
+  if (item) texto(NOMBRE_ITEM[item], ANCHO / 2, ALTO - 66, 17, BLANCO, true);
+
+  // panel de crafteo
+  if (j.crafteo) {
+    const px = ANCHO / 2 - 220, py = 110, pw = 440, ph = 40 + RECETAS.length * 30 + 30;
+    rect(px, py, pw, ph, 'rgb(25,25,35)');
+    rectBorde(px, py, pw, ph, BLANCO, 2);
+    texto('CRAFTEO (aprieta el número)   mesa cerca: ' + (hayMesa ? 'sí' : 'no'), px + 12, py + 10, 17);
+    RECETAS.forEach((rec, i) => {
+      const [nombre, ingredientes, , necesitaMesa] = rec;
+      const ok = puedeCraftear(rec, p, hayMesa);
+      const ing = Object.entries(ingredientes).map(([k, n]) => n + ' ' + NOMBRE_ITEM[k].toLowerCase()).join(', ');
+      texto((i + 1) + '. ' + nombre + ': ' + ing + (necesitaMesa ? '  [mesa]' : ''), px + 12, py + 40 + i * 30, 17, ok ? 'rgb(120,255,140)' : 'rgb(150,150,150)');
+    });
+    texto('C cierra', px + 12, py + ph - 24, 17, 'rgb(170,170,170)');
+  }
+
+  if (j.estado === 'muerto') {
+    texto('MORISTE', ANCHO / 2, ALTO / 2 - 30, 48, CORAZON, true);
+    texto('R para revivir (tu mundo sigue ahí)', ANCHO / 2, ALTO / 2 + 20, 17, BLANCO, true);
+  }
+}
+
+// ---------- El bucle: siempre 60 cuadros por segundo ----------
+let acumulado = 0;
+let ultimoTiempo = performance.now();
+function bucle(ahora) {
+  let dt = ahora - ultimoTiempo;
+  ultimoTiempo = ahora;
+  if (dt > 250) dt = 250;      // si la pestaña estuvo escondida, no saltamos mil cuadros
+  acumulado += dt;
+  while (acumulado >= PASO) { actualizar(); acumulado -= PASO; }
+  dibujar();
+  requestAnimationFrame(bucle);
+}
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>

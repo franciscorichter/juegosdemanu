@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Impostor de Manu</title>
+<style>
+  :root {
+    --pasto: #5d9a3c; --pasto-oscuro: #3e6b28; --piedra: #7f7f7f; --piedra-oscura: #4f4f4f;
+    --cielo: #7fb2f0; --diamante: #4aedd9; --texto: #ffffff; --sombra: #1a1a1a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 16px;
+    background: var(--sombra); color: var(--texto);
+    font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 12px; line-height: 1.8;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  h1 { font-size: 18px; color: #ff5555; text-shadow: 3px 3px 0 #000; margin: 8px 0 12px; text-align: center; }
+  canvas {
+    display: block; max-width: 100%; height: auto; background: #000;
+    border: 4px solid var(--piedra-oscura); box-shadow: 6px 6px 0 #000;
+    image-rendering: pixelated; touch-action: none;
+  }
+  .ayuda { font-size: 9px; color: #dddddd; text-align: center; max-width: 700px; margin: 10px 0 0; }
+  .boton {
+    display: inline-block; margin: 16px 0; padding: 12px 16px; font-size: 11px;
+    background: #3c6ec9; border: 4px solid #244a8c; box-shadow: 4px 4px 0 #000;
+    color: var(--texto); text-decoration: none; text-shadow: 2px 2px 0 #000;
+  }
+  .boton:hover { background: #4a82e0; }
+  .boton:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+</style>
+</head>
+<body>
+<h1>IMPOSTOR</h1>
+<canvas id="juego" width="900" height="650"></canvas>
+<p class="ayuda">Flechas: moverte &middot; ESPACIO: matar &middot; S: apagar las luces &middot; V: ventilación &middot; D: dificultad &middot; ENTER: empezar &middot; R: de nuevo &middot; M: menú</p>
+<a class="boton" href="../index.html">&larr; Volver a la página</a>
+
+<script>
+// ============================================================
+//  Impostor — versión web del impostor.py de Manu (Nave chica)
+//  TÚ eres el impostor (el círculo rojo). Elimina a todos los
+//  tripulantes sin que te vean... y antes de que terminen sus tareas.
+// ============================================================
+
+// ---------- Ajustes del juego (los mismos que en impostor.py) ----------
+const ANCHO = 900, ALTO = 650;
+const FPS = 60, PASO = 1000 / FPS, DT = 1 / FPS;
+
+const VEL_JUGADOR = 3.6;
+const VEL_BOT = 2.0;
+const VEL_BOT_ALARMA = 3.3;
+
+const RADIO = 14;
+const ALCANCE_KILL = 42;
+const COOLDOWN_KILL = 10.0;
+const ALCANCE_VENT = 24;
+const MARGEN_RUTA = 8;
+
+const VISION_BOT_OSCURO = 60;
+const RADIO_SOSPECHA = 90;
+const DURACION_AVISO = 3.0;
+const DURACION_LUCES = 5.0;
+const COOLDOWN_LUCES = 20.0;
+const TIEMPO_TAREA = [3.0, 6.0];
+
+// Estos cuatro los pone la dificultad
+let VISION_BOT = 190, MEMORIA_BOT = 4.0, CANTIDAD_BOTS = 6, TAREAS_TOTALES = 32;
+const DIFICULTADES = {
+  //          visión memoria bots tareas
+  'Fácil':   [120,  1.0,    5,   90],
+  'Normal':  [160,  2.5,    6,   70],
+  'Difícil': [200,  4.0,    8,   60],
+};
+const ORDEN_DIFICULTAD = ['Fácil', 'Normal', 'Difícil'];
+function aplicarDificultad(nombre) {
+  [VISION_BOT, MEMORIA_BOT, CANTIDAD_BOTS, TAREAS_TOTALES] = DIFICULTADES[nombre];
+}
+
+// ---------- Colores ----------
+const FONDO = 'rgb(18,18,28)';
+const PISO = 'rgb(70,78,95)';
+const PISO_PASILLO = 'rgb(58,64,80)';
+const PARED = 'rgb(150,160,185)';
+const BOTON = 'rgb(220,40,40)';
+const BOTON_BORDE = 'rgb(120,20,20)';
+const TAREA = 'rgb(255,210,60)';
+const VENT = 'rgb(35,38,48)';
+const VENT_LINEA = 'rgb(110,115,130)';
+const BLANCO = 'rgb(240,240,240)';
+const NEGRO = 'rgb(0,0,0)';
+const ROJO = 'rgb(220,40,40)';
+const VERDE = 'rgb(80,230,100)';
+const GRIS = 'rgb(140,140,140)';
+const HUESO = 'rgb(230,230,230)';
+const COLORES_BOTS = [
+  'rgb(60,120,230)', 'rgb(50,190,80)', 'rgb(250,140,30)', 'rgb(240,220,60)',
+  'rgb(200,80,220)', 'rgb(60,210,210)', 'rgb(245,120,180)', 'rgb(150,100,60)',
+];
+
+const canvas = document.getElementById('juego');
+const ctx = canvas.getContext('2d');
+const FUENTE = "'Press Start 2P', 'Courier New', monospace";
+
+function distancia(p, q) { return Math.hypot(p[0] - q[0], p[1] - q[1]); }
+function azarEntre(a, b) { return a + Math.random() * (b - a); }
+function elegir(lista) { return lista[Math.floor(Math.random() * lista.length)]; }
+function mezclarLista(lista) {
+  const l = lista.slice();
+  for (let i = l.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); [l[i], l[k]] = [l[k], l[i]]; }
+  return l;
+}
+
+// ---------- Rectángulos (como pygame.Rect) ----------
+function R(x, y, w, h) { return { x, y, w, h }; }
+function centro(r) { return [r.x + Math.floor(r.w / 2), r.y + Math.floor(r.h / 2)]; }
+function contiene(r, p) { return p[0] >= r.x && p[0] < r.x + r.w && p[1] >= r.y && p[1] < r.y + r.h; }
+function chocan(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+function recorte(a, b) {
+  const x = Math.max(a.x, b.x), y = Math.max(a.y, b.y);
+  const x2 = Math.min(a.x + a.w, b.x + b.w), y2 = Math.min(a.y + a.h, b.y + b.h);
+  if (x2 <= x || y2 <= y) return R(0, 0, 0, 0);
+  return R(x, y, x2 - x, y2 - y);
+}
+function inflar(r, dx, dy) { return R(r.x - dx / 2, r.y - dy / 2, r.w + dx, r.h + dy); }
+
+// ---------- Récord (localStorage) ----------
+function leerRecord() {
+  try { return JSON.parse(localStorage.getItem('impostor-record')) || { victorias: 0, mejorTiempo: 0 }; }
+  catch (e) { return { victorias: 0, mejorTiempo: 0 }; }
+}
+function guardarRecord(r) { try { localStorage.setItem('impostor-record', JSON.stringify(r)); } catch (e) {} }
+let record = leerRecord();
+
+// ---------- Sonidos (Web Audio, fabricados con matemáticas) ----------
+let audio = null;
+function prepararAudio() {
+  try {
+    if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === 'suspended') audio.resume();
+  } catch (e) { audio = null; }
+}
+function tono(f0, f1, dur, vol, cuando, tipo) {
+  if (!audio) return;
+  try {
+    const t = audio.currentTime + (cuando || 0);
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = tipo || 'sine';
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.linearRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    o.connect(g); g.connect(audio.destination);
+    o.start(t); o.stop(t + dur);
+  } catch (e) {}
+}
+function ruido(dur, vol) {
+  if (!audio) return;
+  try {
+    const n = Math.floor(audio.sampleRate * dur);
+    const buf = audio.createBuffer(1, n, audio.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * vol * (1 - i / n);
+    const s = audio.createBufferSource(); s.buffer = buf; s.connect(audio.destination); s.start();
+  } catch (e) {}
+}
+function sonar(nombre) {
+  if (nombre === 'kill') tono(220, 50, 0.35, 0.7);
+  else if (nombre === 'alarma') { tono(880, 880, 0.12, 0.4); tono(660, 660, 0.12, 0.4, 0.18); tono(880, 880, 0.12, 0.4, 0.36); }
+  else if (nombre === 'reunion') { tono(523, 523, 0.15, 0.4); tono(659, 659, 0.15, 0.4, 0.15); tono(784, 784, 0.3, 0.4, 0.3); }
+  else if (nombre === 'vent') ruido(0.25, 0.4);
+  else if (nombre === 'luces') tono(400, 80, 0.2, 0.4);
+  else if (nombre === 'tarea') tono(1200, 1200, 0.05, 0.25);
+}
+
+// ---------- El mapa ----------
+class Mapa {
+  constructor(nombre, ancho, alto, salas, pasillos, puertas, tareas, vents, boton) {
+    this.nombre = nombre;
+    this.ancho = ancho; this.alto = alto;
+    this.salas = salas;         // [{nombre, r}]
+    this.pasillos = pasillos;   // [R]
+    this.puertas = puertas;     // [R]
+    this.tareas = tareas;       // [[x, y]]
+    this.vents = vents;         // [[x, y]] con V saltas a la siguiente
+    this.boton = boton;         // [x, y] botón de emergencia; ahí empiezas tú
+    this.caminable = salas.map((s) => s.r).concat(pasillos, puertas);
+    this.nodos = [];
+    this.vecinos = [];
+    this._armarNodos();
+  }
+
+  _armarNodos() {
+    // Estaciones del "metro" de los bots: cruces de pasillos, puertas y su
+    // sombra en el pasillo, y el centro de cada sala.
+    const puntos = [];
+    for (const p of this.pasillos) for (const q of this.pasillos) {
+      if (p !== q) {
+        const c = recorte(p, q);
+        if (c.w > 0 && c.h > 0) puntos.push(centro(c));
+      }
+    }
+    for (const d of this.puertas) {
+      puntos.push(centro(d));
+      for (const p of this.pasillos) {
+        if (chocan(inflar(d, 2, 2), p)) {
+          const cd = centro(d), cp = centro(p);
+          if (p.h > p.w) puntos.push([cp[0], cd[1]]);   // pasillo vertical
+          else puntos.push([cd[0], cp[1]]);             // pasillo horizontal
+        }
+      }
+    }
+    for (const s of this.salas) puntos.push(centro(s.r));
+    const vistos = new Set();
+    this.nodos = [];
+    for (const p of puntos) {
+      const clave = p[0] + ',' + p[1];
+      if (!vistos.has(clave) && this.esCaminable(p)) { vistos.add(clave); this.nodos.push(p); }
+    }
+    this.vecinos = this.nodos.map(() => []);
+    for (let i = 0; i < this.nodos.length; i++) for (let k = i + 1; k < this.nodos.length; k++) {
+      if (this.lineaLibre(this.nodos[i], this.nodos[k], 4, MARGEN_RUTA)) {
+        this.vecinos[i].push(k); this.vecinos[k].push(i);
+      }
+    }
+  }
+
+  esCaminable(p) {
+    for (const r of this.caminable) if (contiene(r, p)) return true;
+    return false;
+  }
+
+  lineaLibre(p, q, paso, margen) {
+    paso = paso || 4; margen = margen || 0;
+    const d = distancia(p, q);
+    if (d === 0) return this.esCaminable(p);
+    const n = Math.max(1, Math.floor(d / paso));
+    const lados = [[0, 0]];
+    if (margen) {
+      const px = -(q[1] - p[1]) / d * margen, py = (q[0] - p[0]) / d * margen;
+      lados.push([px, py], [-px, -py]);
+    }
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const x = p[0] + (q[0] - p[0]) * t, y = p[1] + (q[1] - p[1]) * t;
+      for (const [ox, oy] of lados) if (!this.esCaminable([x + ox, y + oy])) return false;
+    }
+    return true;
+  }
+
+  nodoMasCercanoVisible(p) {
+    let mejor = -1, mejorD = Infinity;
+    this.nodos.forEach((pos, i) => {
+      const d = distancia(p, pos);
+      if (d < mejorD && this.lineaLibre(p, pos, 4, MARGEN_RUTA)) { mejor = i; mejorD = d; }
+    });
+    return mejor;
+  }
+
+  camino(desde, hasta) {
+    if (this.lineaLibre(desde, hasta, 4, MARGEN_RUTA)) return [hasta];
+    const n1 = this.nodoMasCercanoVisible(desde), n2 = this.nodoMasCercanoVisible(hasta);
+    if (n1 < 0 || n2 < 0) return [hasta];
+    // Búsqueda por anchura: la ruta más corta de estación en estación.
+    const anterior = new Map([[n1, null]]);
+    const cola = [n1];
+    while (cola.length) {
+      const actual = cola.shift();
+      if (actual === n2) break;
+      for (const v of this.vecinos[actual]) if (!anterior.has(v)) { anterior.set(v, actual); cola.push(v); }
+    }
+    if (!anterior.has(n2)) return [hasta];
+    const ruta = [];
+    let n = n2;
+    while (n !== null) { ruta.push(this.nodos[n]); n = anterior.get(n); }
+    ruta.reverse();
+    ruta.push(hasta);
+    return ruta;
+  }
+}
+
+function mapaChico() {
+  // Mapa 1: cuatro salas en las esquinas y dos pasillos en cruz.
+  const salas = [
+    { nombre: 'Cafetería',    r: R(40, 40, 330, 210) },
+    { nombre: 'Armas',        r: R(530, 40, 330, 210) },
+    { nombre: 'Electricidad', r: R(40, 400, 330, 210) },
+    { nombre: 'Reactor',      r: R(530, 400, 330, 210) },
+  ];
+  const pasillos = [R(40, 290, 820, 70), R(415, 40, 70, 570)];
+  const puertas = [
+    R(370, 130, 45, 60), R(180, 250, 60, 40),   // Cafetería
+    R(485, 130, 45, 60), R(660, 250, 60, 40),   // Armas
+    R(370, 470, 45, 60), R(180, 360, 60, 40),   // Electricidad
+    R(485, 470, 45, 60), R(660, 360, 60, 40),   // Reactor
+  ];
+  const tareas = [
+    [90, 90], [300, 200], [200, 120],
+    [580, 90], [800, 200], [700, 120],
+    [90, 560], [300, 450], [200, 530],
+    [580, 560], [800, 450], [700, 530],
+  ];
+  const vents = [[75, 220], [825, 220], [825, 430], [75, 430]];
+  return new Mapa('Nave chica', 900, 650, salas, pasillos, puertas, tareas, vents, [450, 325]);
+}
+
+// ---------- Personajes ----------
+class Jugador {
+  constructor(mapa) {
+    this.mapa = mapa;
+    this.pos = [mapa.boton[0], mapa.boton[1]];
+    this.cooldown = 0;
+  }
+  mover(teclas) {
+    let dx = 0, dy = 0;
+    if (teclas.ArrowLeft) dx -= 1;
+    if (teclas.ArrowRight) dx += 1;
+    if (teclas.ArrowUp) dy -= 1;
+    if (teclas.ArrowDown) dy += 1;
+    if (dx && dy) { dx *= 0.707; dy *= 0.707; }   // en diagonal no vamos más rápido
+    // Probamos cada eje por separado: así te deslizas por las paredes.
+    const nx = this.pos[0] + dx * VEL_JUGADOR;
+    if (this._cabe([nx, this.pos[1]])) this.pos[0] = nx;
+    const ny = this.pos[1] + dy * VEL_JUGADOR;
+    if (this._cabe([this.pos[0], ny])) this.pos[1] = ny;
+  }
+  _cabe(p) {
+    const r = RADIO - 4;
+    for (const [ox, oy] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]]) {
+      if (!this.mapa.esCaminable([p[0] + ox, p[1] + oy])) return false;
+    }
+    return true;
+  }
+  ventCercana() {
+    for (let i = 0; i < this.mapa.vents.length; i++) {
+      if (distancia(this.pos, this.mapa.vents[i]) <= ALCANCE_VENT) return i;
+    }
+    return -1;
+  }
+}
+
+class Bot {
+  constructor(mapa, color, pos) {
+    this.mapa = mapa;
+    this.color = color;
+    this.pos = [pos[0], pos[1]];
+    this.vivo = true;
+    this.alarma = false;          // ¿vio algo y corre al botón?
+    this.sospecha = false;        // ¿te vio matar, al lado de un cuerpo o entrando a una vent?
+    this.desdeQueTeVio = 999;     // segundos desde la última vez que te vio
+    this.ruta = [];
+    this.esperando = 0;           // segundos que le faltan en la tarea actual
+    this.nuevaTarea();
+  }
+  nuevaTarea() { this.ruta = this.mapa.camino(this.pos, elegir(this.mapa.tareas)); }
+  alarmar() {
+    if (!this.alarma) {
+      this.alarma = true;
+      this.esperando = 0;
+      this.ruta = this.mapa.camino(this.pos, this.mapa.boton);
+      sonar('alarma');
+    }
+  }
+  actualizar(dt) {
+    // Mueve al bot. Devuelve true en el instante en que termina una tarea.
+    if (!this.vivo) return false;
+    if (this.esperando > 0) {
+      this.esperando -= dt;
+      if (this.esperando <= 0) { this.nuevaTarea(); return true; }
+      return false;
+    }
+    if (this.ruta.length === 0) {
+      if (this.alarma) return false;          // llegó al botón: se queda ahí
+      this.esperando = azarEntre(TIEMPO_TAREA[0], TIEMPO_TAREA[1]);
+      return false;
+    }
+    const vel = this.alarma ? VEL_BOT_ALARMA : VEL_BOT;
+    const destino = this.ruta[0];
+    const d = distancia(this.pos, destino);
+    if (d <= vel) { this.pos = [destino[0], destino[1]]; this.ruta.shift(); }
+    else {
+      this.pos[0] += (destino[0] - this.pos[0]) / d * vel;
+      this.pos[1] += (destino[1] - this.pos[1]) / d * vel;
+    }
+    return false;
+  }
+  ve(punto, alcance) {
+    return distancia(this.pos, punto) <= alcance && this.mapa.lineaLibre(this.pos, punto);
+  }
+  llegoAlBoton() { return this.alarma && distancia(this.pos, this.mapa.boton) < 18; }
+}
+
+// ---------- El juego ----------
+class Juego {
+  constructor() {
+    this.dificultad = 'Normal';
+    this.estado = 'inicio';       // "inicio", "jugando", "ganaste" o "perdiste"
+    this.mapa = mapaChico();
+    this.sombra = document.createElement('canvas');
+    this.sombra.width = ANCHO; this.sombra.height = ALTO;
+  }
+  empezar() {
+    aplicarDificultad(this.dificultad);
+    this.mapa = mapaChico();
+    this.jugador = new Jugador(this.mapa);
+    const posiciones = mezclarLista(this.mapa.tareas).slice(0, CANTIDAD_BOTS);
+    this.bots = posiciones.map((p, i) => new Bot(this.mapa, COLORES_BOTS[i], p));
+    this.cuerpos = [];            // [[x, y, color]]
+    this.luces = 0;               // segundos que quedan sin luz
+    this.cooldownLuces = 0;
+    this.flashKill = 0;           // instante de kill: los bots que lo ven, te vieron
+    this.posKill = null;
+    this.flashVent = 0;
+    this.posVent = null;
+    this.tareasHechas = 0;
+    this.tiempo = 0;
+    this.estado = 'jugando';
+    this.mensaje = '';
+    this.aviso = '';
+    this.avisoT = 0;
+  }
+
+  // --- acciones del impostor ---
+  intentarKill() {
+    if (this.jugador.cooldown > 0) return;
+    const cerca = this.bots.filter((b) => b.vivo && distancia(b.pos, this.jugador.pos) <= ALCANCE_KILL);
+    if (!cerca.length) return;
+    let victima = cerca[0];
+    for (const b of cerca) if (distancia(b.pos, this.jugador.pos) < distancia(victima.pos, this.jugador.pos)) victima = b;
+    victima.vivo = false;
+    this.cuerpos.push([victima.pos[0], victima.pos[1], victima.color]);
+    this.jugador.cooldown = COOLDOWN_KILL;
+    this.flashKill = 0.5;
+    this.posKill = [victima.pos[0], victima.pos[1]];
+    sonar('kill');
+  }
+  usarVent() {
+    const i = this.jugador.ventCercana();
+    if (i < 0) return;
+    this.flashVent = 0.5;
+    this.posVent = [this.jugador.pos[0], this.jugador.pos[1]];
+    const destino = this.mapa.vents[(i + 1) % this.mapa.vents.length];
+    this.jugador.pos = [destino[0], destino[1]];
+    sonar('vent');
+  }
+  sabotearLuces() {
+    if (this.cooldownLuces > 0 || this.luces > 0) return;
+    this.luces = DURACION_LUCES;
+    this.cooldownLuces = COOLDOWN_LUCES;
+    sonar('luces');
+  }
+  reunion() {
+    // Un bot llegó al botón. Si alguno sospecha de ti, te expulsan.
+    // Si nadie sabe nada, votan al azar (un bot, nadie... o tú).
+    sonar('reunion');
+    const vivos = this.bots.filter((b) => b.vivo);
+    if (vivos.some((b) => b.sospecha)) {
+      this.terminar('perdiste', '¡Reunión! Un tripulante te vio. Te expulsaron.');
+      return;
+    }
+    const candidatos = vivos.concat(['tu', null]);
+    const voto = elegir(candidatos);
+    if (voto === 'tu') {
+      this.terminar('perdiste', '¡Reunión! Nadie tenía pruebas... pero votaron por ti.');
+      return;
+    }
+    if (voto === null) this.aviso = 'Reunión: nadie sabe nada. Empate, nadie fue expulsado.';
+    else { voto.vivo = false; this.aviso = 'Reunión: nadie sabe nada... ¡expulsaron a un inocente!'; }
+    this.avisoT = DURACION_AVISO;
+    // Después de la reunión todo se limpia: cuerpos, alarmas y cooldown.
+    this.cuerpos = [];
+    for (const b of this.bots) {
+      b.alarma = false; b.sospecha = false; b.desdeQueTeVio = 999;
+      if (b.vivo) b.nuevaTarea();
+    }
+    this.jugador.cooldown = COOLDOWN_KILL;
+    this.flashKill = 0; this.flashVent = 0;
+  }
+  terminar(estado, mensaje) {
+    this.estado = estado;
+    this.mensaje = mensaje;
+    if (estado === 'ganaste') {
+      record.victorias = (record.victorias || 0) + 1;
+      const seg = Math.floor(this.tiempo);
+      this.nuevoRecord = !record.mejorTiempo || seg < record.mejorTiempo;
+      if (this.nuevoRecord) record.mejorTiempo = seg;
+      guardarRecord(record);
+    }
+  }
+
+  // --- un cuadro del juego ---
+  actualizar(dt, teclas) {
+    if (this.estado !== 'jugando') return;
+    this.tiempo += dt;
+    this.jugador.mover(teclas);
+    this.jugador.cooldown = Math.max(0, this.jugador.cooldown - dt);
+    this.cooldownLuces = Math.max(0, this.cooldownLuces - dt);
+    this.luces = Math.max(0, this.luces - dt);
+    this.flashKill = Math.max(0, this.flashKill - dt);
+    this.flashVent = Math.max(0, this.flashVent - dt);
+
+    const alcance = this.luces > 0 ? VISION_BOT_OSCURO : VISION_BOT;
+
+    for (const bot of this.bots) {
+      if (bot.actualizar(dt)) { this.tareasHechas += 1; sonar('tarea'); }
+      if (!bot.vivo || bot.alarma) continue;
+      // ¿Te está viendo ahora? Lo recuerda un rato.
+      if (bot.ve(this.jugador.pos, alcance)) bot.desdeQueTeVio = 0;
+      else bot.desdeQueTeVio += dt;
+      // ¿Te vio matar? Eso sí es prueba: sospecha de ti y corre al botón.
+      if (this.flashKill > 0 && bot.ve(this.posKill, alcance)) { bot.sospecha = true; bot.alarmar(); continue; }
+      // ¿Te vio meterte a una ventilación? Solo los impostores hacen eso...
+      if (this.flashVent > 0 && bot.ve(this.posVent, alcance)) bot.sospecha = true;
+      for (const c of this.cuerpos) {
+        if (bot.ve(c, alcance)) {
+          // ¿Estabas al lado del cuerpo, o te vio hace poquito? Sospechoso.
+          const cerca = distancia(this.jugador.pos, c) <= RADIO_SOSPECHA && bot.ve(this.jugador.pos, alcance);
+          if (cerca || bot.desdeQueTeVio < MEMORIA_BOT) bot.sospecha = true;
+          bot.alarmar();
+          break;
+        }
+      }
+    }
+
+    this.avisoT = Math.max(0, this.avisoT - dt);
+    for (const bot of this.bots) if (bot.vivo && bot.llegoAlBoton()) { this.reunion(); return; }
+
+    if (this.tareasHechas >= TAREAS_TOTALES) {
+      this.terminar('perdiste', 'La tripulación terminó todas sus tareas. Se te acabó el tiempo.');
+      return;
+    }
+    if (this.bots.every((b) => !b.vivo)) this.terminar('ganaste', 'Eliminaste a toda la tripulación. La nave es tuya.');
+  }
+
+  // --- dibujar ---
+  dibujar() {
+    if (this.estado === 'inicio') { this._dibujarInicio(); return; }
+    this._dibujarMundo();
+    if (this.luces > 0) this._dibujarOscuridad();
+    this._dibujarHud();
+    if (this.estado !== 'jugando') this._dibujarFinal();
+  }
+
+  _dibujarMundo() {
+    const m = this.mapa;
+    ctx.fillStyle = FONDO;
+    ctx.fillRect(0, 0, ANCHO, ALTO);
+    for (const r of m.pasillos.concat(m.puertas)) { ctx.fillStyle = PISO_PASILLO; ctx.fillRect(r.x, r.y, r.w, r.h); }
+    for (const s of m.salas) {
+      ctx.fillStyle = PISO; ctx.fillRect(s.r.x, s.r.y, s.r.w, s.r.h);
+      ctx.strokeStyle = PARED; ctx.lineWidth = 4; ctx.strokeRect(s.r.x + 2, s.r.y + 2, s.r.w - 4, s.r.h - 4);
+      ctx.font = '14px ' + FUENTE; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillStyle = PARED; ctx.fillText(s.nombre, s.r.x + 10, s.r.y + 8);
+    }
+    for (const r of m.pasillos) { ctx.strokeStyle = PARED; ctx.lineWidth = 3; ctx.strokeRect(r.x + 1.5, r.y + 1.5, r.w - 3, r.h - 3); }
+    for (const r of m.puertas) { ctx.fillStyle = PISO_PASILLO; ctx.fillRect(r.x, r.y, r.w, r.h); }   // las puertas tapan la pared
+
+    for (const [vx, vy] of m.vents) {
+      // Una ventilación: rejilla gris oscura con tres rayitas.
+      rectRedondo(VENT, vx - 18, vy - 12, 36, 24, 5);
+      ctx.strokeStyle = VENT_LINEA; ctx.lineWidth = 2;
+      for (const k of [-6, 0, 6]) { ctx.beginPath(); ctx.moveTo(vx - 12, vy + k); ctx.lineTo(vx + 12, vy + k); ctx.stroke(); }
+    }
+    for (const t of m.tareas) { ctx.strokeStyle = TAREA; ctx.lineWidth = 2; ctx.strokeRect(t[0] - 6, t[1] - 6, 12, 12); }
+
+    circulo(BOTON_BORDE, m.boton[0], m.boton[1], 18);
+    circulo(BOTON, m.boton[0], m.boton[1], 13);
+
+    for (const [cx, cy, color] of this.cuerpos) {
+      // Un cuerpo: medio círculo del color del bot + un huesito.
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(cx, cy, RADIO, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = HUESO; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(cx - 8, cy + 4); ctx.lineTo(cx + 8, cy + 4); ctx.stroke();
+    }
+
+    for (const bot of this.bots) {
+      if (!bot.vivo) continue;
+      const px = Math.floor(bot.pos[0]), py = Math.floor(bot.pos[1]);
+      circulo(bot.color, px, py, RADIO);
+      circulo(NEGRO, px, py, RADIO, 2);
+      if (bot.esperando > 0 && !bot.alarma) {   // está haciendo una tarea
+        ctx.strokeStyle = TAREA; ctx.lineWidth = 1; ctx.strokeRect(px - 10, py - RADIO - 8, 20, 4);
+      }
+      if (bot.alarma) {
+        ctx.font = 'bold 20px ' + FUENTE; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = ROJO; ctx.fillText('!', px, py - RADIO - 12);
+      }
+    }
+
+    const p = [Math.floor(this.jugador.pos[0]), Math.floor(this.jugador.pos[1])];
+    circulo(ROJO, p[0], p[1], RADIO);
+    circulo(NEGRO, p[0], p[1], RADIO, 2);
+    if (this.jugador.cooldown === 0) circulo(BLANCO, p[0], p[1], ALCANCE_KILL, 1);   // anillo: listo para matar
+  }
+
+  _dibujarOscuridad() {
+    // Una capa negra casi opaca con un "agujero" de luz alrededor tuyo.
+    const s = this.sombra.getContext('2d');
+    s.globalCompositeOperation = 'source-over';
+    s.clearRect(0, 0, ANCHO, ALTO);
+    s.fillStyle = 'rgba(0,0,0,0.84)';
+    s.fillRect(0, 0, ANCHO, ALTO);
+    s.globalCompositeOperation = 'destination-out';
+    s.beginPath(); s.arc(this.jugador.pos[0], this.jugador.pos[1], 110, 0, Math.PI * 2); s.fill();
+    ctx.drawImage(this.sombra, 0, 0);
+  }
+
+  _dibujarHud() {
+    const vivos = this.bots.filter((b) => b.vivo).length;
+    const kill = this.jugador.cooldown > 0 ? 'KILL en ' + this.jugador.cooldown.toFixed(1) + ' s' : 'KILL listo (ESPACIO)';
+    let luz;
+    if (this.luces > 0) luz = 'LUCES apagadas ' + this.luces.toFixed(1) + ' s';
+    else if (this.cooldownLuces > 0) luz = 'Sabotaje en ' + this.cooldownLuces.toFixed(1) + ' s';
+    else luz = 'Sabotaje listo (S)';
+    if (this.jugador.ventCercana() >= 0) luz += '   VENT (V)';
+    ctx.font = '13px ' + FUENTE; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = NEGRO; ctx.fillText('Tripulantes: ' + vivos + '   ' + kill + '   ' + luz, 14, ALTO - 14);
+    ctx.fillStyle = BLANCO; ctx.fillText('Tripulantes: ' + vivos + '   ' + kill + '   ' + luz, 12, ALTO - 16);
+
+    // Barra de tareas de la tripulación: si se llena, perdiste.
+    const bx = ANCHO / 2 - 150, by = 10;
+    ctx.fillStyle = NEGRO; ctx.fillRect(bx, by, 300, 14);
+    const avance = Math.min(1, this.tareasHechas / TAREAS_TOTALES);
+    ctx.fillStyle = VERDE; ctx.fillRect(bx, by, Math.floor(300 * avance), 14);
+    ctx.strokeStyle = BLANCO; ctx.lineWidth = 1; ctx.strokeRect(bx + 0.5, by + 0.5, 300, 14);
+    ctx.fillStyle = BLANCO; ctx.fillText('Tareas ' + this.tareasHechas + '/' + TAREAS_TOTALES, bx + 310, by + 7);
+    ctx.fillText('Tiempo ' + Math.floor(this.tiempo) + ' s', 12, by + 7);
+
+    if (this.avisoT > 0) texto(this.aviso, 44, 14, TAREA);
+  }
+
+  _dibujarInicio() {
+    ctx.fillStyle = FONDO;
+    ctx.fillRect(0, 0, ANCHO, ALTO);
+    texto('IMPOSTOR', 110, 56, ROJO);
+    // un impostor y unos tripulantes de adorno
+    let x = ANCHO / 2 - 150;
+    for (const c of [ROJO, COLORES_BOTS[0], COLORES_BOTS[1], COLORES_BOTS[2], COLORES_BOTS[3], COLORES_BOTS[4]]) {
+      circulo(c, x, 175, RADIO); circulo(NEGRO, x, 175, RADIO, 2); x += 60;
+    }
+    const lineas = [
+      ['Mapa: Nave chica', BLANCO, 14],
+      ['Dificultad: ' + this.dificultad + '   (D para cambiar)', BLANCO, 14],
+      ['', BLANCO, 14],
+      ['ENTER para empezar', VERDE, 18],
+      ['', BLANCO, 14],
+      ['Flechas: moverte   ESPACIO: matar   S: apagar luces   V: ventilación', GRIS, 12],
+      ['Los bots hacen tareas: si llenan la barra, perdiste. Si te ven, te expulsan.', GRIS, 12],
+      ['Si un bot ve un cuerpo corre al botón y arma una reunión. Sin pruebas, votan al azar.', GRIS, 12],
+    ];
+    let y = 240;
+    for (const [t, c, tam] of lineas) { if (t) texto(t, y, tam, c); y += 34; }
+    const mejor = record.mejorTiempo ? record.mejorTiempo + ' s' : '—';
+    texto('Victorias: ' + (record.victorias || 0) + '   Mejor tiempo: ' + mejor, y + 10, 12, TAREA);
+  }
+
+  _dibujarFinal() {
+    ctx.fillStyle = 'rgba(0,0,0,0.67)';
+    ctx.fillRect(0, 0, ANCHO, ALTO);
+    const gano = this.estado === 'ganaste';
+    texto(gano ? 'GANASTE' : 'PERDISTE', ALTO / 2 - 50, 56, gano ? VERDE : ROJO);
+    texto(this.mensaje, ALTO / 2 + 10, 14);
+    if (gano) texto((this.nuevoRecord ? '¡NUEVO RÉCORD! ' : '') + 'Tiempo: ' + Math.floor(this.tiempo) + ' s', ALTO / 2 + 40, 14, TAREA);
+    texto('R jugar de nuevo   ·   M menú', ALTO / 2 + 75, 13, GRIS);
+  }
+}
+
+// ---------- Dibujos de ayuda ----------
+function circulo(color, x, y, r, grosor) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  if (grosor) { ctx.lineWidth = grosor; ctx.strokeStyle = color; ctx.stroke(); }
+  else { ctx.fillStyle = color; ctx.fill(); }
+}
+function rectRedondo(color, x, y, w, h, r) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath(); ctx.fill();
+}
+function texto(msg, y, tam, color, x) {
+  if (color === undefined) color = BLANCO;
+  if (x === undefined) x = ANCHO / 2;
+  ctx.font = 'bold ' + tam + 'px ' + FUENTE;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = NEGRO; ctx.fillText(msg, x + 2, y + 2);
+  ctx.fillStyle = color; ctx.fillText(msg, x, y);
+}
+
+// ---------- Teclado ----------
+const juego = new Juego();
+const teclas = {};
+window.addEventListener('keydown', (e) => {
+  const k = e.key;
+  if (k.startsWith('Arrow') || k === ' ') e.preventDefault();
+  teclas[k] = true;
+  prepararAudio();
+  if (e.repeat) return;
+  if (juego.estado === 'inicio') {
+    if (k === 'd' || k === 'D') {
+      const i = ORDEN_DIFICULTAD.indexOf(juego.dificultad);
+      juego.dificultad = ORDEN_DIFICULTAD[(i + 1) % ORDEN_DIFICULTAD.length];
+    } else if (k === 'Enter') juego.empezar();
+  } else if (juego.estado === 'jugando') {
+    if (k === ' ') juego.intentarKill();
+    else if (k === 's' || k === 'S') juego.sabotearLuces();
+    else if (k === 'v' || k === 'V') juego.usarVent();
+  } else {
+    if (k === 'r' || k === 'R') juego.empezar();
+    else if (k === 'm' || k === 'M') juego.estado = 'inicio';
+  }
+});
+window.addEventListener('keyup', (e) => { teclas[e.key] = false; });
+window.addEventListener('blur', () => { for (const k in teclas) teclas[k] = false; });
+canvas.addEventListener('pointerdown', (e) => {
+  e.preventDefault(); prepararAudio();
+  if (juego.estado === 'inicio') juego.empezar();
+  else if (juego.estado !== 'jugando') juego.empezar();
+});
+
+// ---------- El bucle: 60 cuadros por segundo ----------
+let acumulado = 0, ultimoTiempo = performance.now();
+function bucle(ahora) {
+  let dt = ahora - ultimoTiempo;
+  ultimoTiempo = ahora;
+  if (dt > 250) dt = 250;
+  acumulado += dt;
+  while (acumulado >= PASO) { juego.actualizar(DT, teclas); acumulado -= PASO; }
+  juego.dibujar();
+  requestAnimationFrame(bucle);
+}
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>

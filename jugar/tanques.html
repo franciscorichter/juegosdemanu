@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tanques de Manu</title>
+<style>
+  /* Colores de la página (style.css) */
+  :root {
+    --pasto: #5d9a3c; --pasto-oscuro: #3e6b28; --piedra: #7f7f7f; --piedra-oscura: #4f4f4f;
+    --cielo: #7fb2f0; --diamante: #4aedd9; --texto: #ffffff; --sombra: #1a1a1a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 16px;
+    background: var(--sombra); color: var(--texto);
+    font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 12px; line-height: 1.8;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  h1 { font-size: 18px; color: var(--diamante); text-shadow: 3px 3px 0 #000; margin: 8px 0 12px; text-align: center; }
+  canvas {
+    display: block; max-width: 100%; height: auto; background: #000;
+    border: 4px solid var(--piedra-oscura); box-shadow: 6px 6px 0 #000;
+    image-rendering: pixelated; touch-action: none;
+  }
+  .ayuda { font-size: 9px; color: #dddddd; text-align: center; max-width: 640px; margin: 10px 0 0; }
+  .boton {
+    display: inline-block; margin: 16px 0; padding: 12px 16px; font-size: 11px;
+    background: #3c6ec9; border: 4px solid #244a8c; box-shadow: 4px 4px 0 #000;
+    color: var(--texto); text-decoration: none; text-shadow: 2px 2px 0 #000;
+  }
+  .boton:hover { background: #4a82e0; }
+  .boton:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+  /* Botones de celular: solo aparecen en pantallas táctiles (mueven al J1) */
+  .tactil { display: none; gap: 10px; margin-top: 12px; width: 100%; max-width: 800px; justify-content: space-between; align-items: center; }
+  @media (pointer: coarse) { .tactil { display: flex; } }
+  .cruz { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); gap: 4px; }
+  .tactil button {
+    font-family: inherit; font-size: 16px; width: 56px; height: 56px;
+    background: var(--piedra-oscura); border: 4px solid #000; color: var(--texto);
+    box-shadow: 4px 4px 0 #000; touch-action: none; user-select: none;
+  }
+  .tactil button:active { background: var(--piedra); }
+  .tactil .grande { width: 80px; }
+</style>
+</head>
+<body>
+<h1>TANQUES</h1>
+<canvas id="juego" width="800" height="630"></canvas>
+<div class="tactil">
+  <div class="cruz">
+    <span></span><button data-tecla="w">▲</button><span></span>
+    <button data-tecla="a">◀</button><span></span><button data-tecla="d">▶</button>
+    <span></span><button data-tecla="s">▼</button><span></span>
+  </div>
+  <div style="display:flex;gap:10px"><button class="grande" data-tecla="q">MINA</button><button class="grande" data-tecla=" ">💥</button><button class="grande" data-tecla="Enter">OK</button></div>
+</div>
+<p class="ayuda">J1: W A S D mueve · ESPACIO dispara · Q mina &nbsp;&middot;&nbsp; J2: flechas · ENTER dispara · SHIFT DER mina &nbsp;&middot;&nbsp; ENTER empezar · P pausa · M menú</p>
+<a class="boton" href="../index.html">&larr; Volver a la página</a>
+
+<script>
+// ============================================================
+//  Tanques — versión web del tanques.py de Manu
+//  Todo se dibuja con canvas. Sin imágenes, sin internet.
+// ============================================================
+
+// ---------- Ajustes (los mismos que en tanques.py) ----------
+const TAM = 40;
+const COLS = 20, FILAS = 14;
+const HUD = 70;
+const ANCHO = COLS * TAM, ALTO = FILAS * TAM + HUD;
+const FPS = 60;
+const PASO = 1000 / FPS;
+const DT = 1 / FPS;
+
+const VEL_TANQUE = 170;        // píxeles por segundo, a fondo
+const ACELERACION = 420;
+const FRENO = 300;
+const VEL_GIRO = 170;          // grados por segundo
+const VEL_BALA = 430;
+const RECARGA = 0.45;
+const VIDAS = 3;
+const RONDAS_PARA_GANAR = 3;   // al mejor de 5
+const CADA_CUANTO_POWERUP = 7;
+const MAX_POWERUPS = 3;
+
+const COLOR_J = { 1: [70, 170, 255], 2: [255, 110, 70] };
+const NOMBRE_J = { 1: 'J1', 2: 'J2' };
+const NOMBRES_DIFICULTAD = ['Patrulla', 'Persigue', 'Esquiva'];
+const NOMBRES_ARENA = ['Patio', 'Rio', 'Laberinto', 'Isla'];
+const rgb = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
+
+// ---------- Arenas (copiadas de arena1.txt ... arena4.txt) ----------
+//   # muro, L ladrillo, A agua, B arbusto, 1/2 salidas, . piso
+const ARENAS = [`
+####################
+#1.......LL........#
+#..##....LL....##..#
+#..#......L.....#..#
+#.....BB.....BB....#
+#..L..BB.LL..BB.L..#
+#..L.....LL.....L..#
+#..L.....LL.....L..#
+#..L..BB.LL..BB.L..#
+#.....BB.....BB....#
+#..#.....L......#..#
+#..##....LL....##..#
+#........LL.......2#
+####################
+`, `
+####################
+#1....L......L.....#
+#.....L......L.....#
+#.BB..L..##..L..BB.#
+#.BB...............#
+#..................#
+#AAAA.AAAALLAAA.AAA#
+#AAAA.AAAALLAAA.AAA#
+#..................#
+#...............BB.#
+#.BB..L..##..L..BB.#
+#.....L......L.....#
+#.....L......L....2#
+####################
+`, `
+####################
+#1..#......#.......#
+#.#.#.####.#.####..#
+#.#...#..L...#..#..#
+#.###.#.LLL..#.##..#
+#.....#..L...#.....#
+#.##L##.....##L##..#
+#..##L##...##L##...#
+#.....#..L..#......#
+#..##.#.LLL.#.###..#
+#..#..#..L..#...#..#
+#..####.#.####.##..#
+#.......#.........2#
+####################
+`, `
+####################
+#1.....AAAAAA......#
+#..L...AAAAAA...L..#
+#..L....AAAA....L..#
+#.BBB..........BBB.#
+#.BBB..LL..LL..BBB.#
+#A.....L####L.....A#
+#A.....L####L.....A#
+#.BBB..LL..LL..BBB.#
+#.BBB..........BBB.#
+#..L....AAAA....L..#
+#..L...AAAAAA...L..#
+#......AAAAAA.....2#
+####################
+`];
+
+// ---------- Utilidades ----------
+const azarEntre = (a, b) => a + Math.random() * (b - a);
+const elegir = (l) => l[Math.floor(Math.random() * l.length)];
+const rad = (g) => g * Math.PI / 180;
+const grados = (r) => r * 180 / Math.PI;
+const mod = (a, n) => ((a % n) + n) % n;
+// Cuánto hay que girar desde a hasta b, entre -180 y 180.
+const diferenciaAngulo = (a, b) => mod(b - a + 180, 360) - 180;
+
+// ---------- Sonidos fabricados con matemáticas (WebAudio) ----------
+let audio = null;
+function encenderAudio() {
+  if (audio !== null) return;
+  try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = false; }
+}
+function tono(hz, seg, volumen = 0.5, hzFin = null, retraso = 0) {
+  if (!audio) return;
+  const o = audio.createOscillator(), g = audio.createGain();
+  const t0 = audio.currentTime + retraso;
+  o.frequency.setValueAtTime(hz, t0);
+  if (hzFin !== null) o.frequency.linearRampToValueAtTime(hzFin, t0 + seg);
+  g.gain.setValueAtTime(volumen * 0.3, t0);
+  g.gain.linearRampToValueAtTime(0, t0 + seg);
+  o.connect(g).connect(audio.destination);
+  o.start(t0); o.stop(t0 + seg);
+}
+function ruido(seg, volumen = 0.4) {
+  if (!audio) return;
+  const n = Math.floor(audio.sampleRate * seg);
+  const buf = audio.createBuffer(1, n, audio.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = volumen * (Math.random() * 2 - 1) * (1 - i / n);
+  const s = audio.createBufferSource(); s.buffer = buf; s.connect(audio.destination); s.start();
+}
+const SONIDOS = {
+  disparo: () => { tono(700, 0.12, 0.35, 200); ruido(0.1, 0.15); },
+  rebote: () => tono(1500, 0.05, 0.25),
+  ladrillo: () => ruido(0.15, 0.4),
+  golpe: () => { tono(300, 0.3, 0.6, 60); ruido(0.2, 0.3); },
+  explosion: () => { tono(200, 0.7, 0.8, 30); ruido(0.5, 0.6); },
+  powerup: () => { tono(660, 0.08); tono(880, 0.08, 0.5, null, 0.08); tono(1320, 0.12, 0.5, null, 0.16); },
+  mina: () => { tono(440, 0.06, 0.3); tono(440, 0.06, 0.3, null, 0.1); },
+  ronda: () => { tono(523, 0.15); tono(659, 0.15, 0.5, null, 0.15); tono(784, 0.3, 0.5, null, 0.3); },
+};
+const sonar = (n) => SONIDOS[n]();
+
+// ---------- Arena ----------
+class Arena {
+  constructor(txt) {
+    const filas = txt.split('\n').filter(l => l.trim() && !l.startsWith('# '));
+    this.celdas = [];
+    this.inicio = {};
+    for (let fila = 0; fila < FILAS; fila++) {
+      let t = fila < filas.length ? filas[fila] : '';
+      t = (t + '#'.repeat(COLS)).slice(0, COLS);
+      const columna = [];
+      [...t].forEach((c, col) => {
+        if (c === '1' || c === '2') { this.inicio[Number(c)] = [col * TAM + TAM / 2, fila * TAM + TAM / 2]; c = '.'; }
+        if (!'#LAB.'.includes(c)) c = '.';
+        columna.push(c);
+      });
+      this.celdas.push(columna);
+    }
+    if (!this.inicio[1]) this.inicio[1] = [TAM * 1.5, TAM * 1.5];
+    if (!this.inicio[2]) this.inicio[2] = [(COLS - 1.5) * TAM, (FILAS - 1.5) * TAM];
+  }
+  celda(col, fila) { return (col >= 0 && col < COLS && fila >= 0 && fila < FILAS) ? this.celdas[fila][col] : '#'; }
+  celdaEn(x, y) { return this.celda(Math.floor(x / TAM), Math.floor(y / TAM)); }
+  romper(col, fila) {
+    if (this.celda(col, fila) === 'L') { this.celdas[fila][col] = '.'; return true; }
+    return false;
+  }
+  static frenaTanque(c) { return '#LA'.includes(c); }
+  static frenaBala(c) { return '#L'.includes(c); }
+  // ¿Un círculo en (x, y) está libre de muros, ladrillos y agua?
+  tanqueCabe(x, y, radio) {
+    const col0 = Math.floor(x / TAM), fila0 = Math.floor(y / TAM);
+    for (let fila = fila0 - 1; fila <= fila0 + 1; fila++) for (let col = col0 - 1; col <= col0 + 1; col++) {
+      if (Arena.frenaTanque(this.celda(col, fila))) {
+        const cx = Math.max(col * TAM, Math.min(x, col * TAM + TAM));   // punto del rectángulo más cercano
+        const cy = Math.max(fila * TAM, Math.min(y, fila * TAM + TAM));
+        if ((cx - x) ** 2 + (cy - y) ** 2 < radio * radio) return false;
+      }
+    }
+    return true;
+  }
+  casillasLibres() {
+    const l = [];
+    for (let f = 0; f < FILAS; f++) for (let c = 0; c < COLS; c++) if (this.celdas[f][c] === '.') l.push([c, f]);
+    return l;
+  }
+  // Camino más corto entre dos casillas (búsqueda en anchura) por piso y arbustos.
+  camino(desde, hasta) {
+    const k = (p) => p[0] + ',' + p[1];
+    if (k(desde) === k(hasta)) return [hasta];
+    const cola = [desde];
+    const deDonde = new Map([[k(desde), null]]);
+    let i = 0;
+    while (i < cola.length) {
+      const actual = cola[i++];
+      for (const [dc, df] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const v = [actual[0] + dc, actual[1] + df];
+        if (deDonde.has(k(v)) || Arena.frenaTanque(this.celda(v[0], v[1]))) continue;
+        deDonde.set(k(v), actual);
+        if (k(v) === k(hasta)) {
+          const ruta = [hasta];
+          while (deDonde.get(k(ruta[ruta.length - 1])) !== null) ruta.push(deDonde.get(k(ruta[ruta.length - 1])));
+          return ruta.reverse();
+        }
+        cola.push(v);
+      }
+    }
+    return [];
+  }
+  // ¿Una bala podría ir derecho de un punto al otro sin chocar?
+  lineaLibre(x1, y1, x2, y2) {
+    const d = Math.hypot(x2 - x1, y2 - y1);
+    const pasos = Math.max(1, Math.floor(d / 8));
+    for (let i = 0; i <= pasos; i++) {
+      const t = i / pasos;
+      if (Arena.frenaBala(this.celdaEn(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t))) return false;
+    }
+    return true;
+  }
+  dibujarSuelo(tiempo) {
+    for (let fila = 0; fila < FILAS; fila++) for (let col = 0; col < COLS; col++) {
+      const c = this.celdas[fila][col];
+      const x = col * TAM, y = fila * TAM + HUD;
+      if (c === '#') {
+        rect(x, y, TAM, TAM, 'rgb(95,95,105)');
+        rectBorde(x + 5, y + 5, TAM - 10, TAM - 10, 'rgb(130,130,140)', 2);
+      } else if (c === 'L') {
+        rect(x, y, TAM, TAM, 'rgb(170,80,50)');
+        const o = 'rgb(110,50,30)';
+        for (const yy of [y + 10, y + 20, y + 30]) linea(x, yy, x + TAM, yy, o, 2);
+        linea(x + TAM / 2, y, x + TAM / 2, y + 10, o, 2);
+        linea(x + 10, y + 10, x + 10, y + 20, o, 2);
+        linea(x + TAM - 10, y + 10, x + TAM - 10, y + 20, o, 2);
+        linea(x + TAM / 2, y + 20, x + TAM / 2, y + 30, o, 2);
+      } else if (c === 'A') {
+        const onda = Math.trunc(12 * Math.sin(tiempo * 2 + col + fila));
+        rect(x, y, TAM, TAM, rgb([40, 90 + onda, 200 + Math.trunc(onda / 2)]));
+        const yy = y + 20 + Math.trunc(6 * Math.sin(tiempo * 3 + col));
+        linea(x + 6, yy, x + 20, yy, 'rgb(120,170,255)', 2);
+      } else {
+        const tono = (col + fila) % 2 ? 150 : 140;
+        rect(x, y, TAM, TAM, rgb([tono, tono + 20, 100]));
+      }
+    }
+  }
+  // Se dibujan DESPUÉS de los tanques para que los tapen.
+  dibujarArbustos() {
+    for (let fila = 0; fila < FILAS; fila++) for (let col = 0; col < COLS; col++) {
+      if (this.celdas[fila][col] !== 'B') continue;
+      const cx = col * TAM + TAM / 2, cy = fila * TAM + HUD + TAM / 2;
+      for (const [dx, dy, r] of [[-9, -8, 13], [10, -6, 12], [0, 9, 13], [-11, 8, 10], [11, 9, 10], [0, -2, 11]]) {
+        circulo(cx + dx, cy + dy, r, 'rgb(30,110,40)');
+        circulo(cx + dx - 3, cy + dy - 3, Math.floor(r / 2), 'rgb(50,150,60)');
+      }
+    }
+  }
+}
+
+// ---------- Partículas ----------
+class Particula {
+  constructor(x, y, color, velocidad, vida, tamano = 3, gravedad = 0) {
+    const ang = azarEntre(0, 2 * Math.PI), v = azarEntre(velocidad * 0.3, velocidad);
+    this.x = x; this.y = y;
+    this.vx = Math.cos(ang) * v; this.vy = Math.sin(ang) * v;
+    this.color = rgb(color);
+    this.vida = this.vidaTotal = azarEntre(vida * 0.5, vida);
+    this.tamano = tamano; this.gravedad = gravedad;
+  }
+  actualizar(dt) {
+    this.x += this.vx * dt; this.y += this.vy * dt;
+    this.vy += this.gravedad * dt;
+    this.vx *= 0.97; this.vy *= 0.97;
+    this.vida -= dt;
+    return this.vida > 0;
+  }
+  dibujar() {
+    const t = this.tamano * this.vida / this.vidaTotal;
+    if (t >= 1) circulo(this.x, this.y + HUD, Math.floor(t), this.color);
+  }
+}
+function explosion(lista, x, y, color, cantidad = 30, fuerza = 220, vida = 0.8, tamano = 5) {
+  for (let i = 0; i < cantidad; i++) lista.push(new Particula(x, y, color, fuerza, vida, tamano));
+  for (let i = 0; i < Math.floor(cantidad / 3); i++) lista.push(new Particula(x, y, [255, 230, 120], fuerza * 0.6, vida * 0.6, tamano));
+  for (let i = 0; i < Math.floor(cantidad / 3); i++) lista.push(new Particula(x, y, [70, 70, 70], fuerza * 0.3, vida * 1.6, tamano + 2));
+}
+
+// ---------- Bala ----------
+class Bala {
+  static RADIO = 4;
+  get RADIO() { return Bala.RADIO; }
+  constructor(x, y, angulo, duenio) {
+    this.x = x; this.y = y;
+    this.vx = Math.cos(rad(angulo)) * VEL_BALA; this.vy = Math.sin(rad(angulo)) * VEL_BALA;
+    this.duenio = duenio; this.rebotes = 1; this.edad = 0; this.viva = true;
+  }
+  actualizar(dt, arena, particulas) {
+    this.edad += dt;
+    if (this.edad > 3) { this.viva = false; return; }
+    // primero en x, después en y: así sé de qué lado choqué
+    const nx = this.x + this.vx * dt;
+    if (this.choca(nx, this.y, arena, particulas)) this.vx = -this.vx; else this.x = nx;
+    if (!this.viva) return;
+    const ny = this.y + this.vy * dt;
+    if (this.choca(this.x, ny, arena, particulas)) this.vy = -this.vy; else this.y = ny;
+  }
+  choca(x, y, arena, particulas) {
+    const c = arena.celdaEn(x, y);
+    if (c === 'L') {
+      arena.romper(Math.floor(x / TAM), Math.floor(y / TAM));
+      const cx = Math.floor(x / TAM) * TAM + TAM / 2, cy = Math.floor(y / TAM) * TAM + TAM / 2;
+      for (let i = 0; i < 14; i++) particulas.push(new Particula(cx, cy, [170, 80, 50], 160, 0.7, 4, 300));
+      sonar('ladrillo');
+      this.viva = false;
+      return true;
+    }
+    if (c === '#') {
+      if (this.rebotes > 0) {
+        this.rebotes -= 1; sonar('rebote');
+        for (let i = 0; i < 5; i++) particulas.push(new Particula(this.x, this.y, [255, 240, 150], 120, 0.3, 2));
+      } else {
+        this.viva = false;
+        for (let i = 0; i < 6; i++) particulas.push(new Particula(this.x, this.y, [200, 200, 200], 100, 0.3, 2));
+      }
+      return true;
+    }
+    return false;
+  }
+  dibujar() {
+    circulo(this.x, this.y + HUD, this.RADIO, 'rgb(255,240,180)');
+    circulo(this.x, this.y + HUD, this.RADIO - 2, 'rgb(255,160,40)');
+  }
+}
+
+// ---------- Mina ----------
+class Mina {
+  static RADIO_ACTIVA = 22;
+  static RADIO_DANIO = 55;
+  constructor(x, y, duenio) { this.x = x; this.y = y; this.duenio = duenio; this.armadaEn = 1.2; this.viva = true; }
+  actualizar(dt) { this.armadaEn -= dt; }
+  dibujar(tiempo) {
+    circulo(this.x, this.y + HUD, 9, 'rgb(60,60,60)');
+    circulo(this.x, this.y + HUD, 3, (this.armadaEn <= 0 && Math.floor(tiempo * 4) % 2 === 0) ? 'rgb(255,40,40)' : 'rgb(120,120,120)');
+  }
+}
+
+// ---------- Power-ups ----------
+const TIPOS_POWERUP = ['escudo', 'triple', 'velocidad', 'mina'];
+const COLOR_POWERUP = { escudo: 'rgb(80,200,255)', triple: 'rgb(255,200,60)', velocidad: 'rgb(120,255,120)', mina: 'rgb(230,90,230)' };
+const LETRA_POWERUP = { escudo: 'E', triple: '3', velocidad: 'V', mina: 'M' };
+class PowerUp {
+  static RADIO = 14;
+  get RADIO() { return PowerUp.RADIO; }
+  constructor(x, y, tipo) { this.x = x; this.y = y; this.tipo = tipo; this.vida = 15; }
+  actualizar(dt) { this.vida -= dt; return this.vida > 0; }
+  dibujar(tiempo) {
+    if (this.vida < 3 && Math.floor(tiempo * 6) % 2 === 0) return;   // parpadea antes de irse
+    const y = this.y + HUD + 3 * Math.sin(tiempo * 4);
+    circulo(this.x, y, this.RADIO + 2, 'rgb(255,255,255)');
+    circulo(this.x, y, this.RADIO, COLOR_POWERUP[this.tipo]);
+    texto(LETRA_POWERUP[this.tipo], this.x, y, 15, 'rgb(20,20,20)', 'centro');
+  }
+}
+
+// ---------- Tanque ----------
+class Tanque {
+  static RADIO = 15;
+  get RADIO() { return Tanque.RADIO; }
+  constructor(num, arena) {
+    this.num = num; this.color = COLOR_J[num]; this.arena = arena;
+    this.reiniciarPosicion();
+    this.vidas = VIDAS; this.recarga = 0; this.escudo = 0; this.triple = 0; this.rapido = 0;
+    this.minas = 0; this.invulnerable = 0; this.disparos = 0; this.vivo = true;
+  }
+  reiniciarPosicion() { [this.x, this.y] = this.arena.inicio[this.num]; this.angulo = this.num === 1 ? 0 : 180; this.vel = 0; }
+  get casilla() { return [Math.floor(this.x / TAM), Math.floor(this.y / TAM)]; }
+  // acel: 1 adelante, -1 atrás, 0 nada. giro: 1 derecha (horario), -1 izquierda.
+  actualizar(dt, acel, giro, otros) {
+    for (const n of ['recarga', 'escudo', 'triple', 'rapido', 'invulnerable']) this[n] = Math.max(0, this[n] - dt);
+    const velMax = VEL_TANQUE * (this.rapido > 0 ? 1.6 : 1);
+    if (acel > 0) this.vel = Math.min(velMax, this.vel + ACELERACION * dt);
+    else if (acel < 0) this.vel = Math.max(-velMax * 0.6, this.vel - ACELERACION * dt);
+    else this.vel = this.vel > 0 ? Math.max(0, this.vel - FRENO * dt) : Math.min(0, this.vel + FRENO * dt);   // inercia
+    this.angulo = mod(this.angulo + giro * VEL_GIRO * dt, 360);
+    const nx = this.x + Math.cos(rad(this.angulo)) * this.vel * dt;
+    const ny = this.y + Math.sin(rad(this.angulo)) * this.vel * dt;
+    let chocado = false;
+    if (this.cabe(nx, this.y, otros)) this.x = nx; else chocado = true;
+    if (this.cabe(this.x, ny, otros)) this.y = ny; else chocado = true;
+    if (chocado) this.vel *= -0.2;   // rebota un poquito
+    return chocado;
+  }
+  cabe(x, y, otros) {
+    if (!(x >= this.RADIO && x <= ANCHO - this.RADIO && y >= this.RADIO && y <= FILAS * TAM - this.RADIO)) return false;
+    if (!this.arena.tanqueCabe(x, y, this.RADIO)) return false;
+    for (const o of otros) if (o !== this && o.vivo && Math.hypot(o.x - x, o.y - y) < this.RADIO * 2) return false;
+    return true;
+  }
+  punta() { return [this.x + Math.cos(rad(this.angulo)) * (this.RADIO + 6), this.y + Math.sin(rad(this.angulo)) * (this.RADIO + 6)]; }
+  disparar(balas, particulas) {
+    if (this.recarga > 0 || !this.vivo) return false;
+    this.recarga = RECARGA;
+    const [px, py] = this.punta();
+    const angulos = this.triple > 0 ? [this.angulo - 15, this.angulo, this.angulo + 15] : [this.angulo];
+    for (const a of angulos) balas.push(new Bala(px, py, a, this));
+    for (let i = 0; i < 6; i++) particulas.push(new Particula(px, py, [255, 200, 80], 150, 0.25, 3));
+    this.disparos += 1;
+    sonar('disparo');
+    return true;
+  }
+  ponerMina(minas) {
+    if (this.minas <= 0 || !this.vivo) return false;
+    this.minas -= 1;
+    minas.push(new Mina(this.x - Math.cos(rad(this.angulo)) * 22, this.y - Math.sin(rad(this.angulo)) * 22, this));
+    sonar('mina');
+    return true;
+  }
+  // Devuelve true si de verdad perdió una vida.
+  recibirGolpe(particulas) {
+    if (!this.vivo || this.invulnerable > 0) return false;
+    if (this.escudo > 0) {
+      this.escudo = 0;
+      for (let i = 0; i < 20; i++) particulas.push(new Particula(this.x, this.y, [80, 200, 255], 200, 0.5, 4));
+      sonar('rebote');
+      return false;
+    }
+    this.vidas -= 1;
+    if (this.vidas <= 0) { this.vivo = false; explosion(particulas, this.x, this.y, this.color, 70, 320, 1.4, 7); sonar('explosion'); }
+    else { explosion(particulas, this.x, this.y, this.color, 25, 200, 0.7, 5); sonar('golpe'); this.invulnerable = 2; this.triple = this.rapido = 0; }
+    return true;
+  }
+  agarrar(p) {
+    if (p.tipo === 'escudo') this.escudo = 10;
+    else if (p.tipo === 'triple') this.triple = 10;
+    else if (p.tipo === 'velocidad') this.rapido = 8;
+    else if (p.tipo === 'mina') this.minas = Math.min(3, this.minas + 1);
+    sonar('powerup');
+  }
+  dibujar(tiempo, escondido = false) {
+    if (!this.vivo) return;
+    if (this.invulnerable > 0 && Math.floor(tiempo * 10) % 2 === 0) return;   // parpadea
+    const c = rgb(this.color), oscuro = rgb(this.color.map(v => Math.floor(v / 2)));
+    ctx.save();
+    ctx.translate(this.x, this.y + HUD);
+    ctx.rotate(rad(this.angulo));
+    if (escondido) ctx.globalAlpha = 0.43;
+    ctx.translate(-22, -22);           // el dibujo mide 44x44 y el centro es (22, 22)
+    // orugas (las bandas de los lados)
+    rectRedondo(8, 6, 28, 8, 2, 'rgb(40,40,40)'); rectRedondo(8, 30, 28, 8, 2, 'rgb(40,40,40)');
+    const paso = Math.floor(tiempo * Math.abs(this.vel) / 6) % 6;
+    for (let i = 0; i < 5; i++) {
+      const x = 10 + i * 6 + paso;
+      if (x < 34) { linea(x, 7, x, 13, 'rgb(90,90,90)', 1); linea(x, 31, x, 37, 'rgb(90,90,90)', 1); }
+    }
+    // cuerpo
+    rectRedondo(9, 12, 26, 20, 4, c); rectRedondo(9, 12, 26, 20, 4, oscuro, 2);
+    // torreta y cañón (apuntan a la derecha; todo está girado)
+    rect(22, 19, 20, 6, oscuro);
+    circulo(22, 22, 8, c); circulo(22, 22, 8, oscuro, 2);
+    if (this.rapido > 0) circulo(14, 22, 3, 'rgb(120,255,120)');
+    if (this.triple > 0) { rect(22, 15, 20, 3, 'rgb(255,200,60)'); rect(22, 26, 20, 3, 'rgb(255,200,60)'); }
+    ctx.restore();
+    if (this.escudo > 0) circulo(this.x, this.y + HUD, this.RADIO + 6 + Math.trunc(2 * Math.sin(tiempo * 8)), 'rgb(80,200,255)', 2);
+  }
+}
+
+// ---------- IA (el tanque de la computadora) ----------
+//   Nivel 1 Patrulla: da vueltas al azar y dispara si te tiene enfrente.
+//   Nivel 2 Persigue: busca el camino hasta ti y dispara cuando te ve.
+//   Nivel 3 Esquiva: como 2, pero se quita de las balas, agarra power-ups y apunta mejor.
+class IA {
+  constructor(nivel, yo, enemigo) {
+    this.nivel = Math.max(1, Math.min(3, nivel));
+    this.yo = yo; this.enemigo = enemigo;
+    this.anguloObjetivo = azarEntre(0, 360);
+    this.relojCambio = 0; this.relojCamino = 0; this.camino = [];
+    this.recarga = azarEntre(0.5, 1.5); this.atascado = 0; this.reversa = 0;
+  }
+  // Devuelve [acel, giro, disparar, ponerMina], lo mismo que haría un jugador con el teclado.
+  decidir(juego, dt) {
+    const yo = this.yo, en = this.enemigo;
+    let acel = 1, disparar = false, mina = false;
+    this.recarga -= dt; this.relojCambio -= dt; this.relojCamino -= dt;
+    this.reversa = Math.max(0, this.reversa - dt);
+    const veEnemigo = en.vivo && juego.visible(yo, en);
+    const distEn = Math.hypot(en.x - yo.x, en.y - yo.y);
+    const angEn = grados(Math.atan2(en.y - yo.y, en.x - yo.x));
+
+    let objetivo = null;
+    if (this.nivel >= 3) objetivo = this.esquivar(juego.balas);            // 1. esquivar balas
+    if (objetivo === null && this.reversa > 0) { acel = -1; objetivo = this.anguloObjetivo; }   // 2. atascado: retrocede
+    if (objetivo === null) {                                                // 3. moverse
+      if (this.nivel === 1) {
+        if (this.relojCambio <= 0) { this.anguloObjetivo = azarEntre(0, 360); this.relojCambio = azarEntre(1.5, 3); }
+        objetivo = this.anguloObjetivo;
+        if (en.vivo && distEn < 380 && Math.abs(diferenciaAngulo(yo.angulo, angEn)) < 50) { objetivo = angEn; acel = 0; }
+      } else [objetivo, acel] = this.perseguir(juego, veEnemigo, distEn, angEn);
+    }
+    const diff = diferenciaAngulo(yo.angulo, objetivo);
+    let giro = diff > 5 ? 1 : (diff < -5 ? -1 : 0);
+    if (acel > 0 && Math.abs(diff) > 70) acel = 0;   // primero gira, después avanza
+
+    // 4. disparar
+    const umbral = { 1: 14, 2: 9, 3: 6 }[this.nivel];
+    if (en.vivo && this.recarga <= 0) {
+      const apuntado = Math.abs(diferenciaAngulo(yo.angulo, angEn)) < umbral;
+      let puede;
+      if (this.nivel === 1) puede = apuntado && distEn < 380;
+      else if (this.nivel === 2) puede = apuntado && (veEnemigo || !this.camino.length);
+      else puede = apuntado && (veEnemigo || (!this.camino.length && distEn < 300));
+      if (puede) { disparar = true; this.recarga = { 1: 1.3, 2: 0.9, 3: 0.55 }[this.nivel] + azarEntre(0, 0.3); }
+    }
+    // 5. minas: las deja caer cuando el enemigo lo viene siguiendo
+    if (yo.minas > 0 && this.nivel >= 2 && distEn > 90 && distEn < 260 && Math.random() < 0.4 * dt) mina = true;
+    // 6. detectar que no avanza
+    if (acel !== 0 && Math.abs(yo.vel) < 8) this.atascado += dt; else this.atascado = 0;
+    if (this.atascado > 0.5) {
+      this.atascado = 0;
+      this.anguloObjetivo = mod(yo.angulo + elegir([-90, 90, 180]) + azarEntre(-30, 30), 360);
+      this.reversa = 0.5; this.relojCambio = 1.5; this.relojCamino = 0;
+    }
+    return [acel, giro, disparar, mina];
+  }
+  esquivar(balas) {
+    const yo = this.yo;
+    for (const b of balas) {
+      if (b.duenio === yo && b.edad < 0.4) continue;
+      const rx = yo.x - b.x, ry = yo.y - b.y;
+      const d = Math.hypot(rx, ry);
+      if (d > 230 || d === 0) continue;
+      const vlen = Math.hypot(b.vx, b.vy);
+      const ux = b.vx / vlen, uy = b.vy / vlen;
+      const acercando = rx * ux + ry * uy;      // positivo = viene hacia mí
+      const lateral = rx * uy - ry * ux;        // de qué lado paso
+      if (acercando > 0 && Math.abs(lateral) < 45) {
+        const angBala = grados(Math.atan2(uy, ux));
+        return mod(angBala + (lateral >= 0 ? 90 : -90), 360);   // me muevo perpendicular a la bala
+      }
+    }
+    return null;
+  }
+  perseguir(juego, veEnemigo, distEn, angEn) {
+    const yo = this.yo, en = this.enemigo;
+    if (veEnemigo && distEn < 200) return [angEn, 0];   // ya lo veo y está cerca: quieto apuntando
+    let destino = en.casilla;
+    if (this.nivel >= 3) {
+      const cerca = juego.powerups.filter(p => Math.hypot(p.x - yo.x, p.y - yo.y) < 280);
+      if (cerca.length) {
+        const p = cerca.reduce((a, b) => Math.hypot(a.x - yo.x, a.y - yo.y) < Math.hypot(b.x - yo.x, b.y - yo.y) ? a : b);
+        destino = [Math.floor(p.x / TAM), Math.floor(p.y / TAM)];
+      }
+    }
+    if (this.relojCamino <= 0) { this.relojCamino = 0.4; this.camino = juego.arena.camino(yo.casilla, destino); }
+    while (this.camino.length > 1 && Math.hypot(this.camino[0][0] * TAM + TAM / 2 - yo.x, this.camino[0][1] * TAM + TAM / 2 - yo.y) < 14) this.camino.shift();
+    if (!this.camino.length) return [angEn, veEnemigo ? 0 : 1];   // sin camino: apunto al enemigo y avanzo
+    const cx = this.camino[0][0] * TAM + TAM / 2, cy = this.camino[0][1] * TAM + TAM / 2;
+    return [grados(Math.atan2(cy - yo.y, cx - yo.x)), 1];
+  }
+}
+
+// ---------- Juego (una partida completa: varias rondas) ----------
+class Juego {
+  constructor(indiceArena, modo, dificultad) {
+    this.indiceArena = indiceArena;
+    this.modo = modo;               // 1 = contra la IA, 2 = dos jugadores
+    this.dificultad = dificultad;
+    this.rondas = { 1: 0, 2: 0 };
+    this.numeroRonda = 0; this.ganador = null; this.tiempo = 0;
+    this.nuevaRonda();
+  }
+  nuevaRonda() {
+    this.arena = new Arena(ARENAS[this.indiceArena]);
+    this.tanques = [new Tanque(1, this.arena), new Tanque(2, this.arena)];
+    this.ia = this.modo === 1 ? new IA(this.dificultad, this.tanques[1], this.tanques[0]) : null;
+    this.balas = []; this.minas = []; this.powerups = []; this.particulas = [];
+    this.relojPowerup = CADA_CUANTO_POWERUP * 0.6;
+    this.numeroRonda += 1;
+    this.estado = 'jugando';        // o 'fin_ronda' o 'fin_partida'
+    this.temporizador = 0; this.mensaje = '';
+  }
+  tanque(num) { return this.tanques[num - 1]; }
+  // ¿'quien' puede ver a 'aQuien'? No si hay muro en medio, ni si está en un arbusto (salvo muy cerca).
+  visible(quien, aQuien) {
+    if (this.arena.celdaEn(aQuien.x, aQuien.y) === 'B' && Math.hypot(aQuien.x - quien.x, aQuien.y - quien.y) > 70) return false;
+    return this.arena.lineaLibre(quien.x, quien.y, aQuien.x, aQuien.y);
+  }
+  ordenesTeclado(t) {
+    const ordenes = {};
+    ordenes[1] = [(t.w || t.W ? 1 : 0) - (t.s || t.S ? 1 : 0), (t.d || t.D ? 1 : 0) - (t.a || t.A ? 1 : 0), !!t[' '], false];
+    if (this.modo === 2) ordenes[2] = [(t.ArrowUp ? 1 : 0) - (t.ArrowDown ? 1 : 0), (t.ArrowRight ? 1 : 0) - (t.ArrowLeft ? 1 : 0), !!t.Enter, false];
+    return ordenes;
+  }
+  // Avanza el juego dt segundos. ordenes = {1: [acel, giro, disparar, mina], 2: ...}
+  paso(dt, ordenes) {
+    this.tiempo += dt;
+    this.particulas = this.particulas.filter(p => p.actualizar(dt));
+    if (this.estado !== 'jugando') {
+      this.temporizador -= dt;
+      if (this.temporizador <= 0 && this.estado === 'fin_ronda') this.nuevaRonda();
+      return;
+    }
+    if (this.ia) ordenes = { ...ordenes, 2: this.ia.decidir(this, dt) };
+    for (const t of this.tanques) {
+      const [acel, giro, disparar, mina] = ordenes[t.num] || [0, 0, false, false];
+      if (!t.vivo) continue;
+      t.actualizar(dt, acel, giro, this.tanques);
+      if (disparar) t.disparar(this.balas, this.particulas);
+      if (mina) t.ponerMina(this.minas);
+    }
+    for (const b of this.balas) {
+      b.actualizar(dt, this.arena, this.particulas);
+      if (!b.viva) continue;
+      for (const t of this.tanques) {
+        if (!t.vivo || (b.duenio === t && b.edad < 0.2)) continue;
+        if (Math.hypot(t.x - b.x, t.y - b.y) < t.RADIO + b.RADIO) { b.viva = false; t.recibirGolpe(this.particulas); break; }
+      }
+    }
+    // balas que chocan entre ellas se anulan
+    for (let i = 0; i < this.balas.length; i++) for (let k = i + 1; k < this.balas.length; k++) {
+      const a = this.balas[i], b = this.balas[k];
+      if (a.viva && b.viva && Math.hypot(a.x - b.x, a.y - b.y) < a.RADIO * 2) {
+        a.viva = b.viva = false;
+        for (let n = 0; n < 8; n++) this.particulas.push(new Particula(a.x, a.y, [255, 255, 200], 150, 0.3, 3));
+      }
+    }
+    this.balas = this.balas.filter(b => b.viva);
+    for (const m of this.minas) {
+      m.actualizar(dt);
+      if (m.armadaEn > 0) continue;
+      for (const t of this.tanques) {
+        if (t.vivo && Math.hypot(t.x - m.x, t.y - m.y) < Mina.RADIO_ACTIVA + t.RADIO) {
+          m.viva = false;
+          explosion(this.particulas, m.x, m.y, [230, 90, 230], 40, 260, 0.9, 6);
+          sonar('explosion');
+          for (const t2 of this.tanques) if (t2.vivo && Math.hypot(t2.x - m.x, t2.y - m.y) < Mina.RADIO_DANIO) t2.recibirGolpe(this.particulas);
+          break;
+        }
+      }
+    }
+    this.minas = this.minas.filter(m => m.viva);
+    this.relojPowerup -= dt;
+    if (this.relojPowerup <= 0) { this.relojPowerup = CADA_CUANTO_POWERUP; if (this.powerups.length < MAX_POWERUPS) this.crearPowerup(); }
+    this.powerups = this.powerups.filter(p => p.actualizar(dt));
+    for (const p of this.powerups) for (const t of this.tanques) {
+      if (t.vivo && Math.hypot(t.x - p.x, t.y - p.y) < t.RADIO + p.RADIO) { p.vida = 0; t.agarrar(p); break; }
+    }
+    this.powerups = this.powerups.filter(p => p.vida > 0);
+    // ¿alguien murió?
+    const vivos = this.tanques.filter(t => t.vivo);
+    if (vivos.length < 2) {
+      this.estado = 'fin_ronda'; this.temporizador = 2.5;
+      if (vivos.length === 1) {
+        const g = vivos[0].num;
+        this.rondas[g] += 1;
+        this.mensaje = 'Ronda ' + this.numeroRonda + ' para ' + NOMBRE_J[g];
+        if (this.rondas[g] >= RONDAS_PARA_GANAR) { this.estado = 'fin_partida'; this.ganador = g; this.mensaje = '¡Gana ' + NOMBRE_J[g] + '!  ' + this.rondas[1] + ' - ' + this.rondas[2]; }
+      } else this.mensaje = '¡Empate! Se repite la ronda';
+      sonar('ronda');
+    }
+  }
+  crearPowerup() {
+    const libres = this.arena.casillasLibres().filter(([c, f]) => this.tanques.every(t => Math.hypot(c * TAM + TAM / 2 - t.x, f * TAM + TAM / 2 - t.y) > 100));
+    if (!libres.length) return;
+    const [c, f] = elegir(libres);
+    this.powerups.push(new PowerUp(c * TAM + TAM / 2, f * TAM + TAM / 2, elegir(TIPOS_POWERUP)));
+  }
+  dibujar() {
+    rect(0, 0, ANCHO, ALTO, 'rgb(20,20,30)');
+    this.arena.dibujarSuelo(this.tiempo);
+    for (const m of this.minas) m.dibujar(this.tiempo);
+    for (const p of this.powerups) p.dibujar(this.tiempo);
+    for (const t of this.tanques) t.dibujar(this.tiempo, this.arena.celdaEn(t.x, t.y) === 'B');
+    for (const b of this.balas) b.dibujar();
+    this.arena.dibujarArbustos();
+    for (const p of this.particulas) p.dibujar();
+    this.dibujarHud();
+    if (this.estado !== 'jugando') {
+      rect(0, HUD, ANCHO, ALTO - HUD, 'rgba(0,0,0,0.47)');
+      texto(this.mensaje, ANCHO / 2, ALTO / 2, 34, 'rgb(255,255,255)', 'centro');
+      if (this.estado === 'fin_partida') texto('ENTER para volver al menú', ANCHO / 2, ALTO / 2 + 50, 22, 'rgb(220,220,220)', 'centro');
+    }
+  }
+  dibujarHud() {
+    rect(0, 0, ANCHO, HUD, 'rgb(30,30,45)');
+    linea(0, HUD - 1, ANCHO, HUD - 1, 'rgb(80,80,110)', 2);
+    for (const t of this.tanques) {
+      const x0 = t.num === 1 ? 15 : ANCHO - 15, lado = t.num === 1 ? 1 : -1;
+      texto(NOMBRE_J[t.num] + (t.num === 2 && this.ia ? ' (IA)' : ''), x0, 8, 22, rgb(t.color), t.num === 1 ? 'izq' : 'derecha');
+      for (let i = 0; i < VIDAS; i++) circulo(x0 + lado * (10 + i * 22), 48, 8, i < t.vidas ? rgb(t.color) : 'rgb(60,60,70)');
+      const iconos = [];
+      if (t.escudo > 0) iconos.push(['E', COLOR_POWERUP.escudo]);
+      if (t.triple > 0) iconos.push(['3', COLOR_POWERUP.triple]);
+      if (t.rapido > 0) iconos.push(['V', COLOR_POWERUP.velocidad]);
+      for (let i = 0; i < t.minas; i++) iconos.push(['M', COLOR_POWERUP.mina]);
+      iconos.forEach(([letra, color], i) => {
+        const cx = x0 + lado * (90 + i * 26);
+        circulo(cx, 48, 11, color);
+        texto(letra, cx, 48, 15, 'rgb(20,20,20)', 'centro');
+      });
+    }
+    texto(this.rondas[1] + '  -  ' + this.rondas[2], ANCHO / 2, 26, 34, 'rgb(255,255,255)', 'centro');
+    texto('Ronda ' + this.numeroRonda + '  ·  primero a ' + RONDAS_PARA_GANAR, ANCHO / 2, 54, 15, 'rgb(170,170,190)', 'centro');
+  }
+}
+
+// ---------- Menú ----------
+class Menu {
+  constructor() { this.modo = 1; this.arena = 0; this.dificultad = 2; this.fila = 0; }
+  tecla(k) {
+    const kk = k.length === 1 ? k.toLowerCase() : k;
+    const arriba = kk === 'w' || k === 'ArrowUp', abajo = kk === 's' || k === 'ArrowDown';
+    const izq = kk === 'a' || k === 'ArrowLeft', der = kk === 'd' || k === 'ArrowRight';
+    if (arriba) this.fila = mod(this.fila - 1, 3);
+    else if (abajo) this.fila = mod(this.fila + 1, 3);
+    else if (izq || der) {
+      const paso = der ? 1 : -1;
+      if (this.fila === 0) this.modo = 3 - this.modo;
+      else if (this.fila === 1) this.arena = mod(this.arena + paso, ARENAS.length);
+      else if (this.fila === 2) this.dificultad = mod(this.dificultad - 1 + paso, 3) + 1;
+    } else if (k === 'Enter') return true;
+    return false;
+  }
+  dibujar(tiempo) {
+    rect(0, 0, ANCHO, ALTO, 'rgb(20,20,30)');
+    texto('TANQUES', ANCHO / 2, 70, 60, 'rgb(255,220,80)', 'centro');
+    texto('batalla vista desde arriba · al mejor de 5 rondas', ANCHO / 2, 115, 15, 'rgb(170,170,190)', 'centro');
+    const opciones = [
+      ['Modo', this.modo === 1 ? '1 jugador contra la IA' : '2 jugadores'],
+      ['Arena', (this.arena + 1) + '. ' + NOMBRES_ARENA[this.arena]],
+      ['Dificultad', this.dificultad + '. ' + NOMBRES_DIFICULTAD[this.dificultad - 1] + (this.modo === 1 ? '' : '  (solo vs IA)')],
+    ];
+    opciones.forEach(([nombre, valor], i) => {
+      const y = 175 + i * 50, marcada = i === this.fila;
+      const color = marcada ? 'rgb(255,255,255)' : 'rgb(150,150,170)';
+      if (marcada) {
+        rectRedondo(60, y - 20, 420, 42, 8, 'rgb(45,45,70)');
+        texto('<', 200, y, 22, 'rgb(255,220,80)', 'centro'); texto('>', 460, y, 22, 'rgb(255,220,80)', 'centro');
+      }
+      texto(nombre, 75, y, 22, color, 'izqmedio'); texto(valor, 215, y, 22, color, 'izqmedio');
+    });
+    // vista chiquita de la arena
+    const arena = new Arena(ARENAS[this.arena]), mini = 12;
+    const ox = ANCHO - 60 - COLS * mini, oy = 160;
+    const colores = { '#': 'rgb(95,95,105)', L: 'rgb(170,80,50)', A: 'rgb(40,90,200)', B: 'rgb(30,110,40)', '.': 'rgb(145,165,100)' };
+    for (let f = 0; f < FILAS; f++) for (let c = 0; c < COLS; c++) rect(ox + c * mini, oy + f * mini, mini, mini, colores[arena.celdas[f][c]]);
+    for (const [num, [x, y]] of Object.entries(arena.inicio)) circulo(ox + x / TAM * mini, oy + y / TAM * mini, 5, rgb(COLOR_J[num]));
+    let y = 350;
+    const lineas = ['ENTER para empezar   ·   P pausa', '',
+      'J1:  W A S D mueve  ·  ESPACIO dispara  ·  Q mina',
+      'J2:  flechas mueven  ·  ENTER dispara  ·  SHIFT DER mina', '',
+      'Power-ups:  E escudo   3 triple disparo   V velocidad   M mina',
+      'Las balas rebotan una vez en los muros. Los ladrillos se rompen.',
+      'Los arbustos te esconden. El agua no se cruza. 3 vidas por ronda.'];
+    for (const l of lineas) { if (l) texto(l, ANCHO / 2, y, 15, 'rgb(200,200,220)', 'centro'); y += 24; }
+    if (Math.floor(tiempo * 2) % 2 === 0) texto('¡Listos!', ANCHO / 2, ALTO - 40, 22, 'rgb(255,220,80)', 'centro');
+  }
+}
+
+// ---------- Dibujos de ayuda ----------
+const canvas = document.getElementById('juego');
+const ctx = canvas.getContext('2d');
+function rect(x, y, w, h, color) { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); }
+function rectBorde(x, y, w, h, color, g) { ctx.strokeStyle = color; ctx.lineWidth = g; ctx.strokeRect(x + g / 2, y + g / 2, w - g, h - g); }
+function rectRedondo(x, y, w, h, r, color, g = 0) {
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, r);
+  if (g) { ctx.strokeStyle = color; ctx.lineWidth = g; ctx.stroke(); } else { ctx.fillStyle = color; ctx.fill(); }
+}
+function circulo(x, y, r, color, g = 0) {
+  ctx.beginPath(); ctx.arc(x, y, Math.max(0, r), 0, Math.PI * 2);
+  if (g) { ctx.strokeStyle = color; ctx.lineWidth = g; ctx.stroke(); } else { ctx.fillStyle = color; ctx.fill(); }
+}
+function linea(x1, y1, x2, y2, color, g) { ctx.strokeStyle = color; ctx.lineWidth = g; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+function texto(msg, x, y, tam, color, modo = 'izq') {
+  ctx.font = tam + 'px sans-serif'; ctx.fillStyle = color;
+  ctx.textAlign = modo === 'centro' ? 'center' : modo === 'derecha' ? 'right' : 'left';
+  ctx.textBaseline = (modo === 'centro' || modo === 'izqmedio') ? 'middle' : 'top';
+  ctx.fillText(msg, x, y);
+}
+
+// ---------- Estado, teclas y bucle ----------
+const menu = new Menu();
+let juego = null, pausa = false, tiempo = 0;
+const teclas = {};
+
+function tecla(k) {
+  const kk = k.length === 1 ? k.toLowerCase() : k;
+  if (juego === null) {
+    if (menu.tecla(k)) { juego = new Juego(menu.arena, menu.modo, menu.dificultad); pausa = false; }
+  } else if (kk === 'p') pausa = !pausa;
+  else if (kk === 'm') { juego = null; pausa = false; }
+  else if (juego.estado === 'fin_partida' && k === 'Enter') juego = null;
+  else if (!pausa) {
+    if (kk === 'q') juego.tanque(1).ponerMina(juego.minas);
+    if (k === 'Shift' && juego.modo === 2) juego.tanque(2).ponerMina(juego.minas);
+  }
+}
+document.addEventListener('keydown', (e) => {
+  encenderAudio();
+  if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault();
+  if (!e.repeat) tecla(e.key);
+  teclas[e.key] = true;
+});
+document.addEventListener('keyup', (e) => { teclas[e.key] = false; });
+document.querySelectorAll('.tactil button').forEach(b => {
+  const k = b.dataset.tecla;
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); encenderAudio(); teclas[k] = true; tecla(k); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { teclas[k] = false; });
+});
+canvas.addEventListener('pointerdown', () => { encenderAudio(); if (juego === null) tecla('Enter'); });
+
+function actualizar() {
+  tiempo += DT;
+  if (juego !== null && !pausa) juego.paso(DT, juego.ordenesTeclado(teclas));
+}
+function dibujar() {
+  if (juego === null) { menu.dibujar(tiempo); return; }
+  juego.dibujar();
+  if (pausa) {
+    rect(0, 0, ANCHO, ALTO, 'rgba(0,0,0,0.55)');
+    texto('PAUSA', ANCHO / 2, ALTO / 2 - 20, 34, 'rgb(255,255,255)', 'centro');
+    texto('P sigue  ·  M menú', ANCHO / 2, ALTO / 2 + 30, 22, 'rgb(200,200,220)', 'centro');
+  }
+}
+
+let acumulado = 0;
+let ultimoTiempo = performance.now();
+function bucle(ahora) {
+  let dt = ahora - ultimoTiempo;
+  ultimoTiempo = ahora;
+  if (dt > 250) dt = 250;      // si la pestaña estuvo escondida, no saltamos mil cuadros
+  acumulado += dt;
+  while (acumulado >= PASO) { actualizar(); acumulado -= PASO; }
+  dibujar();
+  requestAnimationFrame(bucle);
+}
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>

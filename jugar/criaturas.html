@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Criaturas de Manu</title>
+<style>
+  /* Colores de la página (style.css) */
+  :root {
+    --pasto: #5d9a3c; --pasto-oscuro: #3e6b28; --piedra: #7f7f7f; --piedra-oscura: #4f4f4f;
+    --cielo: #7fb2f0; --diamante: #4aedd9; --texto: #ffffff; --sombra: #1a1a1a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 16px;
+    background: var(--sombra); color: var(--texto);
+    font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 12px; line-height: 1.8;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  h1 { font-size: 18px; color: var(--diamante); text-shadow: 3px 3px 0 #000; margin: 8px 0 12px; text-align: center; }
+  canvas {
+    display: block; max-width: 100%; height: auto; background: #000;
+    border: 4px solid var(--piedra-oscura); box-shadow: 6px 6px 0 #000;
+    touch-action: none;
+  }
+  .ayuda { font-size: 9px; color: #dddddd; text-align: center; max-width: 640px; margin: 10px 0 0; }
+  .boton {
+    display: inline-block; margin: 16px 0; padding: 12px 16px; font-size: 11px;
+    background: #3c6ec9; border: 4px solid #244a8c; box-shadow: 4px 4px 0 #000;
+    color: var(--texto); text-decoration: none; text-shadow: 2px 2px 0 #000;
+  }
+  .boton:hover { background: #4a82e0; }
+  .boton:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+  /* Botones de celular: solo aparecen en pantallas táctiles */
+  .tactil { display: none; gap: 10px; margin-top: 12px; width: 100%; max-width: 960px; justify-content: space-between; align-items: center; }
+  @media (pointer: coarse) { .tactil { display: flex; } }
+  .cruz { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); gap: 4px; }
+  .tactil button {
+    font-family: inherit; font-size: 14px; width: 56px; height: 56px;
+    background: var(--piedra-oscura); border: 4px solid #000; color: var(--texto);
+    box-shadow: 4px 4px 0 #000; touch-action: none; user-select: none;
+  }
+  .tactil button:active { background: var(--piedra); }
+  .tactil .grande { width: 80px; }
+</style>
+</head>
+<body>
+<h1>CRIATURAS</h1>
+<canvas id="juego" width="960" height="640"></canvas>
+<div class="tactil">
+  <div class="cruz">
+    <span></span><button data-tecla="ArrowUp">▲</button><span></span>
+    <button data-tecla="ArrowLeft">◀</button><span></span><button data-tecla="ArrowRight">▶</button>
+    <span></span><button data-tecla="ArrowDown">▼</button><span></span>
+  </div>
+  <div style="display:flex;gap:10px"><button class="grande" data-tecla="Escape">ESC</button><button class="grande" data-tecla="Enter">OK</button></div>
+</div>
+<p class="ayuda">flechas: caminar / moverse por los menús &middot; ENTER: aceptar / hablar &middot; ESC: cancelar / menú &middot; SHIFT: correr &middot; G / L: guardar / cargar</p>
+<a class="boton" href="../index.html">&larr; Volver a la página</a>
+
+<script>
+// ============================================================
+//  Criaturas — versión web del criaturas.py de Manu
+//  (datos.py + logica.py + dibujos.py + criaturas.py en un solo archivo)
+//  Todo se dibuja con canvas. Sin imágenes, sin internet.
+// ============================================================
+
+// ================= DATOS (datos.py) =================
+const COLOR_TIPO = {
+  fuego: [235, 90, 40], agua: [60, 130, 230], planta: [70, 180, 80], electrico: [240, 210, 40],
+  roca: [160, 130, 90], fantasma: [130, 90, 190], normal: [170, 170, 170],
+};
+const NOMBRE_TIPO = { fuego: 'Fuego', agua: 'Agua', planta: 'Planta', electrico: 'Eléctrico', roca: 'Roca', fantasma: 'Fantasma', normal: 'Normal' };
+// EFECTIVIDAD[tipo_del_ataque][tipo_del_que_recibe]: 2 = súper efectivo, 0.5 = poco, 1 = normal
+const EFECTIVIDAD = {
+  fuego: { planta: 2, agua: 0.5, roca: 0.5, fuego: 0.5 },
+  agua: { fuego: 2, roca: 2, agua: 0.5, planta: 0.5 },
+  planta: { agua: 2, roca: 2, fuego: 0.5, planta: 0.5 },
+  electrico: { agua: 2, planta: 0.5, roca: 0.5, electrico: 0.5 },
+  roca: { fuego: 2, electrico: 2, planta: 0.5, agua: 0.5 },
+  fantasma: { fantasma: 2, roca: 0.5, electrico: 0.5 },
+  normal: { roca: 0.5, fantasma: 0.5 },
+};
+const efectividad = (a, d) => (EFECTIVIDAD[a] || {})[d] ?? 1;
+
+// poder 0 = no hace daño, solo el efecto. efecto: null, 'dormir', 'veneno' o 'subir_ataque'
+const A = (tipo, poder, precision, efecto = null) => ({ tipo, poder, precision, efecto });
+const ATAQUES = {
+  'Golpe': A('normal', 40, 100), 'Embestida': A('normal', 55, 95), 'Arañazo': A('normal', 40, 100),
+  'Chispa': A('fuego', 40, 100), 'Llamarada': A('fuego', 65, 90), 'Erupción': A('fuego', 90, 80), 'Rugido Ardiente': A('fuego', 0, 100, 'subir_ataque'),
+  'Burbuja': A('agua', 40, 100), 'Chorro': A('agua', 65, 90), 'Tsunami': A('agua', 90, 80), 'Canción de Marea': A('agua', 0, 70, 'dormir'),
+  'Hoja Filosa': A('planta', 45, 100), 'Látigo Verde': A('planta', 65, 90), 'Raíz Gigante': A('planta', 90, 80), 'Polen Tóxico': A('planta', 0, 80, 'veneno'),
+  'Chispazo': A('electrico', 40, 100), 'Rayo': A('electrico', 65, 90), 'Trueno': A('electrico', 90, 80), 'Carga Eléctrica': A('electrico', 0, 100, 'subir_ataque'),
+  'Pedrada': A('roca', 45, 100), 'Derrumbe': A('roca', 65, 90), 'Avalancha': A('roca', 90, 80), 'Arena Somnífera': A('roca', 0, 70, 'dormir'),
+  'Susurro': A('fantasma', 40, 100), 'Garra Sombría': A('fantasma', 65, 90), 'Pesadilla': A('fantasma', 90, 80), 'Maldición': A('fantasma', 0, 85, 'veneno'),
+};
+
+const NIVEL_EVOLUCION = 16;
+// stats base: hp, ataque, defensa, velocidad. captura: 1.0 fácil, 0.3 difícil. ataques: [nombre, nivel en que lo aprende]
+const E = (tipo, hp, ataque, defensa, velocidad, captura, exp_base, evoluciona, ataques, descripcion) =>
+  ({ tipo, hp, ataque, defensa, velocidad, captura, exp_base, evoluciona, ataques, descripcion });
+const ESPECIES = {
+  'Brasita': E('fuego', 42, 55, 40, 60, 0.9, 60, ['Volcanor', NIVEL_EVOLUCION], [['Golpe', 1], ['Chispa', 1], ['Rugido Ardiente', 5], ['Llamarada', 10]], 'Una brasa con patitas. Si se enoja, echa humo.'),
+  'Volcanor': E('fuego', 70, 85, 60, 80, 0.3, 150, null, [['Golpe', 1], ['Llamarada', 1], ['Rugido Ardiente', 1], ['Erupción', 20]], 'Tiene un cráter en la cabeza que hierve todo el día.'),
+  'Gotix': E('agua', 50, 45, 50, 50, 0.9, 60, ['Marejón', NIVEL_EVOLUCION], [['Golpe', 1], ['Burbuja', 1], ['Canción de Marea', 5], ['Chorro', 10]], 'Una gota gigante que rebota. Canta cuando llueve.'),
+  'Marejón': E('agua', 85, 70, 75, 65, 0.3, 150, null, [['Embestida', 1], ['Chorro', 1], ['Canción de Marea', 1], ['Tsunami', 20]], 'Una ola con cara. Puede tragarse un bote entero.'),
+  'Brotín': E('planta', 48, 48, 55, 42, 0.9, 60, ['Selvarak', NIVEL_EVOLUCION], [['Arañazo', 1], ['Hoja Filosa', 1], ['Polen Tóxico', 5], ['Látigo Verde', 10]], 'Un brote que caminó fuera de la maceta.'),
+  'Selvarak': E('planta', 80, 78, 85, 50, 0.3, 150, null, [['Arañazo', 1], ['Látigo Verde', 1], ['Polen Tóxico', 1], ['Raíz Gigante', 20]], 'Un árbol enojado. Sus raíces atrapan cualquier cosa.'),
+  'Chispín': E('electrico', 38, 52, 35, 75, 0.8, 65, ['Tormentux', NIVEL_EVOLUCION], [['Golpe', 1], ['Chispazo', 1], ['Carga Eléctrica', 5], ['Rayo', 10]], 'Una chispa con orejas. Nunca se queda quieto.'),
+  'Tormentux': E('electrico', 65, 85, 55, 100, 0.3, 155, null, [['Embestida', 1], ['Rayo', 1], ['Carga Eléctrica', 1], ['Trueno', 20]], 'Una nube de tormenta con ojos. Truena al respirar.'),
+  'Pedrolo': E('roca', 55, 50, 70, 25, 0.8, 70, ['Montaraz', NIVEL_EVOLUCION], [['Golpe', 1], ['Pedrada', 1], ['Arena Somnífera', 5], ['Derrumbe', 10]], 'Una piedra que parpadea. Le gusta dormir siglos.'),
+  'Montaraz': E('roca', 90, 80, 110, 35, 0.3, 160, null, [['Embestida', 1], ['Derrumbe', 1], ['Arena Somnífera', 1], ['Avalancha', 20]], 'Una montañita con brazos. Casi nada la mueve.'),
+  'Sombrilo': E('fantasma', 40, 55, 40, 65, 0.6, 70, ['Espectrum', NIVEL_EVOLUCION], [['Arañazo', 1], ['Susurro', 1], ['Maldición', 5], ['Garra Sombría', 10]], 'Una sombra traviesa. Se esconde debajo de las camas.'),
+  'Espectrum': E('fantasma', 65, 90, 60, 90, 0.25, 160, null, [['Arañazo', 1], ['Garra Sombría', 1], ['Maldición', 1], ['Pesadilla', 20]], 'Un fantasma con corona. Dicen que fue rey de algo.'),
+};
+const BASICAS = Object.keys(ESPECIES).filter(n => ESPECIES[n].evoluciona !== null);
+const EVOLUCIONADAS = Object.keys(ESPECIES).filter(n => ESPECIES[n].evoluciona === null);
+const INICIALES = ['Brasita', 'Gotix', 'Brotín'];
+
+const OBJETOS = {
+  'Poción': { tipo: 'curar', valor: 20, descripcion: 'Cura 20 de vida.' },
+  'Superpoción': { tipo: 'curar', valor: 50, descripcion: 'Cura 50 de vida.' },
+  'Esfera': { tipo: 'esfera', valor: 1.0, descripcion: 'Atrapa criaturas salvajes.' },
+  'Superesfera': { tipo: 'esfera', valor: 1.6, descripcion: 'Atrapa mejor que la Esfera.' },
+  'Antídoto': { tipo: 'estado', valor: 0, descripcion: 'Quita veneno y despierta.' },
+};
+const MOCHILA_INICIAL = { 'Poción': 4, 'Esfera': 6, 'Superesfera': 1, 'Antídoto': 1 };
+// letra del mapa -> [nivel mínimo, nivel máximo, especies]
+const PASTO = { ',': [3, 6, BASICAS], ';': [8, 12, BASICAS], '"': [13, 18, [...BASICAS, ...EVOLUCIONADAS]] };
+const PROB_ENCUENTRO = 0.14;
+
+const ENTRENADORES = {
+  '1': { nombre: 'Lía la Jardinera', equipo: [['Brotín', 6], ['Gotix', 7]], antes: '¡Mis plantitas te van a enredar!', despues: 'Uy... les faltó sol.', premio: { 'Poción': 2 } },
+  '2': { nombre: 'Tomás el Minero', equipo: [['Pedrolo', 10], ['Chispín', 11], ['Pedrolo', 12]], antes: '¡Aquí abajo mandan las rocas!', despues: 'Qué golpe... bien jugado.', premio: { 'Superpoción': 2, 'Esfera': 3 } },
+  '3': { nombre: 'Nadia la Nocturna', equipo: [['Sombrilo', 14], ['Brasita', 14], ['Sombrilo', 15]], antes: 'Shhh... ¿escuchas los susurros?', despues: 'Los fantasmas también pierden, parece.', premio: { 'Superesfera': 2, 'Antídoto': 2 } },
+  'K': { nombre: 'Campeón Orión', equipo: [['Tormentux', 17], ['Selvarak', 18], ['Volcanor', 18], ['Espectrum', 19]], antes: 'Venciste a los tres. Ahora veamos si puedes conmigo.', despues: '...Increíble. Eres el nuevo campeón.', premio: { 'Superesfera': 5 } },
+};
+
+// El mapa (copiado de mapa.txt). Cada letra es una casilla:
+//   #  árbol   ~  agua   H  casa   .  camino   +  centro de curación   L  letrero
+//   , ; "  pasto bajo / medio / alto   P  donde empiezas   1 2 3  entrenadores   K  el campeón
+const MAPA_TXT = `
+############################################
+#............#~~~~~~#......................#
+#.HH.........#~~~~~~#..,,,,,,,,,,..HH......#
+#.HH...+.....#~~~~~~#..,,,,,,,,,,..HH......#
+#..L...L.....#~~~~~~#..,,,,,,,,,,....L.....#
+#.P..........#~~~~~~#..,,,,,,,,,,..........#
+#............###..###.......1..............#
+#.,,,,,,,,.........................######..#
+#.,,,,,,,,.....###########.........#;;;;#..#
+#.,,,,,,,,.....#;;;;;;;;;#....HH...#;;;;#..#
+#.,,,,,,,,.....#;;;;;;;;;#....HH...#;;;;#..#
+#..............#;;;;;;;;;#.........#;;;;#..#
+#.............L#;;;;;;;;;#.....2...#;;;;#..#
+######..#######;;;;;;;;;;;.................#
+#......................;;;;;;;;;;..........#
+#.HH..........#~~~~~#..;;;;;;;;;;..........#
+#.HH.....+....#~~~~~#..............L.......#
+#........L....#~~~~~#........###########...#
+#.............#~~~~~#........#"""""""""#...#
+#.........,,,,#~~~~~#........#"""""""""#...#
+#.........,,,,#~~~~~~~~~~~~~~#"""""""""#...#
+#.........,,,,#~~~~~~~~~~~~~~#"""""""""#...#
+#.............#..............#""""3""""#...#
+#.............L..........................L.#
+#.............#..............#####.#####...#
+#..HHHH.......#..............#.........#...#
+#..HHHH.......#..............#....K....#...#
+#..HHHH.......#..............#.........#...#
+#.............#..............###########...#
+############################################
+`;
+
+// ================= LÓGICA (logica.py) =================
+const MAX_EQUIPO = 6;
+const expParaNivel = (nivel) => nivel ** 3;
+const azarEntre = (a, b) => a + Math.random() * (b - a);
+const azarEntero = (a, b) => Math.floor(azarEntre(a, b + 1));
+const elegir = (l) => l[Math.floor(Math.random() * l.length)];
+const trunc = Math.trunc;
+
+class Criatura {
+  constructor(especie, nivel, apodo = null) {
+    if (!(especie in ESPECIES)) throw new Error('No existe la criatura ' + especie);
+    this.especie = especie; this.nivel = nivel; this.exp = expParaNivel(nivel); this.apodo = apodo;
+    this.ataques = this.ataquesConocidos();
+    this.hp = this.hpMax;
+    this.estado = null;          // null, 'dormido' o 'envenenado'
+    this.turnosDormido = 0;
+    this.etapaAtaque = 0;        // de 0 a 6: cuánto subió el ataque en esta batalla
+  }
+  ataquesConocidos() { return ESPECIES[this.especie].ataques.filter(([, nv]) => nv <= this.nivel).map(([n]) => n); }
+  get datos() { return ESPECIES[this.especie]; }
+  get nombre() { return this.apodo || this.especie; }
+  get tipo() { return this.datos.tipo; }
+  stat(n) { return trunc(this.datos[n] * 2 * this.nivel / 100) + 5; }
+  get hpMax() { return trunc(this.datos.hp * 3 * this.nivel / 100) + this.nivel + 12; }
+  get ataque() { return trunc(this.stat('ataque') * (1 + 0.5 * this.etapaAtaque)); }
+  get defensa() { return this.stat('defensa'); }
+  get velocidad() { return this.stat('velocidad'); }
+  get ko() { return this.hp <= 0; }
+  danar(c) { this.hp = Math.max(0, this.hp - trunc(c)); }
+  curar(c) { const antes = this.hp; this.hp = Math.min(this.hpMax, this.hp + trunc(c)); return this.hp - antes; }
+  curarTodo() { this.hp = this.hpMax; this.estado = null; this.turnosDormido = 0; }
+  terminarBatalla() { this.etapaAtaque = 0; }
+  // Suma experiencia. Devuelve eventos: ['nivel', n], ['aprende', ataque], ['evolucion', antes, despues]
+  ganarExp(cantidad) {
+    const eventos = [];
+    this.exp += trunc(cantidad);
+    while (this.nivel < 100 && this.exp >= expParaNivel(this.nivel + 1)) {
+      const hpAntes = this.hpMax;
+      this.nivel += 1;
+      this.hp += this.hpMax - hpAntes;
+      eventos.push(['nivel', this.nivel]);
+      for (const [nombre, nv] of this.datos.ataques) if (nv === this.nivel && !this.ataques.includes(nombre)) { this.ataques.push(nombre); eventos.push(['aprende', nombre]); }
+      const evo = this.datos.evoluciona;
+      if (evo !== null && this.nivel >= evo[1]) { const antes = this.especie; this.evolucionar(); eventos.push(['evolucion', antes, this.especie]); }
+    }
+    return eventos;
+  }
+  evolucionar() {
+    const evo = this.datos.evoluciona;
+    if (evo === null) return false;
+    const hpAntes = this.hpMax;
+    if (this.apodo === this.especie) this.apodo = null;
+    this.especie = evo[0];
+    this.ataques = this.ataquesConocidos();
+    this.hp += this.hpMax - hpAntes;
+    return true;
+  }
+  expSiguiente() { const base = expParaNivel(this.nivel), tope = expParaNivel(this.nivel + 1); return [this.exp - base, tope - base]; }
+  aDict() { return { especie: this.especie, nivel: this.nivel, exp: this.exp, apodo: this.apodo, hp: this.hp, estado: this.estado, ataques: this.ataques }; }
+  static desdeDict(d) {
+    const c = new Criatura(d.especie, d.nivel, d.apodo || null);
+    c.exp = d.exp ?? c.exp; c.hp = Math.min(d.hp ?? c.hpMax, c.hpMax); c.estado = d.estado || null; c.ataques = [...(d.ataques || c.ataques)];
+    return c;
+  }
+}
+
+// Devuelve [daño, efectividad, fueCritico]. Fórmula parecida a la de los juegos de rol.
+function calcularDano(atacante, defensor, nombreAtaque) {
+  const at = ATAQUES[nombreAtaque];
+  if (at.poder === 0) return [0, 1, false];
+  const base = (2 * atacante.nivel / 5 + 2) * at.poder * atacante.ataque / Math.max(1, defensor.defensa) / 50 + 2;
+  const mismoTipo = at.tipo === atacante.tipo ? 1.5 : 1;
+  const efe = efectividad(at.tipo, defensor.tipo);
+  const critico = Math.random() < 1 / 16;
+  const ventaja = Math.max(0.6, Math.min(1.6, Math.sqrt(atacante.nivel / Math.max(1, defensor.nivel))));
+  const dano = base * mismoTipo * efe * ventaja * (critico ? 1.5 : 1) * azarEntre(0.85, 1);
+  return [Math.max(1, trunc(dano)), efe, critico];
+}
+function probabilidadCaptura(c, esfera = 'Esfera') {
+  const vida = (3 * c.hpMax - 2 * c.hp) / (3 * c.hpMax);
+  const bonoEstado = { dormido: 2, envenenado: 1.5 }[c.estado] || 1;
+  return Math.min(1, vida * ESPECIES[c.especie].captura * OBJETOS[esfera].valor * bonoEstado * 0.85);
+}
+function expPorVencer(vencida, contraEntrenador) {
+  return trunc(ESPECIES[vencida.especie].exp_base * vencida.nivel / 7 * (contraEntrenador ? 1.5 : 1)) + 1;
+}
+
+class Mochila {
+  constructor(contenido = null) { this.objetos = { ...(contenido || MOCHILA_INICIAL) }; }
+  tiene(n) { return (this.objetos[n] || 0) > 0; }
+  agregar(n, c = 1) { this.objetos[n] = (this.objetos[n] || 0) + c; }
+  quitar(n) { if (!this.tiene(n)) return false; this.objetos[n] -= 1; if (this.objetos[n] === 0) delete this.objetos[n]; return true; }
+  lista() { return Object.entries(this.objetos).filter(([, c]) => c > 0); }
+}
+
+// Una batalla entre tu equipo y un enemigo. Cada turno devuelve eventos que la pantalla muestra uno por uno.
+class Batalla {
+  constructor(equipo, mochila, enemigos, entrenador = null, caja = null) {
+    this.equipo = equipo; this.mochila = mochila; this.enemigos = enemigos;
+    this.entrenador = entrenador; this.salvaje = entrenador === null;
+    this.caja = caja || [];
+    this.activa = equipo.findIndex(c => !c.ko);
+    this.enemigoI = 0; this.terminada = false; this.resultado = null; this.intentosHuir = 0; this.capturada = null;
+  }
+  get mia() { return this.equipo[this.activa]; }
+  get enemiga() { return this.enemigos[this.enemigoI]; }
+  criatura(lado) { return lado === 'jugador' ? this.mia : this.enemiga; }
+  otro(lado) { return lado === 'jugador' ? 'enemigo' : 'jugador'; }
+  eventosInicio() {
+    const ev = [];
+    if (this.salvaje) ev.push(['msg', '¡Apareció un ' + this.enemiga.nombre + ' salvaje!']);
+    else {
+      ev.push(['msg', '¡' + this.entrenador.nombre + ' quiere pelear!']);
+      ev.push(['msg', this.entrenador.nombre + ': ' + this.entrenador.antes]);
+      ev.push(['sale', 'enemigo']);
+      ev.push(['msg', this.entrenador.nombre + ' saca a ' + this.enemiga.nombre + '.']);
+    }
+    ev.push(['sale', 'jugador']);
+    ev.push(['msg', '¡Adelante, ' + this.mia.nombre + '!']);
+    return ev;
+  }
+  necesitaCambio() { return this.mia.ko && this.equipo.some(c => !c.ko); }
+  // accion: ['atacar', i] / ['objeto', nombre, indiceCriatura] / ['cambiar', i] / ['huir']
+  turno(accion) {
+    if (this.terminada) return [];
+    let ev = [];
+    const tipo = accion[0];
+    if (this.mia.ko) { if (tipo === 'cambiar') ev = ev.concat(this.cambiar(accion[1])); return ev; }
+    let enemigoAtaca = true;
+    if (tipo === 'huir') {
+      if (!this.salvaje) { ev.push(['msg', '¡No puedes huir de un entrenador!']); return ev; }
+      this.intentosHuir += 1;
+      const prob = 0.5 + 0.1 * this.intentosHuir + (this.mia.velocidad >= this.enemiga.velocidad ? 0.2 : 0);
+      if (Math.random() < prob) { ev.push(['msg', '¡Escapaste sin problemas!']); return ev.concat(this.terminar('huida')); }
+      ev.push(['msg', '¡No pudiste escapar!']);
+    } else if (tipo === 'objeto') {
+      const [evObj, gastaTurno] = this.usarObjeto(accion[1], accion.length > 2 ? accion[2] : this.activa);
+      ev = ev.concat(evObj);
+      if (this.terminada || !gastaTurno) return ev;
+    } else if (tipo === 'cambiar') {
+      ev = ev.concat(this.cambiar(accion[1]));
+    } else if (tipo === 'atacar') {
+      const nombre = this.mia.ataques[accion[1]];
+      const atEnemigo = this.elegirAtaqueEnemigo();
+      const yoPrimero = this.mia.velocidad > this.enemiga.velocidad || (this.mia.velocidad === this.enemiga.velocidad && Math.random() < 0.5);
+      const orden = [['jugador', nombre], ['enemigo', atEnemigo]];
+      if (!yoPrimero) orden.reverse();
+      const enemigoAntes = this.enemigoI;
+      for (const [lado, ataque] of orden) {
+        if (this.terminada) return ev;
+        if (this.criatura(lado).ko || this.criatura(this.otro(lado)).ko) continue;
+        if (lado === 'enemigo' && this.enemigoI !== enemigoAntes) continue;   // la nueva del rival recién salió
+        ev = ev.concat(this.atacar(lado, ataque));
+      }
+      enemigoAtaca = false;
+    }
+    if (enemigoAtaca && !this.terminada && !this.enemiga.ko && !this.mia.ko) ev = ev.concat(this.atacar('enemigo', this.elegirAtaqueEnemigo()));
+    // veneno al final del turno
+    for (const lado of ['jugador', 'enemigo']) {
+      if (this.terminada) break;
+      const c = this.criatura(lado);
+      if (!c.ko && c.estado === 'envenenado') {
+        c.danar(Math.max(1, trunc(c.hpMax / 8)));
+        ev.push(['parpadeo', lado], ['hp', lado], ['msg', c.nombre + ' sufre por el veneno.']);
+        if (c.ko) ev = ev.concat(this.cayo(lado));
+      }
+    }
+    return ev;
+  }
+  // El enemigo elige: 7 de cada 10 veces el ataque que más daño haría.
+  elegirAtaqueEnemigo() {
+    const e = this.enemiga;
+    if (Math.random() < 0.3) return elegir(e.ataques);
+    const puntaje = (nombre) => {
+      const at = ATAQUES[nombre];
+      if (at.poder === 0) {
+        const ya = (at.efecto === 'subir_ataque' && e.etapaAtaque >= 2) || ((at.efecto === 'dormir' || at.efecto === 'veneno') && this.mia.estado !== null);
+        return ya ? 0 : 45;
+      }
+      return at.poder * efectividad(at.tipo, this.mia.tipo) * at.precision / 100;
+    };
+    return e.ataques.reduce((a, b) => puntaje(b) > puntaje(a) ? b : a);
+  }
+  atacar(lado, nombre) {
+    let ev = [];
+    const atacante = this.criatura(lado), defensor = this.criatura(this.otro(lado));
+    if (atacante.estado === 'dormido') {
+      atacante.turnosDormido -= 1;
+      if (atacante.turnosDormido > 0) { ev.push(['msg', atacante.nombre + ' está dormida... zZz']); return ev; }
+      atacante.estado = null;
+      ev.push(['hp', lado], ['msg', '¡' + atacante.nombre + ' se despertó!']);
+    }
+    const at = ATAQUES[nombre];
+    ev.push(['msg', atacante.nombre + ' usa ' + nombre + '.'], ['sacudida', lado]);
+    if (Math.random() * 100 >= at.precision) { ev.push(['msg', '...pero falló.']); return ev; }
+    if (at.poder > 0) {
+      const [dano, efe, critico] = calcularDano(atacante, defensor, nombre);
+      defensor.danar(dano);
+      ev.push(['parpadeo', this.otro(lado)], ['hp', this.otro(lado)]);
+      if (critico) ev.push(['msg', '¡Golpe crítico!']);
+      if (efe >= 2) ev.push(['msg', '¡Es súper efectivo!']); else if (efe < 1) ev.push(['msg', 'No es muy efectivo...']);
+      if (defensor.ko) return ev.concat(this.cayo(this.otro(lado)));
+    }
+    const efecto = at.efecto;
+    if (efecto === 'subir_ataque') {
+      if (atacante.etapaAtaque < 6) { atacante.etapaAtaque += 1; ev.push(['msg', '¡El ataque de ' + atacante.nombre + ' subió!']); }
+      else ev.push(['msg', 'El ataque de ' + atacante.nombre + ' no puede subir más.']);
+    } else if (efecto === 'dormir') {
+      if (defensor.estado === null) { defensor.estado = 'dormido'; defensor.turnosDormido = azarEntero(2, 4); ev.push(['hp', this.otro(lado)], ['msg', '¡' + defensor.nombre + ' se quedó dormida!']); }
+      else ev.push(['msg', 'No pasó nada.']);
+    } else if (efecto === 'veneno') {
+      if (defensor.estado === null) { defensor.estado = 'envenenado'; ev.push(['hp', this.otro(lado)], ['msg', '¡' + defensor.nombre + ' quedó envenenada!']); }
+      else ev.push(['msg', 'No pasó nada.']);
+    }
+    return ev;
+  }
+  cayo(lado) {
+    let ev = [['ko', lado]];
+    const c = this.criatura(lado);
+    ev.push(['msg', '¡' + c.nombre + ' cayó!']);
+    if (lado === 'enemigo') {
+      ev = ev.concat(this.darExp());
+      const siguiente = this.enemigos.findIndex(e => !e.ko);
+      if (siguiente === -1) {
+        if (this.salvaje) ev.push(['msg', '¡Venciste al ' + c.nombre + ' salvaje!']);
+        else {
+          ev.push(['msg', this.entrenador.nombre + ': ' + this.entrenador.despues]);
+          for (const [obj, n] of Object.entries(this.entrenador.premio || {})) { this.mochila.agregar(obj, n); ev.push(['msg', '¡Recibiste ' + n + ' x ' + obj + '!']); }
+        }
+        ev = ev.concat(this.terminar('victoria'));
+      } else {
+        this.enemigoI = siguiente;
+        ev.push(['sale', 'enemigo'], ['msg', this.entrenador.nombre + ' saca a ' + this.enemiga.nombre + '.']);
+      }
+    } else if (!this.equipo.some(c => !c.ko)) {
+      ev.push(['msg', 'No te quedan criaturas...']);
+      ev = ev.concat(this.terminar('derrota'));
+    } else ev.push(['msg', '¡Elige otra criatura!']);
+    return ev;
+  }
+  darExp() {
+    const ev = [];
+    if (this.mia.ko) return ev;
+    const cantidad = expPorVencer(this.enemiga, !this.salvaje);
+    ev.push(['msg', this.mia.nombre + ' gana ' + cantidad + ' puntos de experiencia.']);
+    for (const e of this.mia.ganarExp(cantidad)) {
+      if (e[0] === 'nivel') ev.push(['exp', 'jugador'], ['hp', 'jugador'], ['msg', '¡' + this.mia.nombre + ' subió al nivel ' + e[1] + '!']);
+      else if (e[0] === 'aprende') ev.push(['msg', '¡' + this.mia.nombre + ' aprendió ' + e[1] + '!']);
+      else if (e[0] === 'evolucion') ev.push(['msg', '¿Qué? ¡' + e[1] + ' está cambiando de forma!'], ['evolucion', e[1], e[2]], ['hp', 'jugador'], ['msg', '¡' + e[1] + ' evolucionó en ' + e[2] + '!']);
+    }
+    ev.push(['exp', 'jugador']);
+    return ev;
+  }
+  cambiar(i) {
+    const ev = [];
+    if (i === this.activa || this.equipo[i].ko) return [['msg', 'Esa no puede salir ahora.']];
+    if (!this.mia.ko) ev.push(['msg', '¡Vuelve, ' + this.mia.nombre + '!']);
+    this.mia.terminarBatalla();
+    this.activa = i;
+    ev.push(['sale', 'jugador'], ['msg', '¡Adelante, ' + this.mia.nombre + '!']);
+    return ev;
+  }
+  // Devuelve [eventos, gastaTurno]
+  usarObjeto(nombre, objetivoI) {
+    if (!this.mochila.tiene(nombre)) return [[['msg', 'No te quedan ' + nombre + '.']], false];
+    const obj = OBJETOS[nombre], objetivo = this.equipo[objetivoI];
+    if (obj.tipo === 'curar') {
+      if (objetivo.ko) return [[['msg', objetivo.nombre + ' está fuera de combate.']], false];
+      if (objetivo.hp >= objetivo.hpMax) return [[['msg', objetivo.nombre + ' ya tiene toda su vida.']], false];
+      this.mochila.quitar(nombre);
+      const curado = objetivo.curar(obj.valor);
+      return [[['hp', 'jugador'], ['msg', objetivo.nombre + ' recupera ' + curado + ' de vida.']], true];
+    }
+    if (obj.tipo === 'estado') {
+      if (objetivo.estado === null) return [[['msg', objetivo.nombre + ' está bien, no lo necesita.']], false];
+      this.mochila.quitar(nombre); objetivo.estado = null; objetivo.turnosDormido = 0;
+      return [[['hp', 'jugador'], ['msg', '¡' + objetivo.nombre + ' se siente mejor!']], true];
+    }
+    if (obj.tipo === 'esfera') {
+      if (!this.salvaje) return [[['msg', '¡No puedes atrapar la criatura de otro entrenador!']], false];
+      this.mochila.quitar(nombre);
+      let ev = [['msg', '¡Lanzaste una ' + nombre + '!']];
+      const prob = probabilidadCaptura(this.enemiga, nombre);
+      let sacudidas = 0;
+      const porSacudida = Math.cbrt(prob);
+      for (let i = 0; i < 3; i++) { if (Math.random() < porSacudida) sacudidas += 1; else break; }
+      const atrapada = sacudidas === 3;
+      ev.push(['esfera', sacudidas, atrapada]);
+      if (atrapada) {
+        ev.push(['msg', '¡Atrapaste a ' + this.enemiga.nombre + '!']);
+        this.capturada = this.enemiga;
+        this.enemiga.terminarBatalla();
+        if (this.equipo.length < MAX_EQUIPO) { this.equipo.push(this.enemiga); ev.push(['msg', this.enemiga.nombre + ' se une a tu equipo.']); }
+        else { this.caja.push(this.enemiga); ev.push(['msg', 'Tu equipo está lleno: fue a la caja.']); }
+        return [ev.concat(this.terminar('captura')), false];
+      }
+      ev.push(['msg', ['¡Se escapó al toque!', '¡Casi... pero se escapó!', '¡Uf, faltó poquito!'][Math.min(sacudidas, 2)]]);
+      return [ev, true];
+    }
+    return [[['msg', 'Eso no se puede usar aquí.']], false];
+  }
+  terminar(resultado) {
+    this.terminada = true; this.resultado = resultado;
+    for (const c of this.equipo) c.terminarBatalla();
+    return [['fin', resultado]];
+  }
+}
+
+class Partida {
+  constructor() { this.equipo = []; this.caja = []; this.mochila = new Mochila(); this.pos = null; this.vencidos = []; this.nombre = 'Manu'; this.campeon = false; }
+  aDict() { return { version: 1, nombre: this.nombre, pos: this.pos, equipo: this.equipo.map(c => c.aDict()), caja: this.caja.map(c => c.aDict()), mochila: this.mochila.objetos, vencidos: this.vencidos, campeon: this.campeon }; }
+  static desdeDict(d) {
+    const p = new Partida();
+    p.nombre = d.nombre || 'Manu'; p.pos = d.pos || null;
+    p.equipo = (d.equipo || []).map(Criatura.desdeDict); p.caja = (d.caja || []).map(Criatura.desdeDict);
+    p.mochila = new Mochila(d.mochila || {}); p.vencidos = [...(d.vencidos || [])]; p.campeon = !!d.campeon;
+    return p;
+  }
+  curarEquipo() { for (const c of this.equipo) c.curarTodo(); }
+  tieneVivas() { return this.equipo.some(c => !c.ko); }
+}
+const textoEstado = (c) => c.estado === 'dormido' ? 'ZZZ' : c.estado === 'envenenado' ? 'VEN' : '';
+
+// ================= DIBUJOS (dibujos.py) =================
+// Cada criatura se dibuja pensando en un cuadrado de -1 a 1; el Lienzo lo convierte a píxeles.
+const rgb = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
+const masOscuro = (c, k = 0.65) => c.map(v => trunc(v * k));
+const masClaro = (c, k = 0.35) => c.map(v => trunc(v + (255 - v) * k));
+
+class Lienzo {
+  constructor(g, cx, cy, tam, mirando = 1) { this.g = g; this.cx = cx; this.cy = cy; this.r = tam / 2; this.m = mirando; }
+  P(x, y) { return [this.cx + x * this.r * this.m, this.cy + y * this.r]; }
+  circulo(color, x, y, radio, borde = 0) {
+    const [px, py] = this.P(x, y), g = this.g;
+    g.beginPath(); g.arc(px, py, Math.max(1, radio * this.r), 0, Math.PI * 2);
+    if (borde) { g.strokeStyle = rgb(color); g.lineWidth = borde; g.stroke(); } else { g.fillStyle = rgb(color); g.fill(); }
+  }
+  elipse(color, x, y, ancho, alto) {
+    const [px, py] = this.P(x, y), g = this.g;
+    g.beginPath(); g.ellipse(px, py, Math.max(1, ancho * this.r / 2), Math.max(1, alto * this.r / 2), 0, 0, Math.PI * 2);
+    g.fillStyle = rgb(color); g.fill();
+  }
+  poligono(color, puntos) {
+    const g = this.g;
+    g.beginPath();
+    puntos.forEach(([x, y], i) => { const [px, py] = this.P(x, y); if (i === 0) g.moveTo(px, py); else g.lineTo(px, py); });
+    g.closePath(); g.fillStyle = rgb(color); g.fill();
+  }
+  linea(color, a, b, grosor = 2) {
+    const g = this.g, [x1, y1] = this.P(...a), [x2, y2] = this.P(...b);
+    g.strokeStyle = rgb(color); g.lineWidth = Math.max(1, grosor * this.r / 40);
+    g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+  }
+  ojo(x, y, radio = 0.1, pupila = [20, 20, 30], enojado = false) {
+    this.circulo([255, 255, 255], x, y, radio);
+    this.circulo(pupila, x + 0.02, y + 0.02, radio * 0.55);
+    this.circulo([255, 255, 255], x + 0.04, y - 0.03, radio * 0.2);
+    if (enojado) this.linea([20, 20, 30], [x - radio, y - radio * 1.3], [x + radio, y - radio * 0.6], 3);
+  }
+  boca(x, y, ancho = 0.2, feliz = true) {
+    const [px, py] = this.P(x, y), g = this.g;
+    const w = ancho * this.r / 2, h = 0.12 * this.r / 2;
+    g.strokeStyle = 'rgb(20,20,30)'; g.lineWidth = Math.max(1, this.r / 25);
+    g.beginPath();
+    if (feliz) g.ellipse(px, py, w, h, 0, 0, Math.PI); else g.ellipse(px, py, w, h, 0, Math.PI, Math.PI * 2);
+    g.stroke();
+  }
+}
+
+function brasita(L, t) {
+  const c = COLOR_TIPO.fuego, o = Math.sin(t * 6) * 0.06;
+  L.poligono([255, 200, 60], [[-0.35, -0.3], [-0.2, -0.7 + o], [-0.05, -0.45], [0.05, -0.95 - o], [0.15, -0.5], [0.35, -0.75 + o], [0.35, -0.3]]);
+  L.poligono(c, [[-0.25, -0.3], [-0.12, -0.55 + o], [0, -0.4], [0.08, -0.7 - o], [0.2, -0.45], [0.25, -0.3]]);
+  L.elipse(masOscuro(c), -0.25, 0.75, 0.3, 0.16); L.elipse(masOscuro(c), 0.25, 0.75, 0.3, 0.16);
+  L.circulo(c, 0, 0.15, 0.55); L.circulo(masClaro(c), -0.1, 0.25, 0.3);
+  L.ojo(-0.18, 0, 0.11); L.ojo(0.18, 0, 0.11); L.boca(0, 0.3, 0.22);
+}
+function volcanor(L, t) {
+  const c = masOscuro(COLOR_TIPO.fuego, 0.8), b = (Math.sin(t * 5) + 1) / 2;
+  L.elipse(c, -0.75, 0.2, 0.3, 0.5); L.elipse(c, 0.75, 0.2, 0.3, 0.5);
+  L.poligono(c, [[-0.6, 0.85], [-0.55, -0.1], [-0.3, -0.5], [0.3, -0.5], [0.55, -0.1], [0.6, 0.85]]);
+  L.elipse([90, 40, 30], -0.3, 0.85, 0.35, 0.18); L.elipse([90, 40, 30], 0.3, 0.85, 0.35, 0.18);
+  L.poligono([90, 60, 50], [[-0.35, -0.5], [-0.2, -0.9], [0.2, -0.9], [0.35, -0.5]]);
+  L.elipse([255, 170, 40], 0, -0.9, 0.4, 0.14);
+  L.circulo([255, 230, 90], 0.05, -0.95 - 0.15 * b, 0.06 + 0.03 * b); L.circulo([255, 230, 90], -0.1, -1.0 - 0.1 * (1 - b), 0.04);
+  L.linea([255, 150, 40], [-0.3, 0.1], [-0.1, 0.4], 4); L.linea([255, 150, 40], [0.2, 0], [0.35, 0.5], 4);
+  L.ojo(-0.2, -0.2, 0.12, [200, 40, 20], true); L.ojo(0.2, -0.2, 0.12, [200, 40, 20], true); L.boca(0, 0.15, 0.3, false);
+}
+function gotix(L, t) {
+  const c = masClaro(COLOR_TIPO.agua, 0.25), r = Math.abs(Math.sin(t * 4)) * 0.08;
+  L.poligono(c, [[0, -0.95 + r], [-0.5, 0.15], [0.5, 0.15]]); L.circulo(c, 0, 0.3 - r * 0.5, 0.6);
+  L.circulo([255, 255, 255], -0.25, 0.05, 0.13); L.circulo([255, 255, 255], -0.3, -0.25, 0.06);
+  L.ojo(-0.2, 0.3, 0.14); L.ojo(0.2, 0.3, 0.14);
+  L.circulo([255, 150, 170], -0.4, 0.5, 0.08); L.circulo([255, 150, 170], 0.4, 0.5, 0.08); L.boca(0, 0.58, 0.22);
+}
+function marejon(L, t) {
+  const c = COLOR_TIPO.agua, o = Math.sin(t * 3) * 0.05;
+  L.poligono(c, [[-0.95, 0.9], [-0.9, 0.2], [-0.7, -0.4], [-0.3, -0.85 + o], [0.2, -0.95], [0.6, -0.8 + o], [0.75, -0.5], [0.65, -0.25], [0.4, -0.35], [0.5, -0.55], [0.3, -0.6], [0.45, 0.1], [0.95, 0.9]]);
+  L.poligono(masOscuro(c), [[-0.95, 0.9], [-0.85, 0.5], [0.9, 0.55], [0.95, 0.9]]);
+  [[-0.3, -0.85], [0, -0.98], [0.35, -0.9], [0.62, -0.72], [-0.6, -0.4]].forEach(([x, y], i) => L.circulo([240, 250, 255], x, y + o * (i % 2 ? 1 : -1), 0.12));
+  L.ojo(-0.35, 0, 0.14, [20, 20, 30], true); L.ojo(0.05, 0, 0.14, [20, 20, 30], true); L.boca(-0.15, 0.35, 0.4, false);
+  L.poligono([255, 255, 255], [[-0.3, 0.35], [-0.25, 0.48], [-0.2, 0.35]]); L.poligono([255, 255, 255], [[0, 0.35], [0.05, 0.48], [0.1, 0.35]]);
+}
+function brotin(L, t) {
+  const c = COLOR_TIPO.planta, v = Math.sin(t * 3) * 0.06;
+  L.elipse(c, -0.35, -0.65 + v, 0.55, 0.28); L.elipse(c, 0.35, -0.65 - v, 0.55, 0.28); L.linea(masOscuro(c), [0, -0.4], [0, -0.85], 4);
+  L.elipse(masOscuro(c), -0.2, 0.85, 0.26, 0.14); L.elipse(masOscuro(c), 0.2, 0.85, 0.26, 0.14);
+  L.elipse(masClaro(c, 0.3), 0, 0.2, 1.0, 1.15); L.elipse(c, 0, 0.55, 0.9, 0.5);
+  L.ojo(-0.2, 0.05, 0.11); L.ojo(0.2, 0.05, 0.11); L.boca(0, 0.32, 0.2);
+}
+function selvarak(L, t) {
+  const verde = COLOR_TIPO.planta, tronco = [110, 75, 45], v = Math.sin(t * 2) * 0.03;
+  L.poligono(tronco, [[-0.3, 0.5], [-0.9, 0.75], [-0.95, 0.9], [-0.25, 0.8]]); L.poligono(tronco, [[0.3, 0.5], [0.9, 0.75], [0.95, 0.9], [0.25, 0.8]]);
+  L.poligono(tronco, [[-0.35, 0.95], [-0.3, -0.1], [0.3, -0.1], [0.35, 0.95]]);
+  for (const [x, y, r] of [[-0.45, -0.3, 0.38], [0.45, -0.3, 0.38], [0, -0.65 + v, 0.45], [-0.25, -0.05, 0.3], [0.25, -0.05, 0.3], [0, -0.25, 0.4]]) L.circulo(masOscuro(verde, 0.85), x, y, r);
+  for (const [x, y, r] of [[-0.4, -0.35, 0.25], [0.4, -0.35, 0.25], [0, -0.7 + v, 0.3]]) L.circulo(verde, x, y, r);
+  L.ojo(-0.13, 0.15, 0.1, [60, 30, 20], true); L.ojo(0.13, 0.15, 0.1, [60, 30, 20], true); L.boca(0, 0.45, 0.25, false);
+}
+function chispin(L, t) {
+  const c = COLOR_TIPO.electrico, y0 = 0.05 - Math.abs(Math.sin(t * 8)) * 0.08;
+  const puntas = [];
+  for (let i = 0; i < 16; i++) { const ang = Math.PI * 2 * i / 16 + t * 1.5, r = i % 2 === 0 ? 0.72 : 0.5; puntas.push([Math.cos(ang) * r, y0 + Math.sin(ang) * r]); }
+  L.poligono(masClaro(c, 0.2), puntas); L.circulo(c, 0, y0, 0.48);
+  L.linea(masOscuro(c), [0, y0 - 0.45], [0.15, y0 - 0.85], 3);
+  L.circulo(trunc(t * 5) % 2 ? [255, 255, 255] : [255, 240, 120], 0.15, y0 - 0.88, 0.09);
+  L.circulo([90, 170, 255], -0.3, y0 + 0.15, 0.09); L.circulo([90, 170, 255], 0.3, y0 + 0.15, 0.09);
+  L.ojo(-0.16, y0 - 0.05, 0.1); L.ojo(0.16, y0 - 0.05, 0.1); L.boca(0, y0 + 0.2, 0.15);
+  L.elipse(masOscuro(c), -0.2, 0.75, 0.22, 0.12); L.elipse(masOscuro(c), 0.2, 0.75, 0.22, 0.12);
+}
+function tormentux(L, t) {
+  const gris = [110, 115, 135], ray = COLOR_TIPO.electrico, f = Math.sin(t * 2) * 0.04;
+  for (const [x, y, r] of [[-0.55, 0, 0.4], [0.55, 0, 0.4], [-0.2, -0.35 + f, 0.45], [0.25, -0.3 + f, 0.42], [0, 0.1, 0.5]]) L.circulo(gris, x, y, r);
+  for (const [x, y, r] of [[-0.5, -0.1, 0.25], [0.2, -0.4 + f, 0.25]]) L.circulo(masClaro(gris, 0.3), x, y, r);
+  L.poligono(trunc(t * 6) % 3 ? ray : [255, 255, 200], [[0, 0.45], [-0.25, 0.7], [-0.05, 0.7], [-0.3, 1.0], [0.2, 0.65], [0, 0.65], [0.25, 0.45]]);
+  L.poligono(ray, [[-0.85, -0.4], [-0.95, -0.6], [-0.7, -0.5]]); L.poligono(ray, [[0.85, -0.5], [0.95, -0.7], [0.7, -0.6]]);
+  L.ojo(-0.2, -0.05, 0.13, [40, 40, 60], true); L.ojo(0.2, -0.05, 0.13, [40, 40, 60], true); L.boca(0, 0.25, 0.25, false);
+}
+function pedrolo(L, t) {
+  const c = COLOR_TIPO.roca;
+  L.poligono(c, [[-0.7, 0.3], [-0.6, -0.4], [-0.2, -0.7], [0.4, -0.65], [0.75, -0.1], [0.65, 0.55], [0.1, 0.75], [-0.5, 0.65]]);
+  L.poligono(masClaro(c, 0.2), [[-0.5, -0.2], [-0.2, -0.55], [0.3, -0.5], [0.1, -0.1]]);
+  L.linea(masOscuro(c), [0.3, 0.1], [0.55, 0.4], 3); L.linea(masOscuro(c), [0.55, 0.4], [0.45, 0.6], 3); L.linea(masOscuro(c), [-0.55, 0.3], [-0.35, 0.5], 3);
+  if (trunc(t * 1.3) % 5 === 4 && (t * 1.3) % 1 < 0.3) L.linea([40, 30, 20], [-0.2, 0], [0.2, 0], 4); else L.ojo(0, 0, 0.2);
+  L.boca(0, 0.4, 0.2);
+  L.elipse(masOscuro(c), -0.35, 0.8, 0.3, 0.14); L.elipse(masOscuro(c), 0.35, 0.8, 0.3, 0.14);
+}
+function montaraz(L, t) {
+  const c = masOscuro(COLOR_TIPO.roca, 0.85);
+  L.poligono(c, [[-0.7, 0.2], [-0.95, 0.5], [-0.9, 0.85], [-0.6, 0.7]]); L.poligono(c, [[0.7, 0.2], [0.95, 0.5], [0.9, 0.85], [0.6, 0.7]]);
+  L.poligono(c, [[-0.8, 0.9], [0, -0.95], [0.8, 0.9]]);
+  L.poligono(masOscuro(c), [[-0.8, 0.9], [-0.3, 0.9], [0, 0.2], [-0.35, -0.1]]);
+  L.poligono([245, 245, 255], [[-0.22, -0.45], [0, -0.95], [0.22, -0.45], [0.12, -0.35], [0, -0.5], [-0.12, -0.35]]);
+  L.poligono(COLOR_TIPO.planta, [[0.4, 0.5], [0.5, 0.25], [0.6, 0.5]]); L.poligono(COLOR_TIPO.planta, [[-0.55, 0.7], [-0.45, 0.45], [-0.35, 0.7]]);
+  L.ojo(-0.15, 0.1, 0.11, [40, 30, 20], true); L.ojo(0.15, 0.1, 0.11, [40, 30, 20], true); L.boca(0, 0.4, 0.25, false);
+}
+function cuerpoFantasma(L, color, t, escala = 1) {
+  const ancho = 0.6 * escala, flota = Math.sin(t * 2.5) * 0.06;
+  L.circulo(color, 0, -0.3 + flota, ancho);
+  const ondas = [];
+  for (let i = 0; i <= 5; i++) ondas.push([-ancho + 2 * ancho * i / 5, 0.55 * escala + flota + (i % 2 ? 0.15 : 0) * escala]);
+  L.poligono(color, [[-ancho, -0.3 + flota], ...ondas, [ancho, -0.3 + flota]]);
+  return flota;
+}
+function sombrilo(L, t) {
+  const c = COLOR_TIPO.fantasma, f = cuerpoFantasma(L, c, t);
+  L.ojo(-0.22, -0.35 + f, 0.17, [60, 20, 90]); L.ojo(0.22, -0.35 + f, 0.17, [60, 20, 90]);
+  L.boca(0.05, -0.02 + f, 0.35); L.poligono([255, 255, 255], [[0.12, -0.02 + f], [0.16, 0.1 + f], [0.2, -0.02 + f]]);
+  L.elipse(c, -0.7, -0.05 + f, 0.3, 0.2); L.elipse(c, 0.7, -0.05 + f, 0.3, 0.2);
+}
+function espectrum(L, t) {
+  const c = masOscuro(COLOR_TIPO.fantasma, 0.7), f = cuerpoFantasma(L, c, t, 1.25);
+  L.poligono([40, 20, 60], [[-0.75, -0.3 + f], [-0.95, 0.75 + f], [-0.55, 0.55 + f]]); L.poligono([40, 20, 60], [[0.75, -0.3 + f], [0.95, 0.75 + f], [0.55, 0.55 + f]]);
+  L.poligono([240, 200, 60], [[-0.45, -0.85 + f], [-0.45, -1.15 + f], [-0.22, -0.95 + f], [0, -1.2 + f], [0.22, -0.95 + f], [0.45, -1.15 + f], [0.45, -0.85 + f]]);
+  L.circulo([230, 60, 60], 0, -0.95 + f, 0.06);
+  L.ojo(-0.25, -0.4 + f, 0.16, [200, 30, 40], true); L.ojo(0.25, -0.4 + f, 0.16, [200, 30, 40], true); L.boca(0, f, 0.4, false);
+  L.poligono([255, 255, 255], [[-0.15, f], [-0.1, 0.14 + f], [-0.05, f]]); L.poligono([255, 255, 255], [[0.05, f], [0.1, 0.14 + f], [0.15, f]]);
+}
+const DIBUJOS = { 'Brasita': brasita, 'Volcanor': volcanor, 'Gotix': gotix, 'Marejón': marejon, 'Brotín': brotin, 'Selvarak': selvarak,
+  'Chispín': chispin, 'Tormentux': tormentux, 'Pedrolo': pedrolo, 'Montaraz': montaraz, 'Sombrilo': sombrilo, 'Espectrum': espectrum };
+
+function dibujarCriatura(g, especie, cx, cy, tam, t = 0, mirando = 1) {
+  const L = new Lienzo(g, cx, cy, tam, mirando);
+  const fn = DIBUJOS[especie];
+  if (!fn) { L.circulo([150, 150, 150], 0, 0, 0.6); return; }
+  fn(L, t);
+}
+// La misma criatura pero de un solo color (para la evolución): se dibuja aparte y se "tiñe".
+const capaSilueta = document.createElement('canvas');
+function silueta(g, especie, cx, cy, tam, color, t = 0, mirando = 1) {
+  const ancho = trunc(tam * 2.4);
+  capaSilueta.width = ancho; capaSilueta.height = ancho;
+  const gc = capaSilueta.getContext('2d');
+  gc.clearRect(0, 0, ancho, ancho);
+  dibujarCriatura(gc, especie, ancho / 2, ancho / 2, tam, t, mirando);
+  gc.globalCompositeOperation = 'source-in';
+  gc.fillStyle = rgb(color); gc.fillRect(0, 0, ancho, ancho);
+  gc.globalCompositeOperation = 'source-over';
+  g.drawImage(capaSilueta, cx - ancho / 2, cy - ancho / 2);
+}
+
+// ================= EL JUEGO (criaturas.py) =================
+const ANCHO = 960, ALTO = 640;
+const FPS = 60;
+const PASO = 1000 / FPS;
+const DT = 1 / FPS;
+const TILE = 40;
+const PASO_SEG = 0.14, PASO_CORRER = 0.07;
+const VEL_TEXTO = 40;       // letras por segundo en las cajas de texto
+const ESPERA_MSG = 2.0;     // segundos hasta que un mensaje avanza solo
+
+const BLANCO = 'rgb(250,250,245)', NEGRO = 'rgb(25,25,35)', GRIS = 'rgb(120,120,130)', AZUL_CAJA = 'rgb(50,70,110)';
+const VERDE_HP = 'rgb(80,200,90)', AMARILLO_HP = 'rgb(230,200,60)', ROJO_HP = 'rgb(220,70,60)', AZUL_EXP = 'rgb(90,150,240)';
+const COLOR_TILE = { '.': 'rgb(205,190,140)', ',': 'rgb(120,190,90)', ';': 'rgb(80,160,70)', '"': 'rgb(50,120,60)', '#': 'rgb(40,110,50)',
+  '~': 'rgb(70,140,220)', 'H': 'rgb(190,120,80)', '+': 'rgb(240,240,240)', 'P': 'rgb(205,190,140)', 'L': 'rgb(205,190,140)',
+  '1': 'rgb(205,190,140)', '2': 'rgb(205,190,140)', '3': 'rgb(205,190,140)', 'K': 'rgb(205,190,140)' };
+const SOLIDOS = new Set('#~H123KL');
+const LETREROS = [
+  'Bienvenido a Villa Brote. Camina por el pasto alto para encontrar criaturas.',
+  'Centro de curación: entra a la casa blanca con la cruz roja y tu equipo se cura gratis.',
+  'Consejo: una criatura con poca vida o dormida es MUCHO más fácil de atrapar.',
+  'Al sur hay pasto más peligroso. Fuego quema Planta, Agua apaga Fuego, Planta bebe Agua...',
+  'Aquí vive Tomás el Minero. Dicen que sus rocas le ganan a cualquier chispa.',
+  'Eléctrico es súper efectivo contra Agua, pero no le hace casi nada a Roca.',
+  'Pasto alto, nivel 13 a 18: aquí salen hasta criaturas evolucionadas.',
+  'Al Campeón Orión solo lo enfrenta quien venció a los 3 entrenadores. G guarda tu partida.',
+];
+
+// ---------- Sonidos (WebAudio) ----------
+let audio = null;
+function encenderAudio() { if (audio !== null) return; try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = false; } }
+function tono(hz, seg, vol = 0.5, hzFin = null, retraso = 0) {
+  if (!audio) return;
+  const o = audio.createOscillator(), g = audio.createGain(), t0 = audio.currentTime + retraso;
+  o.frequency.setValueAtTime(hz, t0); if (hzFin !== null) o.frequency.linearRampToValueAtTime(hzFin, t0 + seg);
+  g.gain.setValueAtTime(vol * 0.25, t0); g.gain.linearRampToValueAtTime(0, t0 + seg);
+  o.connect(g).connect(audio.destination); o.start(t0); o.stop(t0 + seg);
+}
+function ruido(seg, vol = 0.4) {
+  if (!audio) return;
+  const n = trunc(audio.sampleRate * seg), buf = audio.createBuffer(1, n, audio.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = vol * (Math.random() * 2 - 1) * (1 - i / n);
+  const s = audio.createBufferSource(); s.buffer = buf; s.connect(audio.destination); s.start();
+}
+const SONIDOS = {
+  seleccion: () => tono(880, 0.05, 0.25),
+  golpe: () => { ruido(0.12, 0.5); tono(300, 0.15, 0.5, 80, 0.12); },
+  encuentro: () => { tono(440, 0.08); tono(660, 0.08, 0.5, null, 0.08); tono(880, 0.15, 0.5, null, 0.16); },
+  captura: () => { tono(523, 0.1); tono(659, 0.1, 0.5, null, 0.1); tono(784, 0.1, 0.5, null, 0.2); tono(1047, 0.3, 0.5, null, 0.3); },
+  escape: () => tono(600, 0.3, 0.5, 200),
+  nivel: () => { tono(659, 0.08); tono(784, 0.08, 0.5, null, 0.08); tono(988, 0.08, 0.5, null, 0.16); tono(1319, 0.25, 0.5, null, 0.24); },
+  curar: () => { tono(700, 0.1, 0.3); tono(900, 0.1, 0.3, null, 0.1); tono(1100, 0.2, 0.3, null, 0.2); },
+  ko: () => tono(500, 0.5, 0.6, 60),
+  esfera: () => tono(300, 0.06, 0.4),
+  evolucion: () => { for (let i = 0; i < 12; i++) tono(400 + 60 * i, 0.06, 0.3, null, i * 0.06); },
+};
+const sonar = (n) => SONIDOS[n]();
+
+// ---------- Ayudas de dibujo ----------
+const canvas = document.getElementById('juego');
+const ctx = canvas.getContext('2d');
+const FUENTE = 'sans-serif';
+function medir(cadena, tam) { ctx.font = tam + 'px ' + FUENTE; return ctx.measureText(cadena).width; }
+function texto(g, cadena, x, y, tam = 22, color = NEGRO, centrado = false, sombra = null) {
+  g.font = tam + 'px ' + FUENTE; g.textAlign = 'left'; g.textBaseline = 'top';
+  const w = g.measureText(cadena).width;
+  if (centrado) x -= w / 2;
+  if (sombra) { g.fillStyle = sombra; g.fillText(cadena, x + 2, y + 2); }
+  g.fillStyle = color; g.fillText(cadena, x, y);
+  return w;
+}
+// Corta un texto largo en líneas que quepan en anchoMax píxeles.
+function partirTexto(cadena, tam, anchoMax) {
+  const lineas = []; let actual = '';
+  for (const p of cadena.split(' ')) {
+    const prueba = (actual + ' ' + p).trim();
+    if (medir(prueba, tam) <= anchoMax) actual = prueba; else { lineas.push(actual); actual = p; }
+  }
+  if (actual) lineas.push(actual);
+  return lineas;
+}
+function rectRedondo(g, x, y, w, h, r, color, grosor = 0) {
+  g.beginPath(); g.roundRect(x, y, w, h, r);
+  if (grosor) { g.strokeStyle = color; g.lineWidth = grosor; g.stroke(); } else { g.fillStyle = color; g.fill(); }
+}
+function rect(g, x, y, w, h, color) { g.fillStyle = color; g.fillRect(x, y, w, h); }
+function circulo(g, x, y, r, color) { g.fillStyle = color; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+function linea(g, x1, y1, x2, y2, color, grosor) { g.strokeStyle = color; g.lineWidth = grosor; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); }
+function poligono(g, pts, color) { g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.fillStyle = color; g.fill(); }
+function caja(g, x, y, w, h, color = BLANCO, borde = AZUL_CAJA) { rectRedondo(g, x, y, w, h, 10, color); rectRedondo(g, x, y, w, h, 10, borde, 4); }
+function barra(g, x, y, ancho, alto, fraccion, color, fondo = 'rgb(60,60,70)') {
+  rectRedondo(g, x, y, ancho, alto, 4, fondo);
+  const w = trunc(ancho * Math.max(0, Math.min(1, fraccion)));
+  if (w > 0) rectRedondo(g, x, y, w, alto, 4, color);
+}
+const colorHp = (f) => f > 0.5 ? VERDE_HP : f > 0.2 ? AMARILLO_HP : ROJO_HP;
+function sombraElipse(g, x, y, w, h, alpha = 50) { g.fillStyle = `rgba(0,0,0,${alpha / 255})`; g.beginPath(); g.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); g.fill(); }
+
+function dibujarPersona(g, cx, cy, color, corona = false, apagado = false, t = 0, mirandoAbajo = true) {
+  if (apagado) color = color.map(c => trunc(c * 0.5 + 60));
+  sombraElipse(g, cx - 10, cy + 12, 20, 6);
+  rectRedondo(g, cx - 8, cy - 2, 16, 16, 4, rgb(color));
+  circulo(g, cx, cy - 8, 8, 'rgb(240,200,170)');
+  rectRedondo(g, cx - 8, cy - 16, 16, 6, 2, rgb(color.map(c => trunc(c * 0.6))));
+  if (mirandoAbajo) { circulo(g, cx - 3, cy - 7, 1, NEGRO); circulo(g, cx + 3, cy - 7, 1, NEGRO); }
+  if (corona) poligono(g, [[cx - 8, cy - 16], [cx - 8, cy - 24], [cx - 4, cy - 19], [cx, cy - 25], [cx + 4, cy - 19], [cx + 8, cy - 24], [cx + 8, cy - 16]], 'rgb(240,200,60)');
+}
+
+// ---------- El mapa ----------
+class Mapa {
+  constructor(txt) {
+    const filas = txt.split('\n').filter(l => l.trim() && !l.startsWith('//'));
+    const ancho = Math.max(...filas.map(f => f.length));
+    this.filas = filas.map(f => f.padEnd(ancho, '#'));
+    this.alto = this.filas.length; this.ancho = ancho;
+    this.inicio = [1, 1]; this.entrenadores = {}; this.letreros = new Map(); this.centros = [];
+    let nLetrero = 0;
+    this.filas.forEach((fila, y) => [...fila].forEach((ch, x) => {
+      if (ch === 'P') this.inicio = [x, y];
+      else if ('123K'.includes(ch)) this.entrenadores[ch] = [x, y];
+      else if (ch === 'L') { this.letreros.set(x + ',' + y, LETREROS[nLetrero % LETREROS.length]); nLetrero++; }
+      else if (ch === '+') this.centros.push([x, y]);
+    }));
+    // decoración fija (florcitas): un número "al azar" pero siempre igual por casilla
+    this.flores = (x, y) => { const s = Math.sin(x * 131 + y * 17) * 10000; return s - Math.floor(s); };
+  }
+  casilla(x, y) { return (y >= 0 && y < this.alto && x >= 0 && x < this.ancho) ? this.filas[y][x] : '#'; }
+  solida(x, y) { return SOLIDOS.has(this.casilla(x, y)); }
+  dibujar(g, camX, camY, t, vencidos) {
+    const c0 = Math.max(0, trunc(camX / TILE)), f0 = Math.max(0, trunc(camY / TILE));
+    for (let y = f0; y < Math.min(this.alto, f0 + ALTO / TILE + 2); y++) for (let x = c0; x < Math.min(this.ancho, c0 + ANCHO / TILE + 2); x++) {
+      const ch = this.casilla(x, y), px = x * TILE - camX, py = y * TILE - camY;
+      rect(g, px, py, TILE, TILE, COLOR_TILE[ch] || 'rgb(200,200,200)');
+      this.decorar(g, ch, x, y, px, py, t);
+    }
+    for (const [letra, [x, y]] of Object.entries(this.entrenadores)) {
+      dibujarPersona(g, x * TILE - camX + TILE / 2, y * TILE - camY + TILE / 2, [200, 60, 60], letra === 'K', vencidos.includes(letra), t);
+    }
+  }
+  decorar(g, ch, x, y, px, py, t) {
+    const cx = px + TILE / 2, cy = py + TILE / 2, azar = this.flores(x, y);
+    if (ch === '#') {
+      rect(g, cx - 4, cy + 4, 8, 14, 'rgb(90,60,30)'); circulo(g, cx, cy - 4, 15, 'rgb(30,90,40)'); circulo(g, cx - 4, cy - 8, 9, 'rgb(50,130,60)');
+    } else if (ch === '~') {
+      const fase = Math.sin(t * 2 + x + y * 0.7);
+      linea(g, px + 6, cy + fase * 3, px + 18, cy + fase * 3, 'rgb(140,190,240)', 2);
+      linea(g, px + 22, cy + 8 - fase * 3, px + 34, cy + 8 - fase * 3, 'rgb(140,190,240)', 2);
+    } else if (',;"'.includes(ch)) {
+      const color = { ',': 'rgb(90,160,70)', ';': 'rgb(50,130,50)', '"': 'rgb(30,90,40)' }[ch];
+      const altoH = 8 + (ch === ';' ? 4 : ch === '"' ? 10 : 0);
+      for (let i = 0; i < 3; i++) { const bx = px + 6 + i * 12 + trunc(azar * 5); poligono(g, [[bx, py + TILE - 2], [bx + 4, py + TILE - 2 - altoH], [bx + 8, py + TILE - 2]], color); }
+    } else if (ch === 'H') {
+      rect(g, px, py, TILE, TILE / 3, 'rgb(150,80,60)'); rect(g, px + 6, py + TILE / 2, 10, 10, 'rgb(230,210,170)'); rect(g, px + TILE - 16, py + TILE / 2, 10, 10, 'rgb(230,210,170)');
+    } else if (ch === '+') {
+      rect(g, cx - 3, cy - 12, 6, 24, 'rgb(220,50,50)'); rect(g, cx - 12, cy - 3, 24, 6, 'rgb(220,50,50)');
+    } else if (ch === 'L') {
+      rect(g, cx - 2, cy, 4, 16, 'rgb(120,80,40)'); rectRedondo(g, cx - 14, cy - 12, 28, 16, 3, 'rgb(200,160,90)');
+    } else if (ch === '.' && azar > 0.93) circulo(g, cx + 8, cy + 8, 3, azar > 0.965 ? 'rgb(250,220,90)' : 'rgb(240,120,150)');
+  }
+}
+
+// ---------- Menús simples ----------
+class Menu {
+  constructor(opciones, columnas = 1) { this.opciones = opciones; this.columnas = columnas; this.i = 0; }
+  mover(k) {
+    const n = this.opciones.length;
+    if (n === 0) return;
+    if (k === 'ArrowUp') this.i = (this.i - this.columnas + n * 10) % n;
+    else if (k === 'ArrowDown') this.i = (this.i + this.columnas) % n;
+    else if (k === 'ArrowLeft') this.i = (this.i - 1 + n) % n;
+    else if (k === 'ArrowRight') this.i = (this.i + 1) % n;
+    else return;
+    sonar('seleccion');
+  }
+}
+
+// ---------- La pantalla de batalla ----------
+const POS_MIA = [250, 400], POS_ENEMIGA = [700, 210], TAM_MIA = 190, TAM_ENEMIGA = 150;
+
+class PantallaBatalla {
+  constructor(juego, batalla, fondo) {
+    this.juego = juego; this.b = batalla; this.fondo = fondo;
+    this.cola = batalla.eventosInicio();
+    this.actual = null; this.tiempoEv = 0; this.texto = '';
+    this.modo = 'eventos';      // eventos / menu / ataques / mochila / equipo
+    this.menu = new Menu(['Pelear', 'Mochila', 'Criaturas', 'Huir'], 2);
+    this.menuAtaques = new Menu([], 2); this.menuMochila = new Menu([]); this.menuEquipo = new Menu([]);
+    this.objetoElegido = null;
+    // una "foto" de cada criatura que solo cambia con los eventos
+    this.foto = { jugador: this.sacarFoto('jugador'), enemigo: this.sacarFoto('enemigo') };
+    this.hpVisual = { jugador: this.hpFrac('jugador'), enemigo: this.hpFrac('enemigo') };
+    this.expVisual = this.expFrac();
+    this.visible = { jugador: false, enemigo: this.b.salvaje };
+    this.offset = { jugador: 0, enemigo: 0 }; this.parpadeo = { jugador: 0, enemigo: 0 }; this.koAnim = { jugador: 0, enemigo: 0 };
+    this.esferaAnim = null; this.evolucionAnim = null; this.terminado = false; this.t = 0;
+  }
+  sacarFoto(lado) { const c = this.b.criatura(lado); return { especie: c.especie, nombre: c.nombre, nivel: c.nivel, hp: c.hp, hpMax: c.hpMax, estado: textoEstado(c) }; }
+  refrescar(lado, conEspecie = true) {
+    const nueva = this.sacarFoto(lado);
+    if (!conEspecie) { nueva.especie = this.foto[lado].especie; nueva.nombre = this.foto[lado].nombre; }
+    this.foto[lado] = nueva;
+  }
+  hpFrac(lado) { const f = this.foto[lado]; return f.hp / f.hpMax; }
+  expFrac() { const [a, b] = this.b.mia.expSiguiente(); return b ? a / b : 0; }
+  siguienteEvento() {
+    if (this.cola.length) { this.actual = this.cola.shift(); this.tiempoEv = 0; this.empezarEvento(this.actual); }
+    else {
+      this.actual = null;
+      if (this.b.terminada) this.terminado = true;
+      else if (this.b.necesitaCambio()) this.abrirEquipo(true);
+      else { this.modo = 'menu'; this.texto = '¿Qué hará ' + this.b.mia.nombre + '?'; }
+    }
+  }
+  empezarEvento(ev) {
+    const tipo = ev[0];
+    if (tipo === 'msg') this.texto = ev[1];
+    else if (tipo === 'parpadeo') { this.parpadeo[ev[1]] = 0.45; sonar('golpe'); }
+    else if (tipo === 'ko') { this.koAnim[ev[1]] = 0.01; sonar('ko'); }
+    else if (tipo === 'hp') this.refrescar(ev[1], false);
+    else if (tipo === 'exp') this.refrescar('jugador', false);
+    else if (tipo === 'sale') {
+      this.visible[ev[1]] = true; this.koAnim[ev[1]] = 0; this.refrescar(ev[1]);
+      this.hpVisual[ev[1]] = this.hpFrac(ev[1]);
+      if (ev[1] === 'jugador') this.expVisual = this.expFrac();
+    } else if (tipo === 'esfera') { this.esferaAnim = { sacudidas: ev[1], atrapada: ev[2], t: 0 }; sonar('esfera'); }
+    else if (tipo === 'evolucion') { this.evolucionAnim = { antes: ev[1], despues: ev[2], t: 0 }; sonar('evolucion'); }
+    else if (tipo === 'fin') { if (ev[1] === 'captura') sonar('captura'); else if (ev[1] === 'huida') sonar('escape'); }
+  }
+  duracion(ev) { return { sacudida: 0.4, parpadeo: 0.45, hp: 0.6, ko: 0.6, sale: 0.4, exp: 0.6, fin: 0.3 }[ev[0]] || 0; }
+  actualizar(dt) {
+    this.t += dt;
+    for (const lado of ['jugador', 'enemigo']) {
+      const objetivo = this.hpFrac(lado);
+      if (Math.abs(this.hpVisual[lado] - objetivo) > 0.002) this.hpVisual[lado] += (objetivo - this.hpVisual[lado]) * Math.min(1, dt * 6); else this.hpVisual[lado] = objetivo;
+      if (this.parpadeo[lado] > 0) this.parpadeo[lado] -= dt;
+      if (this.koAnim[lado] > 0 && this.koAnim[lado] < 1) this.koAnim[lado] = Math.min(1, this.koAnim[lado] + dt * 1.8);
+    }
+    const objetivo = this.expFrac();
+    if (Math.abs(this.expVisual - objetivo) > 0.002) this.expVisual += (objetivo - this.expVisual) * Math.min(1, dt * 5);
+    if (this.modo !== 'eventos') return;
+    if (this.actual === null) { this.siguienteEvento(); return; }
+    this.tiempoEv += dt;
+    const ev = this.actual, tipo = ev[0];
+    if (tipo === 'msg') { if (this.tiempoEv > ESPERA_MSG + ev[1].length / VEL_TEXTO) this.siguienteEvento(); }
+    else if (tipo === 'sacudida') {
+      this.offset[ev[1]] = trunc(Math.sin(this.tiempoEv * 40) * 10 * (1 - this.tiempoEv / 0.4));
+      if (this.tiempoEv >= 0.4) { this.offset[ev[1]] = 0; this.siguienteEvento(); }
+    } else if (tipo === 'esfera') {
+      const a = this.esferaAnim; a.t += dt;
+      if (a.t >= 0.6 + 0.5 * a.sacudidas + 0.7) { if (!a.atrapada) this.esferaAnim = null; this.siguienteEvento(); }
+    } else if (tipo === 'evolucion') {
+      this.evolucionAnim.t += dt;
+      if (this.evolucionAnim.t >= 3.0) { this.evolucionAnim = null; this.refrescar('jugador'); this.siguienteEvento(); }
+    } else if (this.tiempoEv >= this.duracion(ev)) this.siguienteEvento();
+  }
+  tecla(k) {
+    if (this.modo === 'eventos') {
+      if (k === 'Enter' && this.actual && this.actual[0] === 'msg' && this.tiempoEv > 0.15) this.siguienteEvento();
+      return;
+    }
+    if (this.modo === 'menu') {
+      this.menu.mover(k);
+      if (k === 'Enter') {
+        sonar('seleccion');
+        const op = this.menu.opciones[this.menu.i];
+        if (op === 'Pelear') { this.menuAtaques = new Menu([...this.b.mia.ataques], 2); this.modo = 'ataques'; }
+        else if (op === 'Mochila') this.abrirMochila();
+        else if (op === 'Criaturas') this.abrirEquipo();
+        else if (op === 'Huir') this.ejecutar(['huir']);
+      }
+    } else if (this.modo === 'ataques') {
+      this.menuAtaques.mover(k);
+      if (k === 'Enter') this.ejecutar(['atacar', this.menuAtaques.i]);
+      else if (k === 'Escape') this.modo = 'menu';
+    } else if (this.modo === 'mochila') {
+      this.menuMochila.mover(k);
+      if (k === 'Enter' && this.menuMochila.opciones.length) {
+        const nombre = this.menuMochila.opciones[this.menuMochila.i][0];
+        if (OBJETOS[nombre].tipo === 'esfera') this.ejecutar(['objeto', nombre, this.b.activa]);
+        else { this.objetoElegido = nombre; this.abrirEquipo(false, true); }
+      } else if (k === 'Escape') this.modo = 'menu';
+    } else if (this.modo === 'equipo') {
+      this.menuEquipo.mover(k);
+      if (k === 'Enter') {
+        const i = this.menuEquipo.i;
+        if (this.objetoElegido) { this.ejecutar(['objeto', this.objetoElegido, i]); this.objetoElegido = null; }
+        else if (i === this.b.activa || this.b.equipo[i].ko) sonar('escape');
+        else this.ejecutar(['cambiar', i]);
+      } else if (k === 'Escape' && !this.b.necesitaCambio()) { this.objetoElegido = null; this.modo = 'menu'; }
+    }
+  }
+  abrirMochila() { this.menuMochila = new Menu(this.b.mochila.lista()); this.modo = 'mochila'; }
+  abrirEquipo(obligado = false, paraObjeto = false) {
+    this.menuEquipo = new Menu([...this.b.equipo]); this.modo = 'equipo';
+    this.texto = paraObjeto ? '¿A quién le das ' + this.objetoElegido + '?' : 'Elige una criatura.';
+  }
+  ejecutar(accion) { this.cola = this.cola.concat(this.b.turno(accion)); this.modo = 'eventos'; this.actual = null; }
+
+  dibujar(g) {
+    g.drawImage(this.fondo, 0, 0);
+    sombraElipse(g, POS_MIA[0] - 120, POS_MIA[1] + 60, 240, 40); sombraElipse(g, POS_ENEMIGA[0] - 100, POS_ENEMIGA[1] + 50, 200, 34);
+    this.dibujarCriatura(g, 'enemigo', POS_ENEMIGA, TAM_ENEMIGA, -1);
+    this.dibujarCriatura(g, 'jugador', POS_MIA, TAM_MIA, 1);
+    if (this.esferaAnim) this.dibujarEsfera(g);
+    this.panel(g, 'enemigo', 40, 40); this.panel(g, 'jugador', ANCHO - 340, 330);
+    caja(g, 20, ALTO - 150, ANCHO - 40, 130);
+    if (this.modo === 'eventos' || this.modo === 'menu') this.dibujarTexto(g, this.texto, 40, ALTO - 135, this.modo === 'menu' ? ANCHO - 400 : ANCHO - 80);
+    if (this.modo === 'menu') this.dibujarMenu(g, this.menu, ANCHO - 360, ALTO - 140, 160, 2);
+    else if (this.modo === 'ataques') this.dibujarAtaques(g);
+    else if (this.modo === 'mochila') this.dibujarMochila(g);
+    else if (this.modo === 'equipo') this.dibujarEquipo(g);
+  }
+  dibujarCriatura(g, lado, pos, tam, mirando) {
+    if (!this.visible[lado] || this.koAnim[lado] >= 1) return;
+    if (this.esferaAnim && lado === 'enemigo') {
+      const a = this.esferaAnim;
+      if (a.t > 0.5 && (a.atrapada || a.t < 0.6 + 0.5 * a.sacudidas + 0.2)) return;   // está adentro de la esfera
+    }
+    if (this.parpadeo[lado] > 0 && trunc(this.parpadeo[lado] * 20) % 2 === 0) return;
+    const x = pos[0] + this.offset[lado], y = pos[1] + trunc(this.koAnim[lado] * 120);
+    if (this.evolucionAnim && lado === 'jugador') {
+      const a = this.evolucionAnim, fase = trunc(a.t * (4 + a.t * 4)) % 2;
+      const especie = (a.t > 2.4 || fase) ? a.despues : a.antes;
+      if (a.t < 2.4) silueta(g, especie, x, y, tam, [255, 255, 255], this.t, mirando); else dibujarCriatura(g, especie, x, y, tam, this.t, mirando);
+      return;
+    }
+    const f = this.foto[lado];
+    if (f.estado === 'ZZZ' && trunc(this.t * 2) % 2 === 0) texto(g, 'z', x + tam / 2, y - tam / 2 - 10, 26, NEGRO);
+    dibujarCriatura(g, f.especie, x, y, tam, this.t, mirando);
+  }
+  dibujarEsfera(g) {
+    const a = this.esferaAnim, t = a.t, [ex, ey] = POS_ENEMIGA;
+    let x, y;
+    if (t < 0.5) { const k = t / 0.5; x = POS_MIA[0] + (ex - POS_MIA[0]) * k; y = POS_MIA[1] - 80 + (ey - POS_MIA[1] + 80) * k - Math.sin(k * Math.PI) * 200; }
+    else { x = ex; y = ey + 40; const s = t - 0.6; if (s >= 0 && s < 0.5 * a.sacudidas) x += trunc(Math.sin(s * 25) * 10); }
+    const color = (a.atrapada && t > 0.6 + 0.5 * a.sacudidas) ? 'rgb(250,200,60)' : 'rgb(220,60,60)';
+    circulo(g, x, y, 18, color);
+    g.strokeStyle = BLANCO; g.lineWidth = 3; g.beginPath(); g.arc(x, y, 18, 0, Math.PI * 2); g.stroke();
+    linea(g, x - 18, y, x + 18, y, NEGRO, 3);
+    circulo(g, x, y, 6, BLANCO);
+    g.strokeStyle = NEGRO; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 6, 0, Math.PI * 2); g.stroke();
+  }
+  panel(g, lado, x, y) {
+    if (!this.visible[lado]) return;
+    const f = this.foto[lado], alto = lado === 'jugador' ? 100 : 80;
+    caja(g, x, y, 300, alto);
+    texto(g, f.nombre, x + 15, y + 10, 24); texto(g, 'Nv ' + f.nivel, x + 220, y + 10, 22);
+    if (f.estado) { rectRedondo(g, x + 160, y + 12, 44, 20, 4, f.estado === 'ZZZ' ? 'rgb(120,80,200)' : 'rgb(140,60,160)'); texto(g, f.estado, x + 165, y + 13, 16, BLANCO); }
+    const frac = this.hpVisual[lado];
+    texto(g, 'PS', x + 15, y + 42, 16, GRIS); barra(g, x + 45, y + 44, 235, 14, frac, colorHp(frac));
+    if (lado === 'jugador') {
+      texto(g, f.hp + '/' + f.hpMax, x + 180, y + 60, 18);
+      texto(g, 'EXP', x + 15, y + 78, 14, GRIS); barra(g, x + 55, y + 80, 225, 8, this.expVisual, AZUL_EXP);
+    }
+  }
+  dibujarTexto(g, cadena, x, y, ancho) {
+    const enMsg = this.modo === 'eventos' && this.actual && this.actual[0] === 'msg';
+    if (enMsg) cadena = cadena.slice(0, trunc(this.tiempoEv * VEL_TEXTO));
+    partirTexto(cadena, 26, ancho).forEach((l, i) => texto(g, l, x, y + i * 32, 26));
+    if (enMsg && trunc(this.t * 3) % 2) texto(g, '▼', ANCHO - 60, ALTO - 55, 22, AZUL_CAJA);
+  }
+  dibujarMenu(g, menu, x, y, anchoCol, columnas) {
+    menu.opciones.forEach((op, i) => {
+      const px = x + (i % columnas) * anchoCol, py = y + trunc(i / columnas) * 50;
+      if (i === menu.i) texto(g, '▶', px - 22, py + 8, 22, AZUL_CAJA);
+      texto(g, op, px, py + 5, 26);
+    });
+  }
+  dibujarAtaques(g) {
+    const m = this.menuAtaques;
+    m.opciones.forEach((nombre, i) => {
+      const px = 60 + (i % 2) * 300, py = ALTO - 135 + trunc(i / 2) * 55;
+      rectRedondo(g, px - 6, py + 6, 8, 28, 3, rgb(COLOR_TIPO[ATAQUES[nombre].tipo]));
+      if (i === m.i) texto(g, '▶', px - 30, py + 8, 22, AZUL_CAJA);
+      texto(g, nombre, px + 10, py + 5, 24);
+    });
+    const at = ATAQUES[m.opciones[m.i]], x = ANCHO - 320;
+    caja(g, x, ALTO - 140, 280, 110, 'rgb(235,240,250)');
+    texto(g, 'Tipo: ' + NOMBRE_TIPO[at.tipo], x + 15, ALTO - 130, 20);
+    texto(g, 'Poder: ' + (at.poder || '--') + '   Precisión: ' + at.precision + '%', x + 15, ALTO - 105, 20);
+    texto(g, { dormir: 'Duerme al rival', veneno: 'Envenena al rival', subir_ataque: 'Sube tu ataque' }[at.efecto] || 'Sin efecto extra', x + 15, ALTO - 80, 20, AZUL_CAJA);
+    texto(g, 'ESC: volver', x + 15, ALTO - 55, 16, GRIS);
+  }
+  dibujarMochila(g) {
+    const m = this.menuMochila;
+    if (!m.opciones.length) { texto(g, 'La mochila está vacía.', 40, ALTO - 135, 26); return; }
+    m.opciones.forEach(([nombre, n], i) => {
+      const px = 60 + (i % 2) * 300, py = ALTO - 140 + trunc(i / 2) * 40;
+      if (i === m.i) texto(g, '▶', px - 30, py + 6, 20, AZUL_CAJA);
+      texto(g, nombre + ' x' + n, px, py + 4, 22);
+    });
+    const nombre = m.opciones[m.i][0], x = ANCHO - 320;
+    caja(g, x, ALTO - 140, 280, 110, 'rgb(235,240,250)');
+    partirTexto(OBJETOS[nombre].descripcion, 20, 250).forEach((l, j) => texto(g, l, x + 15, ALTO - 130 + j * 24, 20));
+    texto(g, 'ESC: volver', x + 15, ALTO - 55, 16, GRIS);
+  }
+  dibujarEquipo(g) {
+    const m = this.menuEquipo;
+    caja(g, 20, 20, ANCHO - 40, ALTO - 190, 'rgb(240,244,250)');
+    texto(g, this.texto, 40, 30, 24);
+    m.opciones.forEach((c, i) => {
+      const px = 50 + (i % 2) * 450, py = 70 + trunc(i / 2) * 120;
+      rectRedondo(g, px, py, 420, 105, 8, i === m.i ? 'rgb(215,225,245)' : 'rgb(250,250,250)');
+      rectRedondo(g, px, py, 420, 105, 8, i === m.i ? AZUL_CAJA : GRIS, 3);
+      dibujarCriatura(g, c.especie, px + 55, py + 52, 70, this.t);
+      texto(g, c.nombre + (i === this.b.activa ? '  (en batalla)' : ''), px + 110, py + 12, 22);
+      texto(g, 'Nv ' + c.nivel + '   ' + NOMBRE_TIPO[c.tipo] + '   ' + textoEstado(c), px + 110, py + 40, 18, GRIS);
+      const frac = c.hp / c.hpMax;
+      barra(g, px + 110, py + 68, 220, 12, frac, colorHp(frac)); texto(g, c.hp + '/' + c.hpMax, px + 340, py + 62, 18);
+    });
+  }
+}
+
+// ---------- El juego completo ----------
+class Juego {
+  constructor() {
+    this.mapa = new Mapa(MAPA_TXT);
+    this.partida = new Partida();
+    this.estado = 'titulo';
+    this.menu = new Menu(['Nueva partida', 'Continuar (L)', 'Borrar partida guardada']);
+    this.menuInicial = new Menu(INICIALES);
+    this.menuPausa = new Menu(['Criaturas', 'Mochila', 'Guardar (G)', 'Cargar (L)', 'Seguir jugando', 'Volver al título']);
+    this.menuEquipo = new Menu([]); this.menuMochila = new Menu([]);
+    this.intercambio = null; this.objetoElegido = null;
+    [this.x, this.y] = this.mapa.inicio;
+    this.mirando = [0, 1]; this.pasoTimer = 0; this.mensajes = [];
+    this.batalla = null; this.batallaLetra = null; this.transicion = 0; this.batallaPendiente = null;
+    this.t = 0; this.aviso = ['', 0];
+    this.puntoCuracion = this.mapa.centros.length ? this.mapa.centros[0] : this.mapa.inicio;
+    this.fondos = {};
+  }
+  nuevaPartida(inicial) {
+    this.partida = new Partida();
+    this.partida.equipo = [new Criatura(inicial, 5)];
+    [this.x, this.y] = this.mapa.inicio;
+    this.partida.pos = [this.x, this.y];
+    this.estado = 'mapa';
+    this.mensajes = ['¡' + inicial + ' es tu primera criatura! Al norte hay pasto bajo para practicar.', 'ENTER habla y avanza el texto. ESC abre el menú. G guarda.'];
+  }
+  guardar() {
+    this.partida.pos = [this.x, this.y];
+    try { localStorage.setItem('criaturas-partida', JSON.stringify(this.partida.aDict())); this.aviso = ['Partida guardada en el navegador', 2]; sonar('curar'); }
+    catch (e) { this.aviso = ['No se pudo guardar', 3]; }
+  }
+  cargar() {
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem('criaturas-partida')); } catch (e) {}
+    if (!d) { this.aviso = ['No hay partida guardada todavía.', 2]; return false; }
+    try { this.partida = Partida.desdeDict(d); } catch (e) { this.aviso = ['No se pudo cargar', 3]; return false; }
+    if (this.partida.pos && !this.mapa.solida(...this.partida.pos)) [this.x, this.y] = this.partida.pos; else [this.x, this.y] = this.mapa.inicio;
+    if (!this.partida.equipo.length) this.partida.equipo = [new Criatura(INICIALES[0], 5)];
+    this.estado = 'mapa'; this.aviso = ['Partida cargada.', 2]; sonar('curar');
+    return true;
+  }
+  manejarTecla(k) {
+    const kk = k.length === 1 ? k.toLowerCase() : k;
+    if (this.estado === 'titulo') {
+      this.menu.mover(k);
+      if (kk === 'l') this.cargar();
+      else if (k === 'Enter') {
+        sonar('seleccion');
+        if (this.menu.i === 0) this.estado = 'elegir';
+        else if (this.menu.i === 1) this.cargar();
+        else { try { localStorage.removeItem('criaturas-partida'); } catch (e) {} this.aviso = ['Partida guardada borrada.', 2]; }
+      }
+    } else if (this.estado === 'elegir') {
+      this.menuInicial.mover(k);
+      if (k === 'Enter') { sonar('captura'); this.nuevaPartida(INICIALES[this.menuInicial.i]); }
+      else if (k === 'Escape') this.estado = 'titulo';
+    } else if (this.estado === 'mapa') {
+      if (this.mensajes.length) { if (k === 'Enter') { this.mensajes.shift(); sonar('seleccion'); } return; }
+      if (kk === 'g') this.guardar();
+      else if (kk === 'l') this.cargar();
+      else if (k === 'Escape' || kk === 'm') { this.estado = 'pausa'; this.menuPausa.i = 0; sonar('seleccion'); }
+      else if (k === 'Enter') this.interactuar();
+    } else if (this.estado === 'pausa') this.manejarPausa(k);
+    else if (this.estado === 'equipo') this.manejarEquipo(k);
+    else if (this.estado === 'mochila') this.manejarMochila(k);
+    else if (this.estado === 'batalla') { if (this.batalla) this.batalla.tecla(k); }
+    else if (this.estado === 'final') { if (k === 'Enter') this.estado = 'mapa'; }
+  }
+  manejarPausa(k) {
+    const kk = k.length === 1 ? k.toLowerCase() : k;
+    this.menuPausa.mover(k);
+    if (k === 'Escape' || kk === 'm') this.estado = 'mapa';
+    else if (kk === 'g') this.guardar();
+    else if (kk === 'l') this.cargar();
+    else if (k === 'Enter') {
+      sonar('seleccion');
+      const op = this.menuPausa.i;
+      if (op === 0) { this.menuEquipo = new Menu([...this.partida.equipo]); this.intercambio = null; this.objetoElegido = null; this.estado = 'equipo'; }
+      else if (op === 1) { this.menuMochila = new Menu(this.partida.mochila.lista()); this.estado = 'mochila'; }
+      else if (op === 2) this.guardar();
+      else if (op === 3) this.cargar();
+      else if (op === 4) this.estado = 'mapa';
+      else this.estado = 'titulo';
+    }
+  }
+  manejarEquipo(k) {
+    this.menuEquipo.mover(k);
+    if (k === 'Escape') { this.estado = this.objetoElegido ? 'mochila' : 'pausa'; this.objetoElegido = null; this.intercambio = null; }
+    else if (k === 'Enter') {
+      const i = this.menuEquipo.i, eq = this.partida.equipo;
+      if (this.objetoElegido) this.usarObjetoMapa(this.objetoElegido, eq[i]);
+      else if (this.intercambio === null) { this.intercambio = i; sonar('seleccion'); }
+      else { [eq[this.intercambio], eq[i]] = [eq[i], eq[this.intercambio]]; this.menuEquipo = new Menu([...eq]); this.menuEquipo.i = i; this.intercambio = null; sonar('seleccion'); }
+    }
+  }
+  manejarMochila(k) {
+    this.menuMochila.mover(k);
+    if (k === 'Escape') this.estado = 'pausa';
+    else if (k === 'Enter' && this.menuMochila.opciones.length) {
+      const nombre = this.menuMochila.opciones[this.menuMochila.i][0];
+      if (OBJETOS[nombre].tipo === 'esfera') { this.aviso = ['Las esferas se usan en batalla.', 2]; sonar('escape'); }
+      else { this.objetoElegido = nombre; this.menuEquipo = new Menu([...this.partida.equipo]); this.estado = 'equipo'; }
+    }
+  }
+  usarObjetoMapa(nombre, c) {
+    const obj = OBJETOS[nombre];
+    if (obj.tipo === 'curar') {
+      if (c.ko || c.hp >= c.hpMax) { this.aviso = ['No le hace falta.', 1.5]; sonar('escape'); return; }
+      c.curar(obj.valor);
+    } else if (obj.tipo === 'estado') {
+      if (c.estado === null) { this.aviso = ['No le hace falta.', 1.5]; sonar('escape'); return; }
+      c.estado = null; c.turnosDormido = 0;
+    }
+    this.partida.mochila.quitar(nombre); sonar('curar');
+    this.aviso = ['Usaste ' + nombre + ' en ' + c.nombre + '.', 2];
+    this.objetoElegido = null; this.menuMochila = new Menu(this.partida.mochila.lista()); this.estado = 'mochila';
+  }
+  // ENTER en el mapa: mira la casilla de enfrente.
+  interactuar() {
+    const fx = this.x + this.mirando[0], fy = this.y + this.mirando[1], ch = this.mapa.casilla(fx, fy);
+    if (this.mapa.letreros.has(fx + ',' + fy)) { this.mensajes.push(this.mapa.letreros.get(fx + ',' + fy)); sonar('seleccion'); }
+    else if ('123K'.includes(ch)) this.hablarEntrenador(ch);
+  }
+  hablarEntrenador(letra) {
+    const datos = ENTRENADORES[letra];
+    if (this.partida.vencidos.includes(letra)) { this.mensajes.push(datos.nombre + ': ' + datos.despues); return; }
+    if (letra === 'K' && this.partida.vencidos.filter(v => v !== 'K').length < 3) { this.mensajes.push(datos.nombre + ': Vuelve cuando hayas vencido a los 3 entrenadores.'); return; }
+    if (!this.partida.tieneVivas()) { this.mensajes.push('Tus criaturas están agotadas. Ve al centro de curación primero.'); return; }
+    this.empezarBatalla(datos.equipo.map(([e, n]) => new Criatura(e, n)), letra);
+  }
+  mover(dx, dy, corriendo) {
+    this.mirando = [dx, dy];
+    const nx = this.x + dx, ny = this.y + dy, ch = this.mapa.casilla(nx, ny);
+    if (this.mapa.solida(nx, ny)) {
+      if (this.mapa.letreros.has(nx + ',' + ny) || '123K'.includes(ch)) { if (this.pasoTimer <= 0) { this.interactuar(); this.pasoTimer = 0.4; } }
+      return;
+    }
+    this.x = nx; this.y = ny;
+    this.pasoTimer = corriendo ? PASO_CORRER : PASO_SEG;
+    if (ch === '+') this.curarEnCentro();
+    else if (ch in PASTO && this.partida.tieneVivas() && Math.random() < PROB_ENCUENTRO) {
+      const [nmin, nmax, especies] = PASTO[ch];
+      this.empezarBatalla([new Criatura(elegir(especies), azarEntero(nmin, nmax))], null, ch);
+    }
+  }
+  curarEnCentro() { this.partida.curarEquipo(); this.puntoCuracion = [this.x, this.y]; this.aviso = ['¡Tu equipo está curado!', 2]; sonar('curar'); }
+  empezarBatalla(enemigos, entrenador = null, pasto = null) {
+    const datos = entrenador ? ENTRENADORES[entrenador] : null;
+    const b = new Batalla(this.partida.equipo, this.partida.mochila, enemigos, datos, this.partida.caja);
+    this.batallaPendiente = [b, entrenador, pasto];
+    this.transicion = 0.01;
+    sonar('encuentro');
+  }
+  fondoBatalla(pasto) {
+    const clave = pasto || '.';
+    if (!this.fondos[clave]) {
+      const s = document.createElement('canvas'); s.width = ANCHO; s.height = ALTO;
+      const g = s.getContext('2d');
+      const [arriba, abajo] = { ',': [[170, 220, 250], [130, 200, 110]], ';': [[150, 200, 240], [80, 160, 80]], '"': [[110, 150, 200], [50, 110, 60]], '.': [[230, 210, 170], [190, 160, 110]] }[clave];
+      const grad = g.createLinearGradient(0, 0, 0, ALTO);
+      grad.addColorStop(0, rgb(arriba)); grad.addColorStop(1, rgb(abajo));
+      g.fillStyle = grad; g.fillRect(0, 0, ANCHO, ALTO);
+      this.fondos[clave] = s;
+    }
+    return this.fondos[clave];
+  }
+  terminarBatalla() {
+    const b = this.batalla.b, letra = this.batallaLetra;
+    this.batalla = null; this.estado = 'mapa';
+    if (b.resultado === 'victoria' && letra) {
+      if (!this.partida.vencidos.includes(letra)) this.partida.vencidos.push(letra);
+      if (letra === 'K') { this.partida.campeon = true; this.estado = 'final'; }
+    } else if (b.resultado === 'derrota') {
+      this.partida.curarEquipo();
+      [this.x, this.y] = this.puntoCuracion;
+      this.mensajes.push('Te quedaste sin criaturas... Corriste al centro de curación y ya están bien.');
+      if (letra) this.mensajes.push('Consejo: entrena en el pasto y vuelve más fuerte.');
+    }
+  }
+  actualizar(dt) {
+    this.t += dt;
+    if (this.aviso[1] > 0) this.aviso[1] -= dt;
+    if (this.transicion > 0) {
+      this.transicion += dt;
+      if (this.transicion > 0.7 && this.batallaPendiente) {
+        const [b, letra, pasto] = this.batallaPendiente;
+        this.batalla = new PantallaBatalla(this, b, this.fondoBatalla(pasto));
+        this.batallaLetra = letra; this.batallaPendiente = null; this.estado = 'batalla';
+      }
+      if (this.transicion > 1.0) this.transicion = 0;
+      return;
+    }
+    if (this.estado === 'mapa') {
+      this.pasoTimer -= dt;
+      if (!this.mensajes.length && this.pasoTimer <= 0) {
+        const corriendo = !!teclas.Shift;
+        if (teclas.ArrowLeft) this.mover(-1, 0, corriendo);
+        else if (teclas.ArrowRight) this.mover(1, 0, corriendo);
+        else if (teclas.ArrowUp) this.mover(0, -1, corriendo);
+        else if (teclas.ArrowDown) this.mover(0, 1, corriendo);
+      }
+    } else if (this.estado === 'batalla' && this.batalla) {
+      this.batalla.actualizar(dt);
+      if (this.batalla.terminado) this.terminarBatalla();
+    }
+  }
+  dibujar() {
+    const s = ctx;
+    if (this.estado === 'titulo') this.dibujarTitulo(s);
+    else if (this.estado === 'elegir') this.dibujarElegir(s);
+    else if (['mapa', 'pausa', 'equipo', 'mochila'].includes(this.estado)) {
+      this.dibujarMapa(s);
+      if (this.estado === 'pausa') this.dibujarPausa(s);
+      else if (this.estado === 'equipo') this.dibujarEquipo(s);
+      else if (this.estado === 'mochila') this.dibujarMochila(s);
+    } else if (this.estado === 'batalla' && this.batalla) this.batalla.dibujar(s);
+    else if (this.estado === 'final') this.dibujarFinal(s);
+    if (this.aviso[1] > 0) {
+      const w = medir(this.aviso[0], 22) + 30;
+      caja(s, ANCHO / 2 - w / 2, 15, w, 40); texto(s, this.aviso[0], ANCHO / 2, 24, 22, NEGRO, true);
+    }
+    if (this.transicion > 0) {
+      let k = this.transicion < 0.7 ? this.transicion / 0.7 : 1 - (this.transicion - 0.7) / 0.3;
+      k = Math.max(0, Math.min(1, k));
+      rect(s, 0, 0, ANCHO, ALTO, `rgba(25,25,35,${k})`);
+      if (this.transicion < 0.7) for (let i = 0; i < trunc(k * 12); i++) rect(s, 0, i * ALTO / 12, ANCHO, ALTO / 24, NEGRO);   // rayas que se cierran
+    }
+  }
+  dibujarTitulo(s) {
+    rect(s, 0, 0, ANCHO, ALTO, 'rgb(40,60,100)');
+    Object.keys(ESPECIES).forEach((esp, i) => {
+      const ang = this.t * 0.3 + i * Math.PI * 2 / 12;
+      dibujarCriatura(s, esp, ANCHO / 2 + Math.cos(ang) * 380, ALTO / 2 + Math.sin(ang) * 220, 70, this.t, Math.cos(ang) < 0 ? 1 : -1);
+    });
+    texto(s, 'CRIATURAS', ANCHO / 2, 150, 80, 'rgb(250,230,120)', true, 'rgb(30,30,50)');
+    texto(s, 'un juego de Manu', ANCHO / 2, 240, 26, BLANCO, true);
+    this.menu.opciones.forEach((op, i) => {
+      const y = 330 + i * 50;
+      if (i === this.menu.i) texto(s, '▶', ANCHO / 2 - 120, y, 30, 'rgb(250,230,120)');
+      texto(s, op, ANCHO / 2 - 80, y, 30, BLANCO);
+    });
+    texto(s, 'Flechas: moverse   ENTER: elegir', ANCHO / 2, ALTO - 50, 20, 'rgb(180,190,210)', true);
+  }
+  dibujarElegir(s) {
+    rect(s, 0, 0, ANCHO, ALTO, 'rgb(230,235,225)');
+    texto(s, 'Elige tu primera criatura', ANCHO / 2, 50, 40, NEGRO, true);
+    this.menuInicial.opciones.forEach((esp, i) => {
+      const x = ANCHO / 2 + (i - 1) * 300, elegido = i === this.menuInicial.i, tipo = ESPECIES[esp].tipo;
+      rectRedondo(s, x - 130, 130, 260, 400, 14, elegido ? 'rgb(255,255,255)' : 'rgb(240,240,235)');
+      rectRedondo(s, x - 130, 130, 260, 400, 14, elegido ? rgb(COLOR_TIPO[tipo]) : GRIS, 5);
+      dibujarCriatura(s, esp, x, 280, elegido ? 170 : 140, this.t);
+      texto(s, esp, x, 380, 32, NEGRO, true); texto(s, NOMBRE_TIPO[tipo], x, 420, 22, rgb(COLOR_TIPO[tipo]), true);
+      partirTexto(ESPECIES[esp].descripcion, 18, 230).forEach((l, j) => texto(s, l, x, 455 + j * 22, 18, GRIS, true));
+    });
+    texto(s, 'Izquierda / derecha para mirar, ENTER para elegir', ANCHO / 2, ALTO - 50, 22, GRIS, true);
+  }
+  dibujarMapa(s) {
+    let camX = this.x * TILE - ANCHO / 2 + TILE / 2, camY = this.y * TILE - ALTO / 2 + TILE / 2;
+    camX = Math.max(0, Math.min(this.mapa.ancho * TILE - ANCHO, camX)); camY = Math.max(0, Math.min(this.mapa.alto * TILE - ALTO, camY));
+    rect(s, 0, 0, ANCHO, ALTO, 'rgb(30,80,40)');
+    this.mapa.dibujar(s, camX, camY, this.t, this.partida.vencidos);
+    const bob = this.pasoTimer > 0 ? trunc(Math.abs(Math.sin(this.t * 12)) * 3) : 0;
+    dibujarPersona(s, this.x * TILE - camX + TILE / 2, this.y * TILE - camY + TILE / 2 - bob, [60, 120, 220], false, false, this.t, !(this.mirando[0] === 0 && this.mirando[1] === -1));
+    this.partida.equipo.forEach((c, i) => {
+      const px = 15 + i * 46;
+      rectRedondo(s, px, ALTO - 60, 42, 48, 6, 'rgb(255,255,255)');
+      dibujarCriatura(s, c.especie, px + 21, ALTO - 42, 26, this.t);
+      const frac = c.hp / c.hpMax; barra(s, px + 4, ALTO - 18, 34, 5, frac, colorHp(frac));
+    });
+    if (this.mensajes.length) {
+      caja(s, 20, ALTO - 150, ANCHO - 40, 130);
+      partirTexto(this.mensajes[0], 24, ANCHO - 90).forEach((l, i) => texto(s, l, 40, ALTO - 135 + i * 30, 24));
+      if (trunc(this.t * 3) % 2) texto(s, '▼ ENTER', ANCHO - 130, ALTO - 50, 18, AZUL_CAJA);
+    } else {
+      const ayuda = 'ESC: menú   G: guardar   L: cargar';
+      texto(s, ayuda, ANCHO - 15 - medir(ayuda, 16), ALTO - 25, 16, BLANCO, false, NEGRO);
+      const insignias = this.partida.vencidos.filter(v => v !== 'K').length;
+      const t2 = 'Entrenadores vencidos: ' + insignias + '/3' + (this.partida.campeon ? '   ★ CAMPEÓN' : '');
+      texto(s, t2, ANCHO - 15 - medir('Entrenadores vencidos: 0/3   ★ CAMPEÓN', 18), 15, 18, BLANCO, false, NEGRO);
+    }
+  }
+  dibujarPausa(s) {
+    const rx = ANCHO / 2 - 160;
+    caja(s, rx, 120, 320, 340);
+    texto(s, 'MENÚ', ANCHO / 2, 135, 30, NEGRO, true);
+    this.menuPausa.opciones.forEach((op, i) => {
+      const y = 190 + i * 42;
+      if (i === this.menuPausa.i) texto(s, '▶', rx + 25, y + 3, 22, AZUL_CAJA);
+      texto(s, op, rx + 55, y, 24);
+    });
+  }
+  dibujarEquipo(s) {
+    caja(s, 20, 20, ANCHO - 40, ALTO - 40, 'rgb(240,244,250)');
+    const titulo = this.objetoElegido ? '¿A quién le das ' + this.objetoElegido + '?'
+      : this.intercambio !== null ? '¿Con quién cambias a ' + this.partida.equipo[this.intercambio].nombre + '?'
+      : 'Tu equipo  (ENTER dos veces para cambiar el orden; la primera pelea)';
+    texto(s, titulo, 40, 30, 22);
+    const m = this.menuEquipo;
+    m.opciones.forEach((c, i) => {
+      const px = 50 + (i % 2) * 450, py = 70 + trunc(i / 2) * 160, marcado = i === m.i || i === this.intercambio;
+      rectRedondo(s, px, py, 420, 145, 8, marcado ? 'rgb(215,225,245)' : 'rgb(250,250,250)');
+      rectRedondo(s, px, py, 420, 145, 8, marcado ? AZUL_CAJA : GRIS, 3);
+      dibujarCriatura(s, c.especie, px + 60, py + 70, 90, this.t);
+      texto(s, c.nombre, px + 125, py + 12, 24);
+      texto(s, 'Nv ' + c.nivel + '   ' + NOMBRE_TIPO[c.tipo] + '   ' + textoEstado(c), px + 125, py + 42, 18, GRIS);
+      const frac = c.hp / c.hpMax;
+      barra(s, px + 125, py + 68, 200, 12, frac, colorHp(frac)); texto(s, c.hp + '/' + c.hpMax, px + 335, py + 62, 18);
+      const [a, b] = c.expSiguiente(); barra(s, px + 125, py + 90, 200, 6, b ? a / b : 0, AZUL_EXP);
+      texto(s, c.ataques.slice(0, 2).join('  '), px + 125, py + 100, 15, GRIS); texto(s, c.ataques.slice(2).join('  '), px + 125, py + 118, 15, GRIS);
+    });
+    if (this.partida.caja.length) texto(s, 'En la caja: ' + this.partida.caja.length + ' criatura(s)', 40, ALTO - 50, 18, GRIS);
+    texto(s, 'ESC: volver', ANCHO - 140, ALTO - 50, 18, GRIS);
+  }
+  dibujarMochila(s) {
+    const rx = ANCHO / 2 - 250, ry = 100, rb = ry + 400;
+    caja(s, rx, ry, 500, 400);
+    texto(s, 'MOCHILA', ANCHO / 2, 115, 30, NEGRO, true);
+    const m = this.menuMochila;
+    if (!m.opciones.length) texto(s, 'Está vacía.', ANCHO / 2, 200, 24, GRIS, true);
+    m.opciones.forEach(([nombre, n], i) => {
+      const y = 170 + i * 40;
+      if (i === m.i) texto(s, '▶', rx + 30, y + 3, 22, AZUL_CAJA);
+      texto(s, nombre + '  x' + n, rx + 60, y, 24);
+    });
+    if (m.opciones.length) texto(s, OBJETOS[m.opciones[m.i][0]].descripcion, ANCHO / 2, rb - 70, 20, AZUL_CAJA, true);
+    texto(s, 'ENTER: usar   ESC: volver', ANCHO / 2, rb - 40, 18, GRIS, true);
+  }
+  dibujarFinal(s) {
+    rect(s, 0, 0, ANCHO, ALTO, 'rgb(250,230,120)');
+    texto(s, '¡ERES EL NUEVO CAMPEÓN!', ANCHO / 2, 80, 60, 'rgb(120,60,20)', true, 'rgb(255,250,200)');
+    const eq = this.partida.equipo;
+    eq.forEach((c, i) => {
+      const x = ANCHO / 2 + (i - (eq.length - 1) / 2) * 150, y = 330 + Math.sin(this.t * 4 + i) * 15;
+      dibujarCriatura(s, c.especie, x, y, 120, this.t); texto(s, c.nombre + ' Nv ' + c.nivel, x, 420, 18, NEGRO, true);
+    });
+    texto(s, 'Puedes seguir jugando, atrapando y entrenando. ¡Gracias por jugar!', ANCHO / 2, 520, 24, NEGRO, true);
+    texto(s, 'ENTER para volver al mapa', ANCHO / 2, 570, 20, GRIS, true);
+  }
+}
+
+// ---------- Teclas y bucle ----------
+const teclas = {};
+const juego = new Juego();
+document.addEventListener('keydown', (e) => {
+  encenderAudio();
+  if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault();
+  if (!e.repeat) juego.manejarTecla(e.key);
+  teclas[e.key] = true;
+});
+document.addEventListener('keyup', (e) => { teclas[e.key] = false; });
+document.querySelectorAll('.tactil button').forEach(b => {
+  const k = b.dataset.tecla;
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); encenderAudio(); teclas[k] = true; juego.manejarTecla(k); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { teclas[k] = false; });
+});
+canvas.addEventListener('pointerdown', () => { encenderAudio(); if (juego.estado === 'batalla' || juego.mensajes.length || juego.estado === 'final') juego.manejarTecla('Enter'); });
+
+let acumulado = 0;
+let ultimoTiempo = performance.now();
+function bucle(ahora) {
+  let dt = ahora - ultimoTiempo;
+  ultimoTiempo = ahora;
+  if (dt > 250) dt = 250;      // si la pestaña estuvo escondida, no saltamos mil cuadros
+  acumulado += dt;
+  while (acumulado >= PASO) { juego.actualizar(DT); acumulado -= PASO; }
+  juego.dibujar();
+  requestAnimationFrame(bucle);
+}
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>

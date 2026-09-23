@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flappy de Manu</title>
+<style>
+  /* Colores de la página (style.css) */
+  :root {
+    --pasto: #5d9a3c; --pasto-oscuro: #3e6b28; --piedra: #7f7f7f; --piedra-oscura: #4f4f4f;
+    --cielo: #7fb2f0; --diamante: #4aedd9; --texto: #ffffff; --sombra: #1a1a1a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 16px;
+    background: var(--sombra); color: var(--texto);
+    font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 12px; line-height: 1.8;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  h1 { font-size: 18px; color: var(--diamante); text-shadow: 3px 3px 0 #000; margin: 8px 0 12px; text-align: center; }
+  canvas {
+    display: block; max-width: 100%; height: auto; background: #000;
+    border: 4px solid var(--piedra-oscura); box-shadow: 6px 6px 0 #000;
+    image-rendering: pixelated; touch-action: none; cursor: pointer;
+  }
+  .ayuda { font-size: 9px; color: #dddddd; text-align: center; max-width: 420px; margin: 10px 0 0; }
+  .boton {
+    display: inline-block; margin: 16px 0; padding: 12px 16px; font-size: 11px;
+    background: #3c6ec9; border: 4px solid #244a8c; box-shadow: 4px 4px 0 #000;
+    color: var(--texto); text-decoration: none; text-shadow: 2px 2px 0 #000;
+  }
+  .boton:hover { background: #4a82e0; }
+  .boton:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+</style>
+</head>
+<body>
+<h1>FLAPPY</h1>
+<canvas id="juego" width="400" height="600"></canvas>
+<p class="ayuda">ESPACIO, clic o toque: saltar &middot; 1 / 2 / 3: elegir pájaro &middot; R: reiniciar</p>
+<a class="boton" href="../index.html">&larr; Volver a la página</a>
+
+<script>
+// ============================================================
+//  Flappy — versión web del flappy.py de Manu
+//  Todo se dibuja con canvas. Sin imágenes, sin internet.
+// ============================================================
+
+// ---------- Ajustes del juego (los mismos que en flappy.py) ----------
+const ANCHO = 400, ALTO = 600;
+const FPS = 60;
+const PASO = 1000 / FPS;          // milisegundos de cada cuadro
+
+const GRAVEDAD = 0.5;
+const SALTO = -9;
+const RADIO_PAJARO = 16;
+
+const ANCHO_TUBO = 70;
+const HUECO_TUBO = 170;
+const HUECO_MINIMO = 115;
+const VELOCIDAD_TUBOS = 3;
+const VELOCIDAD_MAXIMA = 7;
+const CADA_CUANTO_TUBO = 1500;
+const CADA_CUANTO_MINIMO = 900;
+
+const HUECO_POR_PUNTO = 2.5;
+const VELOCIDAD_POR_PUNTO = 0.12;
+const TIEMPO_POR_PUNTO = 20;
+
+const ALTO_SUELO = 60;
+
+// ---------- Colores ----------
+const CIELO = 'rgb(110,200,240)';
+const VERDE_TUBO = 'rgb(80,190,80)';
+const VERDE_OSCURO = 'rgb(40,120,40)';
+const SUELO = 'rgb(200,160,90)';
+const AMARILLO = 'rgb(255,220,40)';
+const BLANCO = 'rgb(255,255,255)';
+const NEGRO = 'rgb(0,0,0)';
+const ROJO = 'rgb(220,50,50)';
+
+// ---------- Skins del pájaro ----------
+const SKINS = [
+  { nombre: 'Clásico',  cuerpo: 'rgb(255,220,40)', pico: 'rgb(255,140,0)',  adorno: null },
+  { nombre: 'Azulito',  cuerpo: 'rgb(80,150,255)', pico: 'rgb(255,200,60)', adorno: 'cresta' },
+  { nombre: 'Fueguito', cuerpo: 'rgb(240,70,40)',  pico: 'rgb(255,230,80)', adorno: 'llamas' },
+];
+
+const canvas = document.getElementById('juego');
+const ctx = canvas.getContext('2d');
+const FUENTE = "'Press Start 2P', 'Courier New', monospace";
+
+function azarEntre(a, b) { return a + Math.random() * (b - a); }
+function enteroEntre(a, b) { return Math.floor(azarEntre(a, b + 1)); }
+
+// ---------- Récord (localStorage en vez de record.txt) ----------
+function leerRecord() {
+  try { return parseInt(localStorage.getItem('flappy-record'), 10) || 0; }
+  catch (e) { return 0; }
+}
+function guardarRecord(puntos) {
+  try { localStorage.setItem('flappy-record', String(puntos)); } catch (e) {}
+}
+
+// ---------- Sonidos fabricados con matemáticas (Web Audio) ----------
+let audio = null;
+function prepararAudio() {
+  try {
+    if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === 'suspended') audio.resume();
+  } catch (e) { audio = null; }
+}
+function sonar(nombre) {
+  if (!audio) return;
+  try {
+    const t = audio.currentTime;
+    const g = audio.createGain();
+    g.connect(audio.destination);
+    if (nombre === 'golpe') {
+      // ruido: un buffer lleno de números al azar que se apaga
+      const n = Math.floor(audio.sampleRate * 0.3);
+      const buf = audio.createBuffer(1, n, audio.sampleRate);
+      const d = buf.getChannelData(0);
+      let fase = 0;
+      for (let i = 0; i < n; i++) {
+        const tt = i / n;
+        fase += 2 * Math.PI * (200 + (60 - 200) * tt) / audio.sampleRate;
+        d[i] = (Math.sin(fase) * 0.4 + (Math.random() * 2 - 1) * 0.6) * (1 - tt) * 0.5;
+      }
+      const s = audio.createBufferSource();
+      s.buffer = buf; s.connect(g); s.start(t);
+      return;
+    }
+    const o = audio.createOscillator();
+    o.type = 'sine';
+    let f0 = 400, f1 = 800, dur = 0.10, vol = 0.4;
+    if (nombre === 'punto') { f0 = 900; f1 = 1400; dur = 0.15; vol = 0.3; }
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.linearRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    o.connect(g); o.start(t); o.stop(t + dur);
+  } catch (e) {}
+}
+
+// ---------- El pájaro ----------
+class Pajaro {
+  constructor(skin) {
+    this.x = 90;
+    this.y = ALTO / 2;
+    this.vel = 0;          // velocidad vertical: + baja, - sube
+    this.skin = skin;
+  }
+  saltar() { this.vel = SALTO; }
+  actualizar() {
+    this.vel += GRAVEDAD;  // la gravedad lo empuja hacia abajo
+    this.y += this.vel;    // y se mueve según su velocidad
+  }
+  rect() {
+    return { x: this.x - RADIO_PAJARO, y: this.y - RADIO_PAJARO, w: RADIO_PAJARO * 2, h: RADIO_PAJARO * 2 };
+  }
+  dibujar(x, y) {
+    if (x === undefined) x = this.x;
+    if (y === undefined) y = Math.floor(this.y);
+    const s = SKINS[this.skin];
+    if (s.adorno === 'llamas') {
+      // colita de fuego detrás
+      const colores = ['rgb(255,200,0)', 'rgb(255,120,0)', 'rgb(220,40,0)'];
+      for (let i = 0; i < 3; i++) {
+        const largo = 26 - i * 7;
+        poligono(colores[i], [[x - 8, y - 6 + i * 2], [x - 8 - largo, y + enteroEntre(-3, 3)], [x - 8, y + 6 - i * 2]]);
+      }
+    }
+    circulo(s.cuerpo, x, y, RADIO_PAJARO);
+    circulo(NEGRO, x, y, RADIO_PAJARO, 2);
+    if (s.adorno === 'cresta') {
+      poligono(s.pico, [[x - 4, y - 14], [x, y - 26], [x + 4, y - 14]]);
+      poligono(s.pico, [[x + 2, y - 14], [x + 9, y - 22], [x + 8, y - 12]]);
+    }
+    // ojo y pico
+    circulo(BLANCO, x + 6, y - 5, 5);
+    circulo(NEGRO, x + 7, y - 5, 2);
+    poligono(s.pico, [[x + 14, y], [x + 26, y + 3], [x + 14, y + 7]]);
+  }
+}
+
+// ---------- Un par de tubos (arriba y abajo) ----------
+class Tubo {
+  constructor(hueco) {
+    this.x = ANCHO;
+    this.hueco = hueco;
+    const margen = 60;
+    this.huecoY = enteroEntre(margen, ALTO - ALTO_SUELO - hueco - margen);
+    this.contado = false;
+  }
+  actualizar(velocidad) { this.x -= velocidad; }
+  rects() {
+    const abajoY = this.huecoY + this.hueco;
+    return [
+      { x: this.x, y: 0, w: ANCHO_TUBO, h: this.huecoY },
+      { x: this.x, y: abajoY, w: ANCHO_TUBO, h: ALTO - ALTO_SUELO - abajoY },
+    ];
+  }
+  fueraDePantalla() { return this.x + ANCHO_TUBO < 0; }
+  dibujar() {
+    for (const r of this.rects()) {
+      ctx.fillStyle = VERDE_TUBO;
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+      ctx.strokeStyle = VERDE_OSCURO;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(r.x + 1.5, r.y + 1.5, r.w - 3, r.h - 3);
+    }
+  }
+}
+
+function chocan(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+// ---------- Dificultad según los puntos ----------
+function dificultad(puntos) {
+  const hueco = Math.max(HUECO_MINIMO, HUECO_TUBO - puntos * HUECO_POR_PUNTO);
+  const velocidad = Math.min(VELOCIDAD_MAXIMA, VELOCIDAD_TUBOS + puntos * VELOCIDAD_POR_PUNTO);
+  const cada = Math.max(CADA_CUANTO_MINIMO, CADA_CUANTO_TUBO - puntos * TIEMPO_POR_PUNTO);
+  return { hueco, velocidad, cada };
+}
+
+// ---------- Dibujos de ayuda ----------
+function circulo(color, x, y, r, grosor) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  if (grosor) { ctx.lineWidth = grosor; ctx.strokeStyle = color; ctx.stroke(); }
+  else { ctx.fillStyle = color; ctx.fill(); }
+}
+function poligono(color, puntos, grosor) {
+  ctx.beginPath();
+  ctx.moveTo(puntos[0][0], puntos[0][1]);
+  for (let i = 1; i < puntos.length; i++) ctx.lineTo(puntos[i][0], puntos[i][1]);
+  ctx.closePath();
+  if (grosor) { ctx.lineWidth = grosor; ctx.strokeStyle = color; ctx.stroke(); }
+  else { ctx.fillStyle = color; ctx.fill(); }
+}
+function texto(msg, y, tam, color, sombra, x) {
+  if (color === undefined) color = BLANCO;
+  if (sombra === undefined) sombra = true;
+  if (x === undefined) x = ANCHO / 2;
+  ctx.font = 'bold ' + tam + 'px ' + FUENTE;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  if (sombra) { ctx.fillStyle = NEGRO; ctx.fillText(msg, x + 2, y + 2); }
+  ctx.fillStyle = color;
+  ctx.fillText(msg, x, y);
+}
+
+// ---------- Estado del juego ----------
+let record = leerRecord();
+let skin = 0;
+let pajaro, tubos, puntos;
+let perdiste = false;
+let empezo = false;          // antes del primer salto, el pájaro flota
+let nuevoRecord = false;
+let reloj = 0;               // milisegundos de juego (como pygame.time.get_ticks)
+let ultimoTubo = 0;
+let flotar = 0;              // para que el pájaro se mueva un poquito en el menú
+
+function nuevoJuego() {
+  pajaro = new Pajaro(skin);
+  tubos = [];
+  puntos = 0;
+  perdiste = false;
+  empezo = false;
+  nuevoRecord = false;
+  ultimoTubo = reloj;
+}
+nuevoJuego();
+
+function saltar() {
+  if (perdiste) return;
+  if (!empezo) { empezo = true; ultimoTubo = reloj; }
+  pajaro.saltar();
+  sonar('salto');
+}
+
+// Dónde se dibujan los tres pájaros del menú (para poder tocarlos)
+function cajasSkins() {
+  const cajas = [];
+  for (let i = 0; i < 3; i++) {
+    cajas.push({ x: ANCHO / 2 + (i - 1) * 90 - 30, y: ALTO / 2 + 165 - 30, w: 60, h: 60, i });
+  }
+  return cajas;
+}
+
+// ---------- Teclado ----------
+window.addEventListener('keydown', (e) => {
+  const k = e.key;
+  if (k === ' ' || k === 'ArrowUp') e.preventDefault();
+  prepararAudio();
+  if (e.repeat) return;
+  if (k === ' ' || k === 'ArrowUp') {
+    saltar();
+  } else if ((k === 'r' || k === 'R') && perdiste) {
+    nuevoJuego();
+  } else if (!empezo && (k === '1' || k === '2' || k === '3')) {
+    skin = parseInt(k, 10) - 1;
+    pajaro.skin = skin;
+  }
+});
+
+// ---------- Clic / toque ----------
+canvas.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  prepararAudio();
+  if (perdiste) { nuevoJuego(); return; }
+  if (!empezo) {
+    // ¿tocó uno de los pájaros del menú?
+    const r = canvas.getBoundingClientRect();
+    const px = (e.clientX - r.left) * ANCHO / r.width;
+    const py = (e.clientY - r.top) * ALTO / r.height;
+    for (const c of cajasSkins()) {
+      if (px >= c.x && px <= c.x + c.w && py >= c.y - 10 && py <= c.y + c.h + 20) {
+        skin = c.i; pajaro.skin = skin; return;
+      }
+    }
+  }
+  saltar();
+});
+
+// ---------- Un cuadro del juego ----------
+function paso() {
+  reloj += PASO;
+  flotar += 0.08;
+  if (!empezo || perdiste) return;
+
+  const d = dificultad(puntos);
+  pajaro.actualizar();
+
+  if (reloj - ultimoTubo > d.cada) {
+    tubos.push(new Tubo(Math.floor(d.hueco)));
+    ultimoTubo = reloj;
+  }
+  for (const t of tubos) {
+    t.actualizar(d.velocidad);
+    if (!t.contado && t.x + ANCHO_TUBO < pajaro.x) {
+      t.contado = true;
+      puntos += 1;
+      sonar('punto');
+    }
+  }
+  tubos = tubos.filter((t) => !t.fueraDePantalla());
+
+  // Choques
+  const caja = pajaro.rect();
+  const tocaSuelo = pajaro.y + RADIO_PAJARO >= ALTO - ALTO_SUELO;
+  const tocaTecho = pajaro.y - RADIO_PAJARO <= 0;
+  let tocaTubo = false;
+  for (const t of tubos) for (const r of t.rects()) if (chocan(caja, r)) tocaTubo = true;
+  if (tocaSuelo || tocaTecho || tocaTubo) {
+    perdiste = true;
+    sonar('golpe');
+    if (puntos > record) {
+      record = puntos;
+      nuevoRecord = true;
+      guardarRecord(record);
+    }
+  }
+}
+
+// ---------- Dibujar todo ----------
+function dibujar() {
+  ctx.fillStyle = CIELO;
+  ctx.fillRect(0, 0, ANCHO, ALTO);
+  for (const t of tubos) t.dibujar();
+  ctx.fillStyle = SUELO;
+  ctx.fillRect(0, ALTO - ALTO_SUELO, ANCHO, ALTO_SUELO);
+  ctx.fillStyle = VERDE_OSCURO;
+  ctx.fillRect(0, ALTO - ALTO_SUELO - 2, ANCHO, 4);
+
+  if (!empezo) pajaro.dibujar(pajaro.x, Math.floor(ALTO / 2 + Math.sin(flotar) * 6));
+  else pajaro.dibujar();
+
+  texto(String(puntos), 50, 44);
+  texto('Récord: ' + record, 90, 14);
+
+  if (!empezo) {
+    texto('FLAPPY', ALTO / 2 - 110, 36, AMARILLO);
+    texto('ESPACIO o clic para saltar', ALTO / 2 + 80, 15);
+    texto('Elige tu pájaro:', ALTO / 2 + 120, 14);
+    for (const c of cajasSkins()) {
+      const x = c.x + 30, y = c.y + 30;
+      if (c.i === skin) {
+        ctx.strokeStyle = BLANCO; ctx.lineWidth = 3;
+        ctx.strokeRect(c.x, c.y, c.w, c.h);
+      }
+      new Pajaro(c.i).dibujar(x, y);
+      texto((c.i + 1) + ': ' + SKINS[c.i].nombre, y + 44, 10, NEGRO, false, x);
+    }
+  }
+  if (perdiste) {
+    texto('PERDISTE', ALTO / 2 - 40, 44, ROJO);
+    texto('Puntos: ' + puntos, ALTO / 2 + 10, 20);
+    if (nuevoRecord) texto('¡NUEVO RÉCORD!', ALTO / 2 + 45, 20, AMARILLO);
+    texto('R o clic para jugar de nuevo', ALTO / 2 + 85, 14);
+  }
+}
+
+// ---------- El bucle: siempre 60 cuadros por segundo ----------
+let acumulado = 0;
+let ultimoTiempo = performance.now();
+function bucle(ahora) {
+  let dt = ahora - ultimoTiempo;
+  ultimoTiempo = ahora;
+  if (dt > 250) dt = 250;      // si la pestaña estuvo escondida, no saltamos mil cuadros
+  acumulado += dt;
+  while (acumulado >= PASO) { paso(); acumulado -= PASO; }
+  dibujar();
+  requestAnimationFrame(bucle);
+}
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>

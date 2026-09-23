@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Escape de la Fábrica de Manu</title>
+<style>
+  /* Colores de la página (style.css) */
+  :root {
+    --pasto: #5d9a3c; --pasto-oscuro: #3e6b28; --piedra: #7f7f7f; --piedra-oscura: #4f4f4f;
+    --cielo: #7fb2f0; --diamante: #4aedd9; --texto: #ffffff; --sombra: #1a1a1a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 16px;
+    background: var(--sombra); color: var(--texto);
+    font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 12px; line-height: 1.8;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  h1 { font-size: 18px; color: var(--diamante); text-shadow: 3px 3px 0 #000; margin: 8px 0 12px; text-align: center; }
+  canvas {
+    display: block; max-width: 100%; height: auto; background: #000;
+    border: 4px solid var(--piedra-oscura); box-shadow: 6px 6px 0 #000;
+    image-rendering: pixelated; touch-action: none;
+  }
+  .ayuda { font-size: 9px; color: #dddddd; text-align: center; max-width: 560px; margin: 10px 0 0; }
+  .boton {
+    display: inline-block; margin: 16px 0; padding: 12px 16px; font-size: 11px;
+    background: #3c6ec9; border: 4px solid #244a8c; box-shadow: 4px 4px 0 #000;
+    color: var(--texto); text-decoration: none; text-shadow: 2px 2px 0 #000;
+  }
+  .boton:hover { background: #4a82e0; }
+  .boton:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+  /* Botones de celular: solo aparecen en pantallas táctiles */
+  .tactil { display: none; gap: 10px; margin-top: 12px; width: 100%; max-width: 960px; justify-content: space-between; align-items: center; }
+  @media (pointer: coarse) { .tactil { display: flex; } }
+  .cruz { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); gap: 4px; }
+  .tactil button {
+    font-family: inherit; font-size: 16px; width: 56px; height: 56px;
+    background: var(--piedra-oscura); border: 4px solid #000; color: var(--texto);
+    box-shadow: 4px 4px 0 #000; touch-action: none; user-select: none;
+  }
+  .tactil button:active { background: var(--piedra); }
+  .tactil .grande { width: 80px; }
+</style>
+</head>
+<body>
+<h1>ESCAPE DE LA FÁBRICA</h1>
+<canvas id="juego" width="960" height="672"></canvas>
+<div class="tactil">
+  <div class="cruz">
+    <span></span><button data-tecla="ArrowUp">▲</button><span></span>
+    <button data-tecla="ArrowLeft">◀</button><span></span><button data-tecla="ArrowRight">▶</button>
+    <span></span><button data-tecla="ArrowDown">▼</button><span></span>
+  </div>
+  <div style="display:flex;gap:10px"><button class="grande" data-tecla="f">🔦</button><button class="grande" data-tecla=" ">OK</button></div>
+</div>
+<p class="ayuda">flechas: moverte &middot; F: prender / apagar la linterna &middot; ESPACIO: seguir &middot; R: reiniciar</p>
+<a class="boton" href="../index.html">&larr; Volver a la página</a>
+
+<script>
+// ============================================================
+//  Escape de la Fábrica — versión web del escape.py de Manu
+//  Todo se dibuja con canvas. Sin imágenes, sin internet.
+// ============================================================
+
+// ---------- Ajustes (los mismos que en escape.py) ----------
+const TILE = 32;
+const VEL_JUGADOR = 3.2;
+const VEL_PATRULLA = 1.5;
+const RADIO_LINTERNA = 210;
+const ANGULO_LINTERNA = 70;      // grados
+const RADIO_AMBIENTE = 55;       // lo poquito que ves sin linterna
+const RADIO_MIEDO = 220;         // a esta distancia empieza a temblar la pantalla
+const FPS = 60;
+const PASO = 1000 / FPS;
+
+// Cada dificultad cambia estos números:
+//   vision = casillas a las que te ve el monstruo (con linterna prendida ve 2 más)
+//   caza = velocidad del monstruo cuando te persigue (tú vas a 3.2)
+//   bateria = segundos que dura la linterna prendida
+//   espectro = velocidad del espectro cuando no lo miras
+const DIFICULTADES = {
+  'Fácil':   { vision: 5, caza: 2.4, bateria: 60, espectro: 3.0 },
+  'Normal':  { vision: 7, caza: 2.9, bateria: 40, espectro: 3.6 },
+  'Difícil': { vision: 9, caza: 3.3, bateria: 25, espectro: 4.2 },
+};
+
+const COLOR_PISO = 'rgb(46,42,50)';
+const COLOR_PARED = 'rgb(95,85,100)';
+const COLOR_JUGADOR = 'rgb(255,220,90)';
+const COLOR_MONSTRUO = 'rgb(120,20,40)';
+const COLOR_OJOS = 'rgb(255,40,40)';
+const COLOR_ESPECTRO = 'rgb(200,210,230)';
+const COLOR_LLAVE = 'rgb(255,200,40)';
+const COLOR_PILA = 'rgb(90,220,120)';
+const COLOR_PUERTA_CERRADA = 'rgb(110,70,40)';
+const COLOR_PUERTA_ABIERTA = 'rgb(60,200,90)';
+const COLORES = { r: 'rgb(220,50,50)', v: 'rgb(50,190,80)', a: 'rgb(70,120,240)' };
+const NOMBRES_COLOR = { r: 'roja', v: 'verde', a: 'azul' };
+
+// ---------- Laberintos (copiados de laberinto1.txt, 2 y 3) ----------
+//   #  pared            .  piso
+//   P  tú               M  monstruo (patrulla, y te caza si te ve)
+//   E  espectro         (más rápido, pero se queda quieto si lo alumbras)
+//   K  llave de salida  D  puerta de salida (se abre con TODAS las K)
+//   B  pila             (recarga la linterna)
+//   r  v  a             llave roja / verde / azul
+//   R  V  A             puerta roja / verde / azul
+const NIVELES = [`
+##############################
+#P.....#........#.....#......#
+#.###..#..####..#..#..#..##..#
+#.#K#..#..#..#.....#.....#...#
+#.#.#..#..#..####..####..#.###
+#.#.#.....#.....B...#....#...#
+#.#.####..#..####...#..###.#.#
+#...#.....#..#..#...#....#.#.#
+###.#..####..#..##.###...#.#.#
+#...#........#....K#.....#...#
+#.#####.###..####..#..####..##
+#.#.....#.......#..#.....#...#
+#.#..#..#.####..#..####..###.#
+#.#..#..#.#..#..#........#...#
+#.#..#....#..#..###..##..#.#.#
+#....####.#..#....#..#...#.#.#
+#.####....#.###...#..#.###.#.#
+#....#.####.....###..#.#B..#.#
+#.##.#......#.......M#...#.K.#
+#D...###################.#####
+##############################
+`, `
+###############################
+#P#.....#.................#...#
+#.#.###.#.#.#.#########.#.#.#.#
+#...#.#.#.#...#.....#...#.#.#.#
+##.##.#.#######.###...###.#.#.#
+#...........#...#.#.#.#.#.#.#.#
+#.#.#.###.#.#.###.#.#.#.#.###.#
+#.#.#.#.B.#.#...#...#.#.#.....#
+###.#.#K###.###.#.###.#.#####.#
+#..K#.#...#.B.#.#.....#.......#
+#.###.#.#.#R#.#.#########.#####
+#.#K..#.#.#.#.#.........#.#...#
+#.#.#.#.#.#.#.#.###M###.###.#.#
+#.#...#.#.#...#...#...#.....#.#
+#.###.###.#.#####.#.#.#######.#
+#.#...#..v#.#.......#.......#.#
+#.#.###.###.#########.#.#####.#
+#.#.....#...#.V.......#.#...#.#
+#.##..#.#.###.###.#.#.#.#.#...#
+#......r#.....#...........#..D#
+###############################
+`, `
+#################################
+#P....#...#.#.........#.Er#.....#
+#.###.#.#...#.#.#####.#v###.#.#.#
+#.......#.#.#.#...#.#.#.#...#.#.#
+#.#.#####.#.#.###.#.#.#...###.#a#
+#.#.#.....#.#.#M..#...#.....#.#K#
+#B..#.#####.#.#.###.#######.#.#.#
+#.#.#.#.....#.#...#.#.....#.#...#
+###...#.#.###.###.#.#K###.#.#.###
+#...#.#.#.....#...#.B.#..B#.#...#
+#.#.#.#####.###.#######.###.###.#
+#.#.#..R..#.#...#.....#.#.#K#...#
+#.#######.###.###.#####.#.#.#.#.#
+#.......#.....#...#V..#.#...A.#.#
+#.#.#.####.####..##.#.#...###.#.#
+#...#...............#.#.#.#...#.#
+#.#################.#.#.#.#.#.#.#
+#.........#.........#...#.#...#.#
+#########.#.#.#####.#######.#.#.#
+#.....#...#.#.....#...#.....#.#.#
+#.###.#.###.#...#.#.#.#.#.###.#.#
+#...#...........#...#...#.....#D#
+#################################
+`];
+
+// ---------- Utilidades ----------
+const clave = (cx, cy) => cx + ',' + cy;
+const aCasilla = (x, y) => [Math.floor(x / TILE), Math.floor(y / TILE)];
+const centroDe = ([cx, cy]) => [cx * TILE + TILE / 2, cy * TILE + TILE / 2];
+const elegir = (lista) => lista[Math.floor(Math.random() * lista.length)];
+const azarEntre = (a, b) => a + Math.random() * (b - a);
+
+// ---------- Laberinto ----------
+function cargarLaberinto(txt) {
+  const filas = txt.split('\n').filter(l => l.trim());
+  const ancho = Math.max(...filas.map(f => f.length));
+  return filas.map(f => f.padEnd(ancho, '#'));   // si una fila es más corta, se rellena con pared
+}
+
+// Sabe dónde hay paredes y busca caminos (para que el monstruo no se pierda).
+class Mapa {
+  constructor(filas) {
+    this.filas = filas;
+    this.alto = filas.length;
+    this.ancho = filas[0].length;
+    this.puertaAbierta = false;
+    this.coloresAbiertos = new Set();
+  }
+  celda(cx, cy) {
+    if (cy >= 0 && cy < this.alto && cx >= 0 && cx < this.ancho) return this.filas[cy][cx];
+    return '#';
+  }
+  esPared(cx, cy) {
+    const c = this.celda(cx, cy);
+    if (c === '#') return true;
+    if (c === 'D') return !this.puertaAbierta;
+    if ('RVA'.includes(c)) return !this.coloresAbiertos.has(c.toLowerCase());
+    return false;
+  }
+  // True si el rectángulo [x, y, w, h] toca alguna pared.
+  choca(x, y, w, h) {
+    const cx1 = Math.floor(x / TILE), cy1 = Math.floor(y / TILE);
+    const cx2 = Math.floor((x + w - 1) / TILE), cy2 = Math.floor((y + h - 1) / TILE);
+    for (let cy = cy1; cy <= cy2; cy++) for (let cx = cx1; cx <= cx2; cx++) if (this.esPared(cx, cy)) return true;
+    return false;
+  }
+  vecinos([cx, cy]) {
+    const v = [];
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (!this.esPared(cx + dx, cy + dy)) v.push([cx + dx, cy + dy]);
+    return v;
+  }
+  // Camino más corto entre dos casillas (BFS): como una inundación que sale de 'desde'.
+  camino(desde, hasta) {
+    const kHasta = clave(...hasta);
+    if (clave(...desde) === kHasta) return [];
+    const anterior = new Map([[clave(...desde), null]]);
+    const cola = [desde];
+    let i = 0;
+    while (i < cola.length) {
+      const actual = cola[i++];
+      if (clave(...actual) === kHasta) break;
+      for (const v of this.vecinos(actual)) {
+        const k = clave(...v);
+        if (!anterior.has(k)) { anterior.set(k, actual); cola.push(v); }
+      }
+    }
+    if (!anterior.has(kHasta)) return [];
+    const ruta = [];
+    let paso = hasta;
+    while (clave(...paso) !== clave(...desde)) { ruta.push(paso); paso = anterior.get(clave(...paso)); }
+    return ruta.reverse();
+  }
+  // True si desde la casilla a se ve la casilla b sin paredes en medio (línea de Bresenham).
+  hayVision(a, b) {
+    let [x0, y0] = a; const [x1, y1] = b;
+    const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+    while (x0 !== x1 || y0 !== y1) {
+      if (this.esPared(x0, y0)) return false;
+      const e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; x0 += sx; }
+      if (e2 < dx) { err += dx; y0 += sy; }
+    }
+    return true;
+  }
+  casillasDePiso() {
+    const c = [];
+    for (let cy = 0; cy < this.alto; cy++) for (let cx = 0; cx < this.ancho; cx++) if (!this.esPared(cx, cy)) c.push([cx, cy]);
+    return c;
+  }
+}
+
+// ---------- Jugador ----------
+class Jugador {
+  constructor(celda, bateriaSegundos) {
+    [this.x, this.y] = centroDe(celda);
+    this.mira = [1, 0];              // hacia dónde mira (la última dirección en que caminó)
+    this.linterna = true;
+    this.bateria = 100;
+    this.gasto = 100 / (bateriaSegundos * FPS);
+  }
+  static RADIO = 11;
+  get RADIO() { return Jugador.RADIO; }
+  get alumbra() { return this.linterna && this.bateria > 0; }
+  chocaEn(x, y, mapa) { const r = this.RADIO; return mapa.choca(Math.floor(x - r), Math.floor(y - r), r * 2, r * 2); }
+  mover(dx, dy, mapa) {
+    if (dx || dy) this.mira = [Math.sign(dx), Math.sign(dy)];
+    // Primero en X y luego en Y, así puedes deslizarte por las paredes
+    if (dx) { this.x += dx; if (this.chocaEn(this.x, this.y, mapa)) this.x -= dx; }
+    if (dy) { this.y += dy; if (this.chocaEn(this.x, this.y, mapa)) this.y -= dy; }
+  }
+  gastarBateria() { if (this.alumbra) this.bateria = Math.max(0, this.bateria - this.gasto); }
+  // True si el punto (x, y) está dentro del cono de la linterna.
+  estaAlumbrando(x, y, mapa) {
+    if (!this.alumbra) return false;
+    const dx = x - this.x, dy = y - this.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > RADIO_LINTERNA) return false;
+    if (dist > 1) {
+      const angMira = Math.atan2(this.mira[1], this.mira[0]);
+      const angPunto = Math.atan2(dy, dx);
+      let dif = Math.abs(((angPunto - angMira + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI);
+      if (dif * 180 / Math.PI > ANGULO_LINTERNA / 2) return false;
+    }
+    return mapa.hayVision(aCasilla(this.x, this.y), aCasilla(x, y));
+  }
+  dibujar(g) {
+    circulo(g, this.x, this.y, this.RADIO, COLOR_JUGADOR);
+    circulo(g, this.x, this.y, this.RADIO, 'rgb(60,40,10)', 2);
+    // la linterna: un puntito hacia donde miras
+    circulo(g, this.x + this.mira[0] * 8, this.y + this.mira[1] * 8, 4, this.alumbra ? 'rgb(255,255,200)' : 'rgb(90,90,80)');
+  }
+}
+
+// ---------- Monstruo ----------
+class Monstruo {
+  static RADIO = 24;
+  get RADIO() { return Monstruo.RADIO; }
+  constructor(celda, mapa, vision, velCaza) {
+    [this.x, this.y] = centroDe(celda);
+    this.mapa = mapa; this.vision = vision; this.velCaza = velCaza;
+    this.estado = 'patrulla';       // 'patrulla', 'caza' o 'busca'
+    this.ruta = []; this.ultimoVisto = null; this.contador = 0; this.pasoAnim = 0;
+  }
+  get celda() { return aCasilla(this.x, this.y); }
+  // Elige un lugar al azar del laberinto y camina hacia allá.
+  elegirPaseo() {
+    const [mx, my] = this.celda;
+    const opciones = this.mapa.casillasDePiso().filter(([cx, cy]) => Math.abs(cx - mx) + Math.abs(cy - my) > 4);
+    for (let i = 0; i < 10; i++) {
+      this.ruta = this.mapa.camino(this.celda, elegir(opciones));
+      if (this.ruta.length) return;
+    }
+  }
+  veAlJugador(jugador) {
+    const mia = this.celda, suya = aCasilla(jugador.x, jugador.y);
+    const dist = Math.hypot(mia[0] - suya[0], mia[1] - suya[1]);
+    const alcance = this.vision + (jugador.alumbra ? 2 : 0);   // la luz te delata
+    return dist <= alcance && this.mapa.hayVision(mia, suya);
+  }
+  actualizar(jugador) {
+    this.contador += 1;
+    const celdaJugador = aCasilla(jugador.x, jugador.y);
+    if (this.veAlJugador(jugador)) {
+      this.estado = 'caza';
+      this.ultimoVisto = celdaJugador;
+      if (this.contador % 10 === 0 || !this.ruta.length) this.ruta = this.mapa.camino(this.celda, celdaJugador);
+    } else if (this.estado === 'caza') {
+      // Te perdió de vista: va a mirar al último lugar donde te vio
+      this.estado = 'busca';
+      this.ruta = this.mapa.camino(this.celda, this.ultimoVisto);
+    }
+    if (!this.ruta.length) {
+      if (this.estado === 'busca') this.estado = 'patrulla';
+      this.elegirPaseo();
+    }
+    const vel = this.estado === 'caza' ? this.velCaza : VEL_PATRULLA;
+    avanzar(this, vel);
+    this.pasoAnim += vel * 0.15;
+  }
+  dibujar(g) {
+    const x = this.x, y = this.y, r = this.RADIO;
+    const balanceo = Math.trunc(Math.sin(this.pasoAnim) * 4);
+    linea(g, x - r, y, x - r - 18, y + 14 + balanceo, COLOR_MONSTRUO, 7);   // brazos largos
+    linea(g, x + r, y, x + r + 18, y + 14 - balanceo, COLOR_MONSTRUO, 7);
+    circulo(g, x, y, r, COLOR_MONSTRUO);
+    circulo(g, x, y, r, 'rgb(70,10,25)', 3);
+    const ojos = this.estado === 'caza' ? COLOR_OJOS : 'rgb(200,120,60)';
+    circulo(g, x - 8, y - 6, 5, ojos); circulo(g, x + 8, y - 6, 5, ojos);
+    for (let i = -2; i <= 2; i++) poligono(g, [[x + i * 6 - 2, y + 8], [x + i * 6 + 2, y + 8], [x + i * 6, y + 15]], 'rgb(240,240,230)');   // dientes
+  }
+}
+
+// Camina hacia la siguiente casilla de su ruta (lo usan el monstruo y el espectro).
+function avanzar(bicho, vel) {
+  if (!bicho.ruta.length) return;
+  const [ox, oy] = centroDe(bicho.ruta[0]);
+  const dx = ox - bicho.x, dy = oy - bicho.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist <= vel) { bicho.x = ox; bicho.y = oy; bicho.ruta.shift(); }
+  else { bicho.x += dx / dist * vel; bicho.y += dy / dist * vel; }
+}
+
+// Siempre sabe dónde estás y va directo hacia ti... pero si lo alumbras se congela.
+class Espectro {
+  static RADIO = 18;
+  get RADIO() { return Espectro.RADIO; }
+  constructor(celda, mapa, velocidad) {
+    [this.x, this.y] = centroDe(celda);
+    this.mapa = mapa; this.velocidad = velocidad;
+    this.ruta = []; this.contador = 0; this.congelado = false; this.flotar = 0;
+  }
+  get celda() { return aCasilla(this.x, this.y); }
+  actualizar(jugador) {
+    this.contador += 1;
+    this.flotar += 0.08;
+    this.congelado = jugador.estaAlumbrando(this.x, this.y, this.mapa);
+    if (this.congelado) return;
+    if (this.contador % 15 === 0 || !this.ruta.length) this.ruta = this.mapa.camino(this.celda, aCasilla(jugador.x, jugador.y));
+    avanzar(this, this.velocidad);
+  }
+  dibujar(g) {
+    const x = this.x, y = this.y + Math.sin(this.flotar) * 3, r = this.RADIO;
+    const color = this.congelado ? 'rgb(150,160,180)' : COLOR_ESPECTRO;
+    circulo(g, x, y - 4, r, color);                             // cuerpo de fantasma
+    g.fillStyle = color; g.fillRect(x - r, y - 4, r * 2, r);
+    for (let i = -2; i <= 2; i++) circulo(g, x + i * 8, y + r - 4, 5, color);   // flecos
+    circulo(g, x - 7, y - 8, 4, 'rgb(20,20,40)'); circulo(g, x + 7, y - 8, 4, 'rgb(20,20,40)');
+    if (!this.congelado) { g.fillStyle = 'rgb(20,20,40)'; g.beginPath(); g.ellipse(x, y + 4, 6, 4, 0, 0, Math.PI * 2); g.fill(); }
+  }
+}
+
+// ---------- Dibujos de ayuda ----------
+function circulo(g, x, y, r, color, grosor = 0) {
+  g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2);
+  if (grosor) { g.strokeStyle = color; g.lineWidth = grosor; g.stroke(); } else { g.fillStyle = color; g.fill(); }
+}
+function linea(g, x1, y1, x2, y2, color, grosor) {
+  g.strokeStyle = color; g.lineWidth = grosor; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+}
+function poligono(g, pts, color) {
+  g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+  g.closePath(); g.fillStyle = color; g.fill();
+}
+function rectBorde(g, x, y, w, h, color, grosor) {
+  g.strokeStyle = color; g.lineWidth = grosor; g.strokeRect(x + grosor / 2, y + grosor / 2, w - grosor, h - grosor);
+}
+function texto(g, cadena, x, y, tam, color, centrado = false) {
+  g.font = tam + 'px sans-serif'; g.fillStyle = color;
+  g.textAlign = centrado ? 'center' : 'left'; g.textBaseline = centrado ? 'middle' : 'top';
+  g.fillText(cadena, x, y);
+}
+function anchoTexto(g, cadena, tam) { g.font = tam + 'px sans-serif'; return g.measureText(cadena).width; }
+
+// ---------- Sonido: un zumbido grave que late (WebAudio) ----------
+let audio = null, zumbido = null;
+function encenderAudio() {
+  if (audio !== null) return;
+  try {
+    audio = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audio.createOscillator(); osc.frequency.value = 55;          // nota muy grave
+    const lfo = audio.createOscillator(); lfo.frequency.value = 2;           // late 2 veces por segundo
+    const latido = audio.createGain(); latido.gain.value = 0.5;
+    const volumen = audio.createGain(); volumen.gain.value = 0;
+    lfo.connect(latido.gain);
+    osc.connect(latido).connect(volumen).connect(audio.destination);
+    osc.start(); lfo.start();
+    zumbido = volumen;
+  } catch (e) { audio = false; }
+}
+function sonar(vol) { if (zumbido) zumbido.gain.setTargetAtTime(vol * 0.4, audio.currentTime, 0.05); }
+
+// ---------- El juego ----------
+const canvas = document.getElementById('juego');
+const ctx = canvas.getContext('2d');
+const mundo = document.createElement('canvas');      // el laberinto se dibuja aquí y luego se copia (con temblor)
+const gm = mundo.getContext('2d');
+const oscuridad = document.createElement('canvas');
+const go = oscuridad.getContext('2d');
+
+let dificultad = 'Normal', opcionMenu = 1, tiempoTotal = 0, nivel = 0;
+let mapa, objetos, puerta, espectro, monstruo, jugador, totalLlaves, llavesTomadas, llavesColor;
+let estado = 'menu';       // 'menu', 'jugando', 'atrapado', 'nivel_completo', 'escapaste'
+let tiempo = 0, temblor = 0, aviso = '', avisoHasta = 0;
+const ajustes = () => DIFICULTADES[dificultad];
+
+function cargarNivel() {
+  const filas = cargarLaberinto(NIVELES[nivel]);
+  mapa = new Mapa(filas);
+  objetos = new Map();          // "cx,cy" -> letra (K, B, r, v, a)
+  puerta = null; espectro = null; monstruo = null;
+  filas.forEach((fila, cy) => [...fila].forEach((c, cx) => {
+    if (c === 'P') jugador = new Jugador([cx, cy], ajustes().bateria);
+    else if (c === 'M') monstruo = new Monstruo([cx, cy], mapa, ajustes().vision, ajustes().caza);
+    else if (c === 'E') espectro = new Espectro([cx, cy], mapa, ajustes().espectro);
+    else if (c === 'D') puerta = [cx, cy];
+    else if ('KBrva'.includes(c)) objetos.set(clave(cx, cy), c);
+  }));
+  totalLlaves = [...objetos.values()].filter(c => c === 'K').length;
+  llavesTomadas = 0; llavesColor = [];
+  estado = 'jugando'; tiempo = 0; temblor = 0; aviso = ''; avisoHasta = 0;
+  canvas.width = mundo.width = oscuridad.width = mapa.ancho * TILE;
+  canvas.height = mundo.height = oscuridad.height = mapa.alto * TILE;
+}
+
+function reiniciar() {
+  sonar(0);
+  if (estado === 'escapaste') { nivel = 0; tiempoTotal = 0; cargarNivel(); estado = 'menu'; }
+  else cargarNivel();
+}
+function continuar() {
+  if (estado === 'menu') { dificultad = Object.keys(DIFICULTADES)[opcionMenu]; nivel = 0; tiempoTotal = 0; cargarNivel(); }
+  else if (estado === 'nivel_completo') { nivel += 1; cargarNivel(); }
+}
+function tecla(k) {
+  if (k === 'r' || k === 'R') reiniciar();
+  else if (k === ' ') continuar();
+  else if (estado === 'menu') {
+    const n = Object.keys(DIFICULTADES).length;
+    if (k === 'ArrowUp') opcionMenu = (opcionMenu - 1 + n) % n;
+    else if (k === 'ArrowDown') opcionMenu = (opcionMenu + 1) % n;
+    else if (k === '1' || k === '2' || k === '3') { opcionMenu = Number(k) - 1; continuar(); }
+  } else if (estado === 'jugando' && (k === 'f' || k === 'F')) jugador.linterna = !jugador.linterna;
+}
+function avisar(t) { aviso = t; avisoHasta = tiempo + FPS * 3; }
+
+const teclas = {};
+document.addEventListener('keydown', (e) => {
+  encenderAudio();
+  if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault();
+  if (!e.repeat) tecla(e.key);
+  teclas[e.key] = true;
+});
+document.addEventListener('keyup', (e) => { teclas[e.key] = false; });
+document.querySelectorAll('.tactil button').forEach(b => {
+  const k = b.dataset.tecla;
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); encenderAudio(); teclas[k] = true; tecla(k); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { teclas[k] = false; });
+});
+canvas.addEventListener('pointerdown', () => { encenderAudio(); if (estado !== 'jugando') tecla(estado === 'atrapado' || estado === 'escapaste' ? 'r' : ' '); });
+
+// ---------- Lógica ----------
+function actualizar() {
+  if (estado !== 'jugando') return;
+  tiempo += 1;
+  let dx = 0, dy = 0;
+  if (teclas.ArrowLeft) dx -= VEL_JUGADOR;
+  if (teclas.ArrowRight) dx += VEL_JUGADOR;
+  if (teclas.ArrowUp) dy -= VEL_JUGADOR;
+  if (teclas.ArrowDown) dy += VEL_JUGADOR;
+  jugador.mover(dx, dy, mapa);
+  jugador.gastarBateria();
+
+  // ¿Pisé algo?
+  const miCelda = aCasilla(jugador.x, jugador.y);
+  const k = clave(...miCelda);
+  const objeto = objetos.get(k);
+  if (objeto) {
+    objetos.delete(k);
+    if (objeto === 'K') {
+      llavesTomadas += 1;
+      if (llavesTomadas === totalLlaves) { mapa.puertaAbierta = true; avisar('¡La puerta de salida se abrió!'); }
+      else avisar('Llave ' + llavesTomadas + ' de ' + totalLlaves);
+    } else if (objeto === 'B') { jugador.bateria = 100; avisar('Pila: linterna recargada'); }
+    else {
+      llavesColor.push(objeto);
+      mapa.coloresAbiertos.add(objeto);
+      avisar('Llave ' + NOMBRES_COLOR[objeto] + ': se abrió la puerta ' + NOMBRES_COLOR[objeto]);
+    }
+  }
+
+  // ¿Llegué a la puerta abierta?
+  if (mapa.puertaAbierta && puerta && miCelda[0] === puerta[0] && miCelda[1] === puerta[1]) {
+    tiempoTotal += tiempo;
+    estado = nivel === NIVELES.length - 1 ? 'escapaste' : 'nivel_completo';
+    sonar(0);
+    return;
+  }
+
+  // Los monstruos
+  let dist = 9999;
+  if (monstruo) {
+    monstruo.actualizar(jugador);
+    dist = distancia(monstruo);
+    if (dist < monstruo.RADIO + jugador.RADIO - 6) { atrapado(); return; }
+  }
+  if (espectro) {
+    espectro.actualizar(jugador);
+    const d2 = distancia(espectro);
+    dist = Math.min(dist, d2);
+    if (d2 < espectro.RADIO + jugador.RADIO - 4) { atrapado(); return; }
+  }
+
+  // Miedo: mientras más cerca, más tiembla y más fuerte suena
+  const miedo = Math.max(0, 1 - dist / RADIO_MIEDO);
+  temblor = miedo * 9;
+  sonar(miedo);
+}
+const distancia = (bicho) => Math.hypot(bicho.x - jugador.x, bicho.y - jugador.y);
+function atrapado() { estado = 'atrapado'; sonar(0); }
+
+// ---------- Dibujo ----------
+function dibujarLlave(g, x, y, color) {
+  circulo(g, x - 5, y, 6, color, 3);
+  linea(g, x, y, x + 10, y, color, 3);
+  linea(g, x + 7, y, x + 7, y + 5, color, 3);
+}
+function dibujarMapa() {
+  const m = mapa;
+  for (let cy = 0; cy < m.alto; cy++) for (let cx = 0; cx < m.ancho; cx++) {
+    const x = cx * TILE, y = cy * TILE, c = m.celda(cx, cy);
+    if (c === '#') {
+      gm.fillStyle = COLOR_PARED; gm.fillRect(x, y, TILE, TILE);
+      rectBorde(gm, x, y, TILE, TILE, 'rgb(60,52,66)', 2);
+    } else {
+      gm.fillStyle = COLOR_PISO; gm.fillRect(x, y, TILE, TILE);
+      linea(gm, x, y + 0.5, x + TILE, y + 0.5, 'rgb(52,48,58)', 1);   // rejilla sutil del piso
+    }
+    if ('RVA'.includes(c)) {
+      const color = COLORES[c.toLowerCase()];
+      if (m.coloresAbiertos.has(c.toLowerCase())) rectBorde(gm, x, y, TILE, TILE, color, 3);   // abierta: solo el marco
+      else {
+        gm.fillStyle = color; gm.fillRect(x, y, TILE, TILE);
+        rectBorde(gm, x, y, TILE, TILE, 'rgb(30,30,30)', 3);
+        circulo(gm, x + TILE / 2, y + TILE / 2, 5, 'rgb(240,240,240)');
+      }
+    }
+  }
+  if (puerta) {
+    const x = puerta[0] * TILE, y = puerta[1] * TILE;
+    gm.fillStyle = m.puertaAbierta ? COLOR_PUERTA_ABIERTA : COLOR_PUERTA_CERRADA; gm.fillRect(x, y, TILE, TILE);
+    rectBorde(gm, x, y, TILE, TILE, 'rgb(30,20,10)', 3);
+    if (!m.puertaAbierta) circulo(gm, x + TILE / 2, y + TILE / 2, 5, 'rgb(240,220,80)');
+  }
+  for (const [k, c] of objetos) {
+    const [cx, cy] = k.split(',').map(Number);
+    const x = cx * TILE + TILE / 2, y = cy * TILE + TILE / 2;
+    if (c === 'B') {
+      gm.fillStyle = COLOR_PILA; gm.fillRect(x - 6, y - 10, 12, 20);
+      rectBorde(gm, x - 6, y - 10, 12, 20, 'rgb(30,80,40)', 2);
+      gm.fillStyle = 'rgb(30,80,40)'; gm.fillRect(x - 3, y - 13, 6, 3);
+    } else dibujarLlave(gm, x, y, c === 'K' ? COLOR_LLAVE : COLORES[c]);
+  }
+}
+
+// La oscuridad: una capa negra a la que le recortamos la luz con degradados.
+function dibujarOscuridad() {
+  const j = jugador;
+  go.globalCompositeOperation = 'source-over';
+  go.fillStyle = 'rgba(0,0,0,0.92)';
+  go.fillRect(0, 0, oscuridad.width, oscuridad.height);
+  go.globalCompositeOperation = 'destination-out';
+  // lo poquito que ves sin linterna
+  let luz = go.createRadialGradient(j.x, j.y, 0, j.x, j.y, RADIO_AMBIENTE);
+  luz.addColorStop(0, 'rgba(0,0,0,0.85)'); luz.addColorStop(1, 'rgba(0,0,0,0)');
+  go.fillStyle = luz; go.beginPath(); go.arc(j.x, j.y, RADIO_AMBIENTE, 0, Math.PI * 2); go.fill();
+  // el cono de la linterna
+  if (j.alumbra) {
+    const ang = Math.atan2(j.mira[1], j.mira[0]);
+    const mitad = ANGULO_LINTERNA / 2 * Math.PI / 180;
+    luz = go.createRadialGradient(j.x, j.y, 0, j.x, j.y, RADIO_LINTERNA);
+    luz.addColorStop(0, 'rgba(0,0,0,1)'); luz.addColorStop(0.5, 'rgba(0,0,0,0.8)'); luz.addColorStop(1, 'rgba(0,0,0,0)');
+    go.fillStyle = luz;
+    go.beginPath(); go.moveTo(j.x, j.y); go.arc(j.x, j.y, RADIO_LINTERNA, ang - mitad, ang + mitad); go.closePath(); go.fill();
+  }
+  // Los ojos brillan en la oscuridad aunque estén lejos
+  go.globalCompositeOperation = 'source-over';
+  if (monstruo && monstruo.estado === 'caza') for (const ox of [-8, 8]) circulo(go, monstruo.x + ox, monstruo.y - 6, 5, 'rgb(255,40,40)');
+  if (espectro) for (const ox of [-7, 7]) circulo(go, espectro.x + ox, espectro.y - 8, 3, 'rgb(120,140,200)');
+  gm.drawImage(oscuridad, 0, 0);
+}
+
+function dibujar() {
+  if (estado === 'menu') { dibujarMenu(); return; }
+  dibujarMapa();
+  if (monstruo) monstruo.dibujar(gm);
+  if (espectro) espectro.dibujar(gm);
+  jugador.dibujar(gm);
+  dibujarOscuridad();
+  // temblor: movemos el mundo un poquito al azar
+  let sx = 0, sy = 0;
+  if (estado === 'jugando' && temblor > 0) { sx = azarEntre(-temblor, temblor); sy = azarEntre(-temblor, temblor); }
+  ctx.fillStyle = 'rgb(0,0,0)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(mundo, sx, sy);
+  dibujarHud();
+  if (estado === 'atrapado') pantallaFinal('TE ATRAPÓ', 'rgb(255,60,60)', 'R para volver a intentar');
+  else if (estado === 'nivel_completo') pantallaFinal('¡ESCAPASTE!', 'rgb(80,255,120)', 'Nivel ' + (nivel + 1) + ' listo. ESPACIO para el nivel ' + (nivel + 2));
+  else if (estado === 'escapaste') pantallaFinal('¡ESCAPASTE DE LA FÁBRICA!', 'rgb(80,255,120)', 'Tiempo total: ' + Math.floor(tiempoTotal / FPS) + ' s  -  R para jugar de nuevo');
+}
+
+function dibujarHud() {
+  const seg = Math.floor(tiempo / FPS);
+  const t = 'Nivel ' + (nivel + 1) + '/' + NIVELES.length + '   Llaves: ' + llavesTomadas + '/' + totalLlaves + '   Tiempo: ' + seg + ' s';
+  texto(ctx, t, 10, 8, 20, 'rgb(255,255,255)');
+  let x = 10 + anchoTexto(ctx, t, 20) + 20;
+  for (const c of llavesColor) { dibujarLlave(ctx, x, 18, COLORES[c]); x += 26; }
+  // batería de la linterna
+  const ancho = canvas.width, j = jugador;
+  rectBorde(ctx, ancho - 120, 10, 100, 16, 'rgb(200,200,200)', 2);
+  ctx.fillStyle = j.bateria > 30 ? COLOR_PILA : 'rgb(240,80,60)';
+  ctx.fillRect(ancho - 118, 12, Math.floor(96 * j.bateria / 100), 12);
+  texto(ctx, j.alumbra ? 'ON' : (j.bateria <= 0 ? 'VACÍA' : 'OFF'), ancho - 185, 8, 20, 'rgb(255,255,255)');
+  if (aviso && tiempo < avisoHasta) texto(ctx, aviso, ancho / 2, canvas.height - 22, 20, 'rgb(255,240,150)', true);
+}
+
+function dibujarMenu() {
+  ctx.fillStyle = 'rgb(12,10,14)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  texto(ctx, 'ESCAPE DE LA FÁBRICA', cx, cy - 130, 52, 'rgb(255,220,90)', true);
+  texto(ctx, 'Elige la dificultad:', cx, cy - 60, 20, 'rgb(220,220,220)', true);
+  Object.entries(DIFICULTADES).forEach(([nombre, aj], i) => {
+    const elegido = i === opcionMenu;
+    texto(ctx, (elegido ? '> ' : '   ') + (i + 1) + '. ' + nombre + '   (linterna dura ' + aj.bateria + ' s)', cx, cy - 15 + i * 40, 28, elegido ? 'rgb(255,255,255)' : 'rgb(140,140,140)', true);
+  });
+  texto(ctx, 'Arriba/abajo o 1-2-3 para elegir, ESPACIO para empezar', cx, cy + 120, 20, 'rgb(180,180,180)', true);
+  texto(ctx, 'F prende y apaga la linterna. Al espectro, mantenlo alumbrado.', cx, cy + 150, 20, 'rgb(140,140,160)', true);
+}
+
+function pantallaFinal(titulo, color, ayuda) {
+  ctx.fillStyle = 'rgba(0,0,0,0.67)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  texto(ctx, titulo, cx, cy - 30, titulo.length < 16 ? 52 : 28, color, true);
+  texto(ctx, ayuda, cx, cy + 30, 20, 'rgb(230,230,230)', true);
+}
+
+// ---------- El bucle: siempre 60 cuadros por segundo ----------
+cargarNivel();
+estado = 'menu';
+let acumulado = 0;
+let ultimoTiempo = performance.now();
+function bucle(ahora) {
+  let dt = ahora - ultimoTiempo;
+  ultimoTiempo = ahora;
+  if (dt > 250) dt = 250;      // si la pestaña estuvo escondida, no saltamos mil cuadros
+  acumulado += dt;
+  while (acumulado >= PASO) { actualizar(); acumulado -= PASO; }
+  dibujar();
+  requestAnimationFrame(bucle);
+}
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>

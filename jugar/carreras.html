@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carreras de Manu</title>
+<style>
+  /* Colores de la página (style.css) */
+  :root {
+    --pasto: #5d9a3c; --pasto-oscuro: #3e6b28; --piedra: #7f7f7f; --piedra-oscura: #4f4f4f;
+    --cielo: #7fb2f0; --diamante: #4aedd9; --texto: #ffffff; --sombra: #1a1a1a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 16px;
+    background: var(--sombra); color: var(--texto);
+    font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 12px; line-height: 1.8;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  h1 { font-size: 18px; color: var(--diamante); text-shadow: 3px 3px 0 #000; margin: 8px 0 12px; text-align: center; }
+  canvas {
+    display: block; max-width: 100%; height: auto; background: #000;
+    border: 4px solid var(--piedra-oscura); box-shadow: 6px 6px 0 #000;
+    image-rendering: pixelated; touch-action: none;
+  }
+  .ayuda { font-size: 9px; color: #dddddd; text-align: center; max-width: 560px; margin: 10px 0 0; }
+  .boton {
+    display: inline-block; margin: 16px 0; padding: 12px 16px; font-size: 11px;
+    background: #3c6ec9; border: 4px solid #244a8c; box-shadow: 4px 4px 0 #000;
+    color: var(--texto); text-decoration: none; text-shadow: 2px 2px 0 #000;
+  }
+  .boton:hover { background: #4a82e0; }
+  .boton:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+  /* Botones de celular: solo aparecen en pantallas táctiles */
+  .tactil { display: none; gap: 10px; margin-top: 12px; width: 100%; max-width: 900px; justify-content: space-between; }
+  @media (pointer: coarse) { .tactil { display: flex; } }
+  .tactil div { display: flex; gap: 10px; }
+  .tactil button {
+    font-family: inherit; font-size: 20px; width: 64px; height: 64px;
+    background: var(--piedra-oscura); border: 4px solid #000; color: var(--texto);
+    box-shadow: 4px 4px 0 #000; touch-action: none; user-select: none;
+  }
+  .tactil button:active { background: var(--piedra); }
+</style>
+</head>
+<body>
+<h1>CARRERAS</h1>
+<canvas id="juego" width="900" height="650"></canvas>
+<div class="tactil">
+  <div><button data-tecla="ArrowLeft">◀</button><button data-tecla="ArrowRight">▶</button></div>
+  <div><button data-tecla="Enter">⏎</button></div>
+  <div><button data-tecla="ArrowDown">▼</button><button data-tecla="ArrowUp">▲</button></div>
+</div>
+<p class="ayuda">↑ acelerar &middot; ↓ frenar / atrás &middot; ← → doblar &middot; 1 / 2 / 3: pista &middot; ENTER: largar &middot; R: de nuevo &middot; M: menú</p>
+<a class="boton" href="../index.html">&larr; Volver a la página</a>
+
+<script>
+// ============================================================
+//  Carreras — versión web del carreras.py de Manu
+//  Todo se dibuja con canvas. Sin imágenes, sin internet.
+// ============================================================
+
+// ---------- Ajustes del juego (los mismos que en carreras.py) ----------
+const TILE = 30;                       // tamaño de cada cuadrito de la pista
+const COLS = 30, FILAS = 20;
+const ANCHO = COLS * TILE, ALTO = FILAS * TILE + 50;   // abajo va el HUD
+const FPS = 60;
+const PASO = 1000 / FPS;
+const DT = 1 / FPS;
+
+const VUELTAS = 3;
+const RIVALES = 5;
+
+const ACELERACION = 0.16;              // cuánto sube la velocidad por cuadro con el acelerador
+const FRENO = 0.35;
+const VEL_MAX = 6.5;                   // velocidad tope en asfalto (píxeles por cuadro)
+const VEL_MAX_PASTO = 3.0;
+const VEL_MAX_ATRAS = 2.0;
+const ROCE = 0.985;                    // suelta el acelerador y frenas solo
+const ROCE_PASTO = 0.94;
+const GIRO = 3.6;                      // grados por cuadro al doblar, a velocidad tope
+const AGARRE = 0.82;                   // cuánto del derrape se corrige por cuadro (1 = sin derrape)
+const AGARRE_ACEITE = 0.985;           // con aceite casi no se corrige: ¡derrape!
+const DURACION_TURBO = 1.6;            // segundos
+const DURACION_ACEITE = 1.5;
+const TURBO_VEL = 1.5;
+const REBOTE = -0.35;                  // al chocar un muro, la velocidad se multiplica por esto
+const CUENTA_ATRAS = 3.0;
+
+// ---------- Colores ----------
+const FONDO = 'rgb(25,28,35)';
+const ASFALTO = 'rgb(70,70,78)';
+const PASTO = 'rgb(60,140,60)';
+const MURO = 'rgb(150,150,160)';
+const MURO_BORDE = 'rgb(100,100,110)';
+const CHECK = 'rgb(255,210,60)';
+const META_A = 'rgb(240,240,240)';
+const META_B = 'rgb(20,20,20)';
+const TURBO = 'rgb(80,240,120)';
+const ACEITE = 'rgb(15,15,20)';
+const BLANCO = 'rgb(240,240,240)';
+const NEGRO = 'rgb(0,0,0)';
+const GRIS = 'rgb(140,140,150)';
+const ROJO = 'rgb(225,45,45)';
+const VERDE = 'rgb(80,230,100)';
+const COLORES_RIVALES = ['rgb(60,120,230)', 'rgb(250,140,30)', 'rgb(240,220,60)', 'rgb(200,80,220)', 'rgb(60,210,210)'];
+
+// ---------- Las pistas ----------
+// Cada pista es un dibujo de texto de 30 x 20. Cada letra es un cuadrito:
+//   #  muro          .  asfalto        g  pasto (frena)
+//   1-9 checkpoints (en orden)         M  meta
+//   S  lugar de largada               T  turbo        O  mancha de aceite
+// "puntos" son los lugares por donde manejan los rivales (columna, fila), en orden.
+const PISTAS = [
+  {
+    nombre: 'Óvalo', angulo: 0,
+    puntos: [[26.5, 16.5], [26.5, 3], [3, 2.5], [3, 16.5]],
+    dibujo: [
+      '##############################',
+      '#.............2..............#',
+      '#.....T.......2..........O...#',
+      '#.............2..............#',
+      '#.............2..............#',
+      '#.....gggggggggggggggggggg...#',
+      '#.....g################g.....#',
+      '#.....g################g.....#',
+      '#.....g################g.....#',
+      '#33333g################g11111#',
+      '#.....g################g.....#',
+      '#.....g################g.....#',
+      '#.....g################g.....#',
+      '#.....g################g.....#',
+      '#.....gggggggggggggggggggg...#',
+      '#.........SS..M..............#',
+      '#..O......SS..M..............#',
+      '#.........SS..M.......T......#',
+      '#.........SS..M..............#',
+      '##############################',
+    ],
+  },
+  {
+    nombre: 'Chicanas', angulo: 0,
+    puntos: [[11.5, 17.5], [16.5, 15.5], [26.5, 16.5], [26.5, 3], [18.5, 3.5], [13.5, 1.5], [3, 2.5], [3, 16.5]],
+    dibujo: [
+      '##############################',
+      '#..........2......gg.........#',
+      '#..........2......##.........#',
+      '#....T.....2.##.........O....#',
+      '#..........2.##..............#',
+      '#.....gggggggggggggggggggg...#',
+      '#.....g################g.....#',
+      '#.....g################g.....#',
+      '#.....g################g.....#',
+      '#33333g################g11111#',
+      '#.....g################g.....#',
+      '#.....g################g.....#',
+      '#.....g################g.....#',
+      '#.....g################g.....#',
+      '#.....gggggggggggggggggggg...#',
+      '#..........##........M.......#',
+      '#....SS....##........M..O....#',
+      '#....SS.........##...M...T...#',
+      '#....SS.........##...M.......#',
+      '##############################',
+    ],
+  },
+  {
+    nombre: 'Gran Premio', angulo: 0,
+    puntos: [[5.5, 17.5], [16, 17.5], [26.5, 16.5], [26.5, 12], [26, 8.5], [27.5, 3.5], [16, 2.5], [3, 2.5], [3, 9], [3, 13.5], [3.5, 17]],
+    dibujo: [
+      '##############################',
+      '#..............2.............#',
+      '#..............2.........gg..#',
+      '#....T.........2.........gg..#',
+      '#..............2.......O.....#',
+      '#.....gggggggggggggggg.......#',
+      '#.....g###############g......#',
+      '#.....g###############g......#',
+      '#.....g###############g111111#',
+      '#.....g###############g......#',
+      '#.....g################gg....#',
+      '#.....g#################g....#',
+      '#.....g#################g....#',
+      '#33333g#################g....#',
+      '#.....gg################g....#',
+      '#........gMgggggggggggggg....#',
+      '#........O.M.....gg..........#',
+      '#SSS......M...T..............#',
+      '#SSS......M..................#',
+      '##############################',
+    ],
+  },
+];
+
+// ---------- Mejores vueltas (localStorage en vez de mejores.txt) ----------
+function cargarMejores() {
+  try { return JSON.parse(localStorage.getItem('carreras-mejores')) || {}; } catch (e) { return {}; }
+}
+function guardarMejores(m) {
+  try { localStorage.setItem('carreras-mejores', JSON.stringify(m)); } catch (e) {}
+}
+function formatoTiempo(seg) {
+  const m = Math.floor(seg / 60), s = seg % 60;
+  return m + ':' + (s < 10 ? '0' : '') + s.toFixed(2);
+}
+
+// ---------- Sonidos fabricados con matemáticas (WebAudio) ----------
+let audio = null;
+function encenderAudio() {
+  if (audio) return;
+  try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = false; }
+}
+function beep(hz, seg, volumen = 0.5, hzFin = null, retraso = 0) {
+  if (!audio) return;
+  const o = audio.createOscillator(), g = audio.createGain();
+  const t0 = audio.currentTime + retraso;
+  o.frequency.setValueAtTime(hz, t0);
+  if (hzFin) o.frequency.linearRampToValueAtTime(hzFin, t0 + seg);
+  g.gain.setValueAtTime(volumen * 0.3, t0);
+  g.gain.linearRampToValueAtTime(0, t0 + seg);
+  o.connect(g).connect(audio.destination);
+  o.start(t0); o.stop(t0 + seg);
+}
+function ruido(seg, volumen = 0.4) {
+  if (!audio) return;
+  const n = Math.floor(audio.sampleRate * seg);
+  const buf = audio.createBuffer(1, n, audio.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = volumen * (Math.random() * 2 - 1) * (1 - i / n);
+  const s = audio.createBufferSource(); s.buffer = buf; s.connect(audio.destination); s.start();
+}
+const SONIDOS = {
+  cuenta: () => beep(660, 0.15),
+  ya: () => beep(990, 0.4),
+  check: () => beep(1100, 0.06, 0.3),
+  vuelta: () => { beep(523, 0.1); beep(659, 0.1, 0.5, null, 0.1); beep(784, 0.2, 0.5, null, 0.2); },
+  choque: () => ruido(0.15, 0.5),
+  turbo: () => beep(200, 0.4, 0.5, 900),
+  aceite: () => beep(500, 0.3, 0.4, 150),
+  final: () => { beep(523, 0.15); beep(659, 0.15, 0.5, null, 0.15); beep(784, 0.15, 0.5, null, 0.3); beep(1046, 0.4, 0.5, null, 0.45); },
+};
+function sonar(nombre) { SONIDOS[nombre](); }
+
+// ---------- Canvas ----------
+const canvas = document.getElementById('juego');
+const ctx = canvas.getContext('2d');
+const azarEntre = (a, b) => a + Math.random() * (b - a);
+const rad = (g) => g * Math.PI / 180;
+
+function texto(cadena, x, y, tam, color, modo = 'izq') {
+  ctx.font = tam + 'px sans-serif';
+  ctx.fillStyle = color;
+  ctx.textAlign = modo === 'centro' ? 'center' : modo === 'derecha' ? 'right' : 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(cadena, x, y);
+}
+function anchoTexto(cadena, tam) { ctx.font = tam + 'px sans-serif'; return ctx.measureText(cadena).width; }
+
+// ---------- La pista ----------
+class Pista {
+  constructor(datos) {
+    this.nombre = datos.nombre;
+    this.angulo = datos.angulo;
+    this.puntos = datos.puntos.map(([c, f]) => [c * TILE, f * TILE]);
+    this.filas = datos.dibujo;
+    this.checkpoints = [...new Set(this.filas.join('').split('').filter(ch => ch >= '1' && ch <= '9'))].sort();
+    this.largadas = [];
+    this.centroCheck = {};
+    const celdasM = [];
+    const celdasCheck = {};
+    this.filas.forEach((fila, f) => [...fila].forEach((ch, c) => {
+      if (ch === 'S') this.largadas.push([(c + 0.5) * TILE, (f + 0.5) * TILE]);
+      if (ch === 'M') celdasM.push([c, f]);
+      if (ch >= '1' && ch <= '9') (celdasCheck[ch] = celdasCheck[ch] || []).push([c, f]);
+    }));
+    const centro = (celdas) => [
+      (celdas.reduce((s, [c]) => s + c, 0) / celdas.length + 0.5) * TILE,
+      (celdas.reduce((s, [, f]) => s + f, 0) / celdas.length + 0.5) * TILE];
+    for (const d of this.checkpoints) this.centroCheck[d] = centro(celdasCheck[d]);
+    this.centroMeta = centro(celdasM);
+    this.superficie = null;
+  }
+
+  letra(x, y) {
+    const c = Math.floor(x / TILE), f = Math.floor(y / TILE);
+    if (f >= 0 && f < FILAS && c >= 0 && c < COLS) return this.filas[f][c];
+    return '#';
+  }
+  esMuro(x, y) { return this.letra(x, y) === '#'; }
+
+  vertical(c, f) {
+    // ¿Este checkpoint es una raya vertical (mismo número arriba o abajo)?
+    const ch = this.filas[f][c];
+    return (f > 0 && this.filas[f - 1][c] === ch) || (f < FILAS - 1 && this.filas[f + 1][c] === ch);
+  }
+
+  // Dibuja la pista una sola vez en un canvas aparte, para no repetirlo cada cuadro.
+  dibujarBase() {
+    const s = document.createElement('canvas');
+    s.width = COLS * TILE; s.height = FILAS * TILE;
+    const g = s.getContext('2d');
+    g.fillStyle = FONDO; g.fillRect(0, 0, s.width, s.height);
+    this.filas.forEach((fila, f) => [...fila].forEach((ch, c) => {
+      const x = c * TILE, y = f * TILE;
+      if (ch === '#') {
+        g.fillStyle = MURO; g.fillRect(x, y, TILE, TILE);
+        g.strokeStyle = MURO_BORDE; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+      } else if (ch === 'g') {
+        g.fillStyle = PASTO; g.fillRect(x, y, TILE, TILE);
+      } else {
+        g.fillStyle = ASFALTO; g.fillRect(x, y, TILE, TILE);
+      }
+      if (ch >= '1' && ch <= '9') {
+        g.fillStyle = CHECK;
+        if (this.vertical(c, f)) g.fillRect(x + 8, y, TILE - 16, TILE);
+        else g.fillRect(x, y + 8, TILE, TILE - 16);
+      } else if (ch === 'M') {
+        for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+          g.fillStyle = (i + j) % 2 === 0 ? META_A : META_B;
+          g.fillRect(x + i * 10, y + j * 10, 10, 10);
+        }
+      } else if (ch === 'T') {
+        const cx = x + TILE / 2, cy = y + TILE / 2;
+        g.fillStyle = TURBO;
+        g.beginPath(); g.moveTo(cx - 10, cy + 8); g.lineTo(cx + 10, cy + 8); g.lineTo(cx, cy - 10); g.fill();
+      } else if (ch === 'O') {
+        g.fillStyle = ACEITE;
+        g.beginPath(); g.ellipse(x + TILE / 2, y + TILE / 2, TILE / 2 - 2, TILE / 2 - 5, 0, 0, Math.PI * 2); g.fill();
+      }
+    }));
+    this.superficie = s;
+  }
+}
+
+// ---------- Los autos ----------
+class Auto {
+  constructor(pista, color, pos, esJugador = false) {
+    this.pista = pista;
+    this.color = color;
+    [this.x, this.y] = pos;
+    this.angulo = pista.angulo;        // grados; 0 = derecha, 90 = abajo
+    this.vx = 0; this.vy = 0;          // velocidad como vector
+    this.esJugador = esJugador;
+    this.vueltas = 0;
+    this.siguiente = 0;                // índice del próximo checkpoint que tiene que pasar
+    this.termino = false;
+    this.turbo = 0; this.aceite = 0;
+    this.tiempoVuelta = 0; this.mejorVuelta = null; this.tiempoTotal = 0;
+    this.punto = 0;                    // para los rivales: a qué punto van
+    this.habilidad = azarEntre(0.86, 1.0);   // los rivales no son todos igual de buenos
+    this.choqueT = 0;
+    this.paradoT = 0;                  // segundos que lleva casi detenido (para despegarse de un muro)
+    this.retrocediendo = 0;            // segundos que le quedan de marcha atrás
+  }
+
+  // velocidad "hacia adelante" (positiva) o "hacia atrás" (negativa)
+  get rapidez() {
+    const r = rad(this.angulo);
+    return this.vx * Math.cos(r) + this.vy * Math.sin(r);
+  }
+
+  controlar(acelerar, frenar, izquierda, derecha, dt) {
+    const letra = this.pista.letra(this.x, this.y);
+    const enPasto = letra === 'g';
+
+    // 1. Ítems: pisar un turbo o una mancha de aceite.
+    if (letra === 'T' && this.turbo <= 0) { this.turbo = DURACION_TURBO; if (this.esJugador) sonar('turbo'); }
+    if (letra === 'O' && this.aceite <= 0) { this.aceite = DURACION_ACEITE; if (this.esJugador) sonar('aceite'); }
+    this.turbo = Math.max(0, this.turbo - dt);
+    this.aceite = Math.max(0, this.aceite - dt);
+    this.choqueT = Math.max(0, this.choqueT - dt);
+
+    // 2. Doblar: cuanto más rápido vas, más dobla.
+    const rapidez = this.rapidez;
+    let tope = enPasto ? VEL_MAX_PASTO : VEL_MAX;
+    if (this.turbo > 0) tope *= TURBO_VEL;
+    const giro = GIRO * Math.max(-1, Math.min(1, rapidez / VEL_MAX));
+    if (izquierda) this.angulo -= giro;
+    if (derecha) this.angulo += giro;
+
+    // 3. Acelerar / frenar a lo largo de hacia dónde mira el auto.
+    const r = rad(this.angulo);
+    const fx = Math.cos(r), fy = Math.sin(r);
+    if (acelerar) {
+      const m = this.turbo > 0 ? TURBO_VEL : 1;
+      this.vx += fx * ACELERACION * m; this.vy += fy * ACELERACION * m;
+    }
+    if (frenar) {
+      if (rapidez > 0.3) { this.vx -= fx * FRENO; this.vy -= fy * FRENO; }
+      else { this.vx -= fx * ACELERACION * 0.6; this.vy -= fy * ACELERACION * 0.6; }
+    }
+
+    // 4. Agarre: la parte de la velocidad que va "de lado" se corrige (o no, con aceite).
+    let adelante = this.vx * fx + this.vy * fy;
+    const ladoX = this.vx - adelante * fx, ladoY = this.vy - adelante * fy;
+    const agarre = this.aceite > 0 ? AGARRE_ACEITE : AGARRE;
+    adelante *= enPasto ? ROCE_PASTO : ROCE;
+    adelante = Math.max(-VEL_MAX_ATRAS, Math.min(tope, adelante));
+    this.vx = adelante * fx + ladoX * agarre;
+    this.vy = adelante * fy + ladoY * agarre;
+
+    // 5. Moverse, chocando con los muros (eje por eje, para deslizarse).
+    if (this.pista.esMuro(this.x + this.vx, this.y)) { this.vx *= REBOTE; this.chocar(); }
+    else this.x += this.vx;
+    if (this.pista.esMuro(this.x, this.y + this.vy)) { this.vy *= REBOTE; this.chocar(); }
+    else this.y += this.vy;
+
+    // 6. Checkpoints y meta.
+    this.revisarProgreso(dt);
+  }
+
+  chocar() {
+    if (this.esJugador && this.choqueT <= 0 && Math.hypot(this.vx, this.vy) > 1.5) { sonar('choque'); this.choqueT = 0.4; }
+  }
+
+  revisarProgreso(dt) {
+    if (this.termino) return;
+    this.tiempoVuelta += dt;
+    this.tiempoTotal += dt;
+    const letra = this.pista.letra(this.x, this.y);
+    const checks = this.pista.checkpoints;
+    if (this.siguiente < checks.length && letra === checks[this.siguiente]) {
+      this.siguiente += 1;
+      if (this.esJugador) sonar('check');
+    } else if (letra === 'M' && this.siguiente === checks.length) {
+      this.vueltas += 1;
+      this.siguiente = 0;
+      if (this.mejorVuelta === null || this.tiempoVuelta < this.mejorVuelta) this.mejorVuelta = this.tiempoVuelta;
+      this.tiempoVuelta = 0;
+      if (this.vueltas >= VUELTAS) this.termino = true;
+      if (this.esJugador) sonar(this.termino ? 'final' : 'vuelta');
+    }
+  }
+
+  // Un número que crece mientras más avanzado vas: sirve para las posiciones en vivo.
+  progreso() {
+    const checks = this.pista.checkpoints;
+    const objetivo = this.siguiente < checks.length ? this.pista.centroCheck[checks[this.siguiente]] : this.pista.centroMeta;
+    const d = Math.hypot(this.x - objetivo[0], this.y - objetivo[1]);
+    return this.vueltas * 100 + this.siguiente * 10 + (1 - Math.min(1, d / 2000));
+  }
+
+  // la "inteligencia" de los rivales: van de punto en punto, doblan hacia el punto y frenan en las curvas
+  manejarSolo(dt) {
+    const puntos = this.pista.puntos;
+    let [px, py] = puntos[this.punto];
+    const [sx, sy] = puntos[(this.punto + 1) % puntos.length];
+    // Pasa al siguiente punto si ya llegó, o si se lo saltó (el siguiente ya está más cerca).
+    if (Math.hypot(px - this.x, py - this.y) < TILE * 1.4 ||
+        Math.hypot(sx - this.x, sy - this.y) < Math.hypot(px - this.x, py - this.y) * 0.8) {
+      this.punto = (this.punto + 1) % puntos.length;
+      [px, py] = puntos[this.punto];
+    }
+    const deseado = Math.atan2(py - this.y, px - this.x) * 180 / Math.PI;
+    const diferencia = ((deseado - this.angulo + 180) % 360 + 360) % 360 - 180;   // entre -180 y 180
+    const izquierda = diferencia < -4, derecha = diferencia > 4;
+
+    // Plan B: si lleva un segundo pegado a un muro, retrocede un poco doblando al revés.
+    if (Math.abs(this.rapidez) < 0.6 && !this.termino) this.paradoT += dt; else this.paradoT = 0;
+    if (this.paradoT > 1.0) { this.paradoT = 0; this.retrocediendo = 0.7; }
+    if (this.retrocediendo > 0) {
+      this.retrocediendo -= dt;
+      this.controlar(false, true, derecha, izquierda, dt);
+      return;
+    }
+    // En una curva cerrada, o si va muy rápido para su habilidad, suelta el acelerador.
+    const rapido = this.rapidez > VEL_MAX * this.habilidad;
+    const curva = Math.abs(diferencia) > 50 && this.rapidez > VEL_MAX * 0.5;
+    let acelerar = !rapido && !curva;
+    const frenar = curva && this.rapidez > VEL_MAX * 0.7;
+    if (this.termino) acelerar = this.rapidez < VEL_MAX * 0.5;   // ya terminó: da vueltas tranquilo
+    this.controlar(acelerar, frenar, izquierda, derecha, dt);
+  }
+
+  dibujar() {
+    const r = rad(this.angulo);
+    const fx = Math.cos(r), fy = Math.sin(r);
+    const lx = -fy, ly = fx;             // vector "de lado"
+    const largo = 13, ancho = 8;
+    const p = [
+      [this.x + fx * largo + lx * ancho, this.y + fy * largo + ly * ancho],
+      [this.x + fx * largo - lx * ancho, this.y + fy * largo - ly * ancho],
+      [this.x - fx * largo - lx * ancho, this.y - fy * largo - ly * ancho],
+      [this.x - fx * largo + lx * ancho, this.y - fy * largo + ly * ancho],
+    ];
+    ctx.beginPath(); ctx.moveTo(p[0][0], p[0][1]);
+    for (let i = 1; i < 4; i++) ctx.lineTo(p[i][0], p[i][1]);
+    ctx.closePath();
+    ctx.fillStyle = this.color; ctx.fill();
+    ctx.strokeStyle = NEGRO; ctx.lineWidth = 2; ctx.stroke();
+    // el "parabrisas" marca hacia dónde mira
+    ctx.fillStyle = BLANCO;
+    ctx.beginPath(); ctx.arc(this.x + fx * 6, this.y + fy * 6, 3, 0, Math.PI * 2); ctx.fill();
+    if (this.turbo > 0) {
+      ctx.fillStyle = TURBO;
+      ctx.beginPath(); ctx.arc(this.x - fx * 15, this.y - fy * 15, 5, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+}
+
+// ---------- La carrera ----------
+let pistaElegida = 0;
+let estado = 'inicio';        // 'inicio', 'cuenta', 'corriendo', 'final'
+let mejores = cargarMejores();
+let pista, jugador, rivales, autos, cuenta, ultimoBeep, posicionFinal, nuevoRecord;
+const minis = PISTAS.map(p => { const pi = new Pista(p); pi.dibujarBase(); return pi.superficie; });
+
+function empezar() {
+  pista = new Pista(PISTAS[pistaElegida]);
+  pista.dibujarBase();
+  const largadas = pista.largadas.slice(0, RIVALES + 1);
+  for (let i = largadas.length - 1; i > 0; i--) {         // mezclar
+    const j = Math.floor(Math.random() * (i + 1));
+    [largadas[i], largadas[j]] = [largadas[j], largadas[i]];
+  }
+  jugador = new Auto(pista, ROJO, largadas[0], true);
+  rivales = COLORES_RIVALES.map((c, i) => new Auto(pista, c, largadas[i + 1]));
+  autos = [jugador, ...rivales];
+  cuenta = CUENTA_ATRAS;
+  ultimoBeep = 4;
+  estado = 'cuenta';
+  posicionFinal = null;
+  nuevoRecord = false;
+}
+
+// Lista de autos ordenados del primero al último
+function posiciones() {
+  return [...autos].sort((a, b) => (b.termino - a.termino) || (b.progreso() - a.progreso()));
+}
+
+// ---------- Teclas ----------
+const teclas = {};
+document.addEventListener('keydown', (e) => {
+  encenderAudio();
+  if (e.key.startsWith('Arrow')) e.preventDefault();
+  teclas[e.key] = true;
+  tecla(e.key);
+});
+document.addEventListener('keyup', (e) => { teclas[e.key] = false; });
+// botones de celular: mantener apretado = tecla apretada
+document.querySelectorAll('.tactil button').forEach(b => {
+  const k = b.dataset.tecla;
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); encenderAudio(); teclas[k] = true; tecla(k); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { teclas[k] = false; });
+});
+canvas.addEventListener('pointerdown', () => { encenderAudio(); if (estado === 'inicio') empezar(); else if (estado === 'final') empezar(); });
+
+function tecla(k) {
+  if (estado === 'inicio') {
+    if (k === '1' || k === '2' || k === '3') pistaElegida = Number(k) - 1;
+    if (k === 'Enter') empezar();
+  } else if (estado === 'final') {
+    if (k === 'r' || k === 'R') empezar();
+    else if (k === 'm' || k === 'M') estado = 'inicio';
+  } else if (k === 'm' || k === 'M') estado = 'inicio';
+}
+
+// ---------- Lógica ----------
+function actualizar() {
+  const dt = DT;
+  if (estado === 'cuenta') {
+    cuenta -= dt;
+    if (Math.floor(cuenta) + 1 < ultimoBeep && cuenta > 0) { ultimoBeep = Math.floor(cuenta) + 1; sonar('cuenta'); }
+    if (cuenta <= 0) { estado = 'corriendo'; sonar('ya'); }
+    return;
+  }
+  if (estado !== 'corriendo') return;
+
+  jugador.controlar(!!teclas.ArrowUp, !!teclas.ArrowDown, !!teclas.ArrowLeft, !!teclas.ArrowRight, dt);
+  for (const r of rivales) r.manejarSolo(dt);
+  separarAutos();
+
+  if (jugador.termino) {
+    estado = 'final';
+    posicionFinal = posiciones().indexOf(jugador) + 1;
+    const mejor = jugador.mejorVuelta;
+    if (mejor !== null && (!(pista.nombre in mejores) || mejor < mejores[pista.nombre])) {
+      mejores[pista.nombre] = mejor;
+      nuevoRecord = true;
+      guardarMejores(mejores);
+    }
+  }
+}
+
+// Si dos autos se encimaron, se empujan un poquito para separarse.
+function separarAutos() {
+  for (let i = 0; i < autos.length; i++) for (let j = i + 1; j < autos.length; j++) {
+    const a = autos[i], b = autos[j];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const d = Math.hypot(dx, dy);
+    if (d > 0 && d < 22) {
+      const empuje = (22 - d) / 2;
+      const ex = dx / d * empuje, ey = dy / d * empuje;
+      if (!pista.esMuro(a.x - ex, a.y - ey)) { a.x -= ex; a.y -= ey; }
+      if (!pista.esMuro(b.x + ex, b.y + ey)) { b.x += ex; b.y += ey; }
+    }
+  }
+}
+
+// ---------- Dibujar ----------
+function dibujar() {
+  if (estado === 'inicio') { dibujarInicio(); return; }
+  ctx.fillStyle = FONDO; ctx.fillRect(0, 0, ANCHO, ALTO);
+  ctx.drawImage(pista.superficie, 0, 0);
+  for (const a of rivales) a.dibujar();
+  jugador.dibujar();                       // el jugador se dibuja al final (encima)
+  dibujarHud();
+  if (estado === 'cuenta') {
+    texto(String(Math.floor(cuenta) + 1), ANCHO / 2, FILAS * TILE / 2, 90, CHECK, 'centro');
+  } else if (estado === 'final') dibujarFinal();
+}
+
+function dibujarHud() {
+  const j = jugador;
+  const y = FILAS * TILE + 14;
+  const pos = posiciones().indexOf(j) + 1;
+  const vuelta = Math.min(j.vueltas + 1, VUELTAS);
+  const mejor = mejores[pista.nombre];
+  const textos = [
+    'Posición ' + pos + '/' + autos.length,
+    'Vuelta ' + vuelta + '/' + VUELTAS,
+    'Tiempo ' + formatoTiempo(j.tiempoTotal),
+    'Esta vuelta ' + formatoTiempo(j.tiempoVuelta),
+    'Mejor ' + (mejor ? formatoTiempo(mejor) : '--:--'),
+  ];
+  let x = 12;
+  for (const t of textos) { texto(t, x, y, 17, BLANCO); x += anchoTexto(t, 17) + 26; }
+  if (j.turbo > 0) texto('¡TURBO!', x, y, 17, TURBO);
+  else if (j.aceite > 0) texto('¡ACEITE!', x, y, 17, CHECK);
+  // La lista de posiciones, compacta, a la derecha de la barra (cada nombre con su color).
+  x = ANCHO - 12;
+  const orden = posiciones();
+  for (let i = orden.length - 1; i >= 0; i--) {
+    const a = orden[i];
+    const nombre = a.esJugador ? 'TÚ' : 'R' + (COLORES_RIVALES.indexOf(a.color) + 1);
+    const t = (i + 1) + '.' + nombre;
+    x -= anchoTexto(t, 17);
+    texto(t, x, y + 22, 17, a.color);
+    x -= 10;
+  }
+}
+
+function dibujarInicio() {
+  ctx.fillStyle = FONDO; ctx.fillRect(0, 0, ANCHO, ALTO);
+  texto('CARRERAS', ANCHO / 2, 100, 70, ROJO, 'centro');
+  const lineas = [['Pista: ' + PISTAS[pistaElegida].nombre, BLANCO]];
+  PISTAS.forEach((p, i) => {
+    const mejor = mejores[p.nombre];
+    lineas.push(['   ' + (i + 1) + ' = ' + p.nombre + '   (mejor vuelta: ' + (mejor ? formatoTiempo(mejor) : '--:--') + ')', GRIS]);
+  });
+  lineas.push(['', BLANCO], ['ENTER para largar', VERDE], ['', BLANCO],
+    [VUELTAS + ' vueltas contra ' + RIVALES + ' rivales. Pasa las rayas amarillas en orden y cruza la meta.', GRIS],
+    ['↑: acelerar   ↓: frenar   ←/→: doblar', GRIS],
+    ['Flecha verde = turbo. Mancha negra = aceite (¡derrape!). El pasto frena.', GRIS]);
+  let y = 180;
+  for (const [t, color] of lineas) { if (t) texto(t, ANCHO / 2, y, 17, color, 'centro'); y += 30; }
+  // una vista chiquita de la pista elegida
+  const mw = COLS * 8, mh = FILAS * 8;
+  ctx.drawImage(minis[pistaElegida], ANCHO / 2 - mw / 2, ALTO - 90 - mh / 2, mw, mh);
+}
+
+function dibujarFinal() {
+  ctx.fillStyle = 'rgba(0,0,0,0.67)'; ctx.fillRect(0, 0, ANCHO, ALTO);
+  const pos = posicionFinal;
+  const titulo = { 1: '¡GANASTE!', 2: '¡2° LUGAR!', 3: '¡3° LUGAR!' }[pos] || (pos + '° LUGAR');
+  texto(titulo, ANCHO / 2, ALTO / 2 - 60, 70, pos === 1 ? VERDE : CHECK, 'centro');
+  const j = jugador;
+  texto('Tiempo total ' + formatoTiempo(j.tiempoTotal) + '   ·   mejor vuelta ' + formatoTiempo(j.mejorVuelta)
+        + (nuevoRecord ? '   ¡NUEVO RÉCORD!' : ''), ANCHO / 2, ALTO / 2, 17, BLANCO, 'centro');
+  texto('R correr de nuevo   ·   M menú', ANCHO / 2, ALTO / 2 + 40, 17, GRIS, 'centro');
+}
+
+// ---------- El bucle: siempre 60 cuadros por segundo ----------
+let acumulado = 0;
+let ultimoTiempo = performance.now();
+function bucle(ahora) {
+  let dt = ahora - ultimoTiempo;
+  ultimoTiempo = ahora;
+  if (dt > 250) dt = 250;      // si la pestaña estuvo escondida, no saltamos mil cuadros
+  acumulado += dt;
+  while (acumulado >= PASO) { actualizar(); acumulado -= PASO; }
+  dibujar();
+  requestAnimationFrame(bucle);
+}
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>

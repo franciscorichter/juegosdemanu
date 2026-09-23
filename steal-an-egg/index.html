@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Huevos de Steal an Egg</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Nunito:wght@400;700;800&display=swap">
+<style>
+  :root {
+    --bg: #f6f3e9;
+    --panel: #fffdf7;
+    --ink: #2b2a24;
+    --muted: #6d6a5c;
+    --line: #e2dccb;
+    --accent: #3f9d4a;
+    --accent-ink: #ffffff;
+    --chip-ink: #1d1c18;
+    --r-common: #b9b4a3;  --r-uncommon: #6fbf5b; --r-rare: #4a90e2;
+    --r-epic: #a45de0;    --r-legendary: #f2a900; --r-mythic: #e23c5a;
+    --r-cosmic: #2ec4c6;  --r-secret: #4a4458;   --r-eternal: #ff7a1a;
+    --r-divine: #ffd166;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1c1b17; --panel: #262520; --ink: #f0ebdc; --muted: #a8a293;
+      --line: #3a3830; --accent: #63c26e; --accent-ink: #10200f; --chip-ink: #1d1c18;
+      --r-secret: #8f86a8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1c1b17; --panel: #262520; --ink: #f0ebdc; --muted: #a8a293;
+    --line: #3a3830; --accent: #63c26e; --accent-ink: #10200f; --chip-ink: #1d1c18;
+    --r-secret: #8f86a8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Nunito", system-ui, sans-serif; font-size: 16px; line-height: 1.5;
+    padding-block: 0 48px; padding-inline: 16px;
+  }
+  header { max-width: 980px; margin: 0 auto; padding-block: 28px 12px; }
+  h1 {
+    font-family: "Fredoka", "Nunito", sans-serif; font-weight: 700; font-size: clamp(30px, 6vw, 46px);
+    margin: 0; line-height: 1.1; text-wrap: balance;
+  }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); margin: 6px 0 0; max-width: 60ch; }
+  .tools {
+    max-width: 980px; margin: 14px auto 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    position: sticky; top: env(safe-area-inset-top, 0px); background: var(--bg); padding-block: 10px; z-index: 2;
+  }
+  input[type=search] {
+    flex: 1 1 220px; font: inherit; padding: 10px 14px; border-radius: 999px;
+    border: 2px solid var(--line); background: var(--panel); color: var(--ink);
+  }
+  input[type=search]:focus { outline: 3px solid var(--accent); outline-offset: 1px; }
+  .zones-nav { display: flex; flex-wrap: wrap; gap: 6px; }
+  .zones-nav a {
+    font-size: 13px; font-weight: 800; text-decoration: none; color: var(--ink);
+    border: 2px solid var(--line); border-radius: 999px; padding: 4px 10px; background: var(--panel);
+  }
+  .zones-nav a:hover, .zones-nav a:focus-visible { border-color: var(--accent); outline: none; }
+  main { max-width: 980px; margin: 0 auto; display: grid; gap: 22px; }
+  section.zone { background: var(--panel); border: 2px solid var(--line); border-radius: 18px; padding: 16px; scroll-margin-top: 90px; }
+  .zone-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 10px; }
+  .zone-head h2 { font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 26px; margin: 0; }
+  .zone-head .en { color: var(--muted); font-size: 14px; font-weight: 700; }
+  .zone-head .note { flex-basis: 100%; color: var(--muted); font-size: 14px; margin: 0; }
+  .eggs { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .egg {
+    display: grid; grid-template-rows: auto auto auto; gap: 8px;
+    border: 2px solid var(--line); border-top: 8px solid var(--rc, var(--line));
+    border-radius: 12px; padding: 10px 12px; background: var(--bg);
+  }
+  .fotos { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 4px; }
+  .fotos img { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 8px; background: var(--panel); }
+  .fotos .flecha { font-size: 22px; color: var(--muted); }
+  .egg .name { font-weight: 800; }
+  .egg .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; }
+  .chip {
+    background: var(--rc); color: var(--chip-ink); border-radius: 999px; padding: 1px 8px;
+    font-weight: 800; font-size: 12px; letter-spacing: .02em; text-transform: uppercase;
+  }
+  .egg.secret .chip, .egg.secret.dark .chip { color: #fff; }
+  .money { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--accent); }
+  .money.unknown { color: var(--muted); font-weight: 400; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; margin-top: 4px; }
+  .legend .chip { --rc: var(--line); }
+  .empty { color: var(--muted); padding: 10px; display: none; }
+  footer { max-width: 980px; margin: 30px auto 0; color: var(--muted); font-size: 13px; }
+  footer a { color: inherit; }
+  @media (prefers-reduced-motion: no-preference) { section.zone { transition: opacity .15s; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🥚 Huevos de <span>Steal an Egg</span></h1>
+  <p class="sub">Qué mascota sale de cada huevo, qué tan raro es y cuánta plata da por segundo. Escribe un nombre para buscar.</p>
+  <div class="legend" id="legend"></div>
+</header>
+
+<div class="tools">
+  <input type="search" id="buscar" placeholder="Buscar huevo o mascota… (ej: dragon)" autocomplete="off">
+  <nav class="zones-nav" id="nav"></nav>
+</div>
+
+<main id="main"></main>
+<p class="empty" id="empty">No encontré ningún huevo con ese nombre.</p>
+
+<footer>
+  Datos de <a href="https://stealaneggwiki.net/eggs">stealaneggwiki.net</a> y
+  <a href="https://roonby.com/2026/09/13/steal-an-egg-angels-and-demons-biome-guide-all-pets/">roonby.com</a>,
+  septiembre 2026. El juego se actualiza seguido: si algo cambió, avísame y lo arreglamos.
+</footer>
+
+<script>
+// Rarezas: nombre en español, nombre en inglés, y el color que le toca
+const RAREZAS = {
+  common:    ["Común", "Common"],
+  uncommon:  ["Poco común", "Uncommon"],
+  rare:      ["Raro", "Rare"],
+  epic:      ["Épico", "Epic"],
+  legendary: ["Legendario", "Legendary"],
+  mythic:    ["Mítico", "Mythic"],
+  cosmic:    ["Cósmico", "Cosmic"],
+  secret:    ["Secreto", "Secret"],
+  eternal:   ["Eterno", "Eternal"],
+  divine:    ["Divino", "Divine"],
+};
+
+// Cada zona: [nombre en español, nombre en inglés, emoji, nota, lista de huevos]
+// Cada huevo: [nombre, rareza, dinero por segundo]  (null = no se sabe todavía)
+const ZONAS = [
+  ["Bosque", "Forest", "🌲", "La primera zona, al lado de tu base.", [
+    ["Chicken", "common", "$1/s", "img/chicken-egg.png", "img/chicken-pet.png"], ["Dog", "common", "$2/s", "img/dog-egg.png", "img/dog-pet.png"], ["Bird", "uncommon", "$8/s", "img/bird-egg.png", "img/bird-pet.png"],
+    ["Owl", "rare", "$35/s", "img/owl-egg.png", "img/owl-pet.png"], ["Raccoon", "rare", "$45/s", "img/raccoon-egg.png", "img/raccoon-pet.png"], ["Fox", "epic", "$180/s", "img/fox-egg.png", "img/fox-pet.png"],
+    ["Bear", "epic", "$240/s", "img/bear-egg.png", "img/bear-pet.png"], ["Brr Brr Patapim", "legendary", "$1.8k/s", "img/brr-brr-patapim-egg.png", "img/brr-brr-patapim-pet.png"],
+  ]],
+  ["Lago", "Lake", "🏞️", "", [
+    ["Frog", "common", "$3/s", "img/frog-egg.png", "img/frog-pet.png"], ["Duckling", "common", "$4/s", "img/duckling-egg.png", "img/duckling-pet.png"], ["Catfish", "uncommon", "$12/s", "img/catfish-egg.png", "img/catfish-pet.png"],
+    ["Turtle", "rare", "$60/s", "img/turtle-egg.png", "img/turtle-pet.png"], ["Trulimero Trulicina", "epic", "$260/s", "img/trulimero-trulicina-egg.png", "img/trulimero-trulicina-pet.png"], ["Swan", "epic", "$320/s", "img/swan-egg.png", "img/swan-pet.png"],
+    ["Axolotl", "legendary", "$2.8k/s", "img/axolotl-egg.png", "img/axolotl-pet.png"], ["Leviathan", "cosmic", "$220k/s", "img/leviathan-egg.png", "img/leviathan-pet.png"],
+  ]],
+  ["Desierto", "Desert", "🏜️", "", [
+    ["Jerboa", "common", "$6/s", "img/jerboa-egg.png", "img/jerboa-pet.png"], ["Fennec", "uncommon", "$18/s", "img/fennec-egg.png", "img/fennec-pet.png"], ["Camel", "rare", "$75/s", "img/camel-egg.png", "img/camel-pet.png"],
+    ["Tob Tobi Tob Tob", "epic", "$325/s", "img/tob-tobi-tob-tob-egg.png", "img/tob-tobi-tob-tob-pet.png"], ["Snake", "epic", "$3.6k/s", "img/snake-egg.png", "img/snake-pet.png"], ["Sand Spider", "mythic", "$16k/s", "img/sand-spider-egg.png", "img/sand-spider-pet.png"],
+    ["Scorpion", "mythic", "$18.5k/s", "img/scorpion-egg.png", "img/scorpion-pet.png"], ["Royal Sphinx", "cosmic", "$280k/s", "img/royal-sphinx-egg.png", "img/royal-sphinx-pet.png"],
+  ]],
+  ["Selva", "Jungle", "🌴", "", [
+    ["Chimpanzee", "rare", "$90/s", "img/chimpanzee-egg.png", "img/chimpanzee-pet.png"], ["Toucan", "rare", "$110/s", "img/toucan-egg.png", "img/toucan-pet.png"], ["Crocodile", "epic", "$420/s", "img/crocodile-egg.png", "img/crocodile-pet.png"],
+    ["Gorilla", "legendary", "$4.8k/s", "img/gorilla-egg.png", "img/gorilla-pet.png"], ["Orangutini Ananassini", "legendary", "$5.5k/s", "img/orangutini-ananassini-egg.png", "img/orangutini-ananassini-pet.png"],
+    ["Spider", "mythic", "$22k/s", "img/spider-egg.png", "img/spider-pet.png"], ["Tiger", "mythic", "$28k/s", "img/tiger-egg.png", "img/tiger-pet.png"], ["King Snake", "secret", "$3.5M/s", "img/king-snake-egg.png", "img/king-snake-pet.png"],
+  ]],
+  ["Nieve", "Snow", "❄️", "", [
+    ["Penguin", "rare", "$140/s", "img/penguin-egg.png", "img/penguin-pet.png"], ["Walrus", "epic", "$600/s", "img/walrus-egg.png", "img/walrus-pet.png"], ["Polar Bear", "legendary", "$7k/s", "img/polar-bear-egg.png", "img/polar-bear-pet.png"],
+    ["Sabertooth Tiger", "mythic", "$35k/s", "img/sabertooth-tiger-egg.png", "img/sabertooth-tiger-pet.png"], ["Mammoth", "mythic", "$42k/s", "img/mammoth-egg.png", "img/mammoth-pet.png"], ["King Mammoth", "cosmic", "$400k/s", "img/king-mammoth-egg.png", "img/king-mammoth-pet.png"],
+    ["Yeti", "secret", "$5M/s", "img/yeti-egg.png", "img/yeti-pet.png"], ["Ice Dragon", "eternal", "$65M/s", "img/ice-dragon-egg.png", "img/ice-dragon-pet.png"],
+  ]],
+  ["Volcán", "Volcano", "🌋", "", [
+    ["Lava Gecko", "rare", "$180/s", "img/lava-gecko-egg.png", "img/lava-gecko-pet.png"], ["Lava Frog", "epic", "$850/s", "img/lava-frog-egg.png", "img/lava-frog-pet.png"], ["Flaming Bull", "legendary", "$9.5k/s", "img/flaming-bull-egg.png", "img/flaming-bull-pet.png"],
+    ["Lava Iguana", "legendary", "$11k/s", "img/lava-iguana-egg.png", "img/lava-iguana-pet.png"], ["Chillin Chilli", "mythic", "$55k/s", "img/chillin-chilli-egg.png", "img/chillin-chilli-pet.png"], ["Cerberus", "secret", "$8M/s", "img/cerberus-egg.png", "img/cerberus-pet.png"],
+    ["Phoenix", "eternal", "$85M/s", "img/phoenix-egg.png", "img/phoenix-pet.png"], ["Lava Dragon", "eternal", "$100M/s", "img/lava-dragon-egg.png", "img/lava-dragon-pet.png"],
+  ]],
+  ["Océano Abisal", "Abyss Ocean", "🌊", "", [
+    ["Parrotfish", "rare", "$220/s", "img/parrotfish-egg.png", "img/parrotfish-pet.png"], ["Swordfish", "epic", "$1.1k/s", "img/swordfish-egg.png", "img/swordfish-pet.png"], ["Shark", "legendary", "$15k/s", "img/shark-egg.png", "img/shark-pet.png"],
+    ["Orca", "mythic", "$80k/s", "img/orca-egg.png", "img/orca-pet.png"], ["Whale Shark", "cosmic", "$700k/s", "img/whale-shark-egg.png", "img/whale-shark-pet.png"], ["Beluga Whale", "cosmic", "$850k/s", "img/beluga-whale-egg.png", "img/beluga-whale-pet.png"],
+    ["Kraken", "eternal", "$15M/s", "img/kraken-egg.png", "img/kraken-pet.png"], ["El Maja", "eternal", "$130M/s", "img/el-maja-egg.png", "img/el-maja-pet.png"],
+  ]],
+  ["Prehistórico", "Prehistoric", "🦖", "", [
+    ["Dodo", "rare", "$280/s", "img/dodo-egg.png", "img/dodo-pet.png"], ["Pterodactyl", "legendary", "$22k/s", "img/pterodactyl-egg.png", "img/pterodactyl-pet.png"], ["Ankylosaurus", "mythic", "$120k/s", "img/ankylosaurus-egg.png", "img/ankylosaurus-pet.png"],
+    ["Triceratops", "cosmic", "$1.2M/s", "img/triceratops-egg.png", "img/triceratops-pet.png"], ["Bronto", "cosmic", "$1.5M/s", "img/bronto-egg.png", "img/bronto-pet.png"], ["Tralaledon", "secret", "$850k/s", "img/tralaledon-egg.png", "img/tralaledon-pet.png"],
+    ["T-Rex", "secret", "$25M/s", "img/t-rex-egg.png", "img/t-rex-pet.png"], ["Mosasaurus", "eternal", "$180M/s", "img/mosasaurus-egg.png", "img/mosasaurus-pet.png"],
+  ]],
+  ["Cósmico", "Cosmic", "🪐", "", [
+    ["Centapede", "epic", "$1.5k/s", "img/centapede-egg.png", "img/centapede-pet.png"], ["Cosmic Gecko", "legendary", "$30k/s", "img/cosmic-gecko-egg.png", "img/cosmic-gecko-pet.png"], ["Cosmic Gorilla", "mythic", "$180k/s", "img/cosmic-gorilla-egg.png", "img/cosmic-gorilla-pet.png"],
+    ["La Vacca Saturno Saturnita", "cosmic", "$2.2M/s", "img/la-vacca-saturno-saturnita-egg.png", "img/la-vacca-saturno-saturnita-pet.png"], ["Cosmic Skeleton Boss", "secret", "$45M/s", "img/cosmic-skeleton-boss-egg.png", "img/cosmic-skeleton-boss-pet.png"],
+    ["Cosmic Dragon", "secret", "$60M/s", "img/cosmic-dragon-egg.png", "img/cosmic-dragon-pet.png"], ["Eternal Lunar Dragon", "eternal", "$25M/s", "img/eternal-lunar-dragon-egg.png", "img/eternal-lunar-dragon-pet.png"], ["Unicorn", "divine", "$1B/s", "img/unicorn-egg.png", "img/unicorn-pet.png"],
+  ]],
+  ["Cerezos", "Cherry Blossom", "🌸", "", [
+    ["Crane", "epic", "$4k/s", "img/crane-egg.png", "img/crane-pet.png"], ["Salamander", "legendary", "$74k/s", "img/salamander-egg.png", "img/salamander-pet.png"], ["Red Panda", "mythic", "$450k/s", "img/red-panda-egg.png", "img/red-panda-pet.png"],
+    ["Snowy Owl", "cosmic", "$7.5M/s", "img/snowy-owl-egg.png", "img/snowy-owl-pet.png"], ["Koi", "cosmic", "$12M/s", "img/koi-egg.png", "img/koi-pet.png"], ["Stag", "secret", "$145M/s", "img/stag-egg.png", "img/stag-pet.png"],
+    ["Oni Tiger", "eternal", "$600M/s", "img/oni-tiger-egg.png", "img/oni-tiger-pet.png"], ["Kitsune", "divine", null, "img/kitsune-egg.png", "img/kitsune-pet.png"],
+  ]],
+  ["Templo Titán", "Titan Temple", "🏛️", "", [
+    ["Spideron", "legendary", "$95k/s", "img/spideron-egg.png", "img/spideron-pet.png"], ["Crustacia", "legendary", "$130k/s", "img/crustacia-egg.png", "img/crustacia-pet.png"], ["Bladehide", "mythic", "$11M/s", "img/bladehide-egg.png", "img/bladehide-pet.png"],
+    ["Mantaris", "cosmic", "$12M/s", "img/mantaris-egg.png", "img/mantaris-pet.png"], ["Rhinotaur", "cosmic", "$17.5M/s", "img/rhinotaur-egg.png", "img/rhinotaur-pet.png"], ["Mutant Shark", "secret", "$215M/s", "img/mutant-shark-egg.png", "img/mutant-shark-pet.png"],
+    ["Gorilla King", "eternal", "$880M/s", "img/gorilla-king-egg.png", "img/gorilla-king-pet.png"], ["Nightflame", "divine", null, "img/nightflame-egg.png", "img/nightflame-pet.png"],
+  ]],
+  ["Ángeles", "Angels & Demons (lado Light)", "😇",
+   "Zona nueva (sept 2026). Solo de noche y necesitas 20 mil millones (20B) de velocidad. Cambia entre Ángeles y Demonios cada noche. Los devs aún no publican cuánto da cada uno.", [
+    ["Light Dove", "legendary", null, "img/light-dove-egg.png", "img/light-dove-pet.png"], ["Winged Lamb", "mythic", null, "img/winged-lamb-egg.png", "img/winged-lamb-pet.png"], ["Sacred Moth", "cosmic", null, "img/sacred-moth-egg.png", "img/sacred-moth-pet.png"],
+    ["Holy Peacock", "cosmic", null, "img/holy-peacock-egg.png", "img/holy-peacock-pet.png"], ["Pure Jellyfish", "secret", null, "img/pure-jellyfish-egg.png", "img/pure-jellyfish-pet.png"], ["Centaur", "secret", null, "img/centaur-egg.png", "img/centaur-pet.png"],
+    ["Pegasus", "eternal", null, "img/pegasus-egg.png", "img/pegasus-pet.png"], ["ArchAngel", "divine", "≈ $5B/s", "img/archangel-egg.png", "img/archangel-pet.png"],
+  ]],
+  ["Demonios", "Angels & Demons (lado Darkness)", "😈",
+   "Misma zona, la otra noche. Detrás de la cascada hay un portal al Santuario de Fusión: juntando mascotas Eternas o Divinas de aquí salen Equinox y Aetheron.", [
+    ["Flame Sprite", "legendary", null, "img/flame-sprite-egg.png", "img/flame-sprite-pet.png"], ["Toro", "mythic", null, "img/toro-egg.png", "img/toro-pet.png"], ["Imp", "cosmic", null, "img/imp-egg.png", "img/imp-pet.png"],
+    ["Demon Hound", "cosmic", null, "img/demon-hound-egg.png", "img/demon-hound-pet.png"], ["Gargoyle", "secret", null, "img/gargoyle-egg.png", "img/gargoyle-pet.png"], ["RazorFang", "secret", null, "img/razorfang-egg.png", "img/razorfang-pet.png"],
+    ["Skeleton Horse", "eternal", null, "img/skeleton-horse-egg.png", "img/skeleton-horse-pet.png"], ["World Burner", "divine", "≈ $5B/s", "img/world-burner-egg.png", "img/world-burner-pet.png"],
+  ]],
+  ["Tienda de Monstruos", "Monster Eggs (Robux)", "🛒", "Estos no están en ninguna zona: se compran con Robux.", [
+    ["Scorpio", "legendary", "$10k/s", "img/scorpio-egg.png", "img/scorpio-pet.png"], ["Froggo", "mythic", "$50k/s", "img/froggo-egg.png", "img/froggo-pet.png"], ["Crawler", "cosmic", "$1.5M/s", "img/crawler-egg.png", "img/crawler-pet.png"],
+    ["Crocodon", "secret", "$30M/s", "img/crocodon-egg.png", "img/crocodon-pet.png"], ["Krakenoid", "eternal", "$500M/s", "img/krakenoid-egg.png", "img/krakenoid-pet.png"], ["Dreadscale", "divine", "$2B/s", "img/dreadscale-egg.png", "img/dreadscale-pet.png"],
+    ["Mecha Scorpio", "secret", "$45M/s", "img/mecha-scorpio-egg.png", "img/mecha-scorpio-pet.png"], ["Mecha Froggo", "secret", "$155M/s", "img/mecha-froggo-egg.png", "img/mecha-froggo-pet.png"], ["Mecha Crawler", "cosmic", "$320M/s", "img/mecha-crawler-egg.png", "img/mecha-crawler-pet.png"],
+    ["Mecha Crocodon", "eternal", "$680M/s", "img/mecha-crocodon-egg.png", "img/mecha-crocodon-pet.png"], ["Mecha Krakenoid", "eternal", "$1B/s", "img/mecha-krakenoid-egg.png", "img/mecha-krakenoid-pet.png"], ["Mecha Dreadscale", "divine", "$4B/s", "img/mecha-dreadscale-egg.png", "img/mecha-dreadscale-pet.png"],
+  ]],
+  ["Retirados", "Retired Brainrot Eggs", "📦", "Ya no aparecen en el juego; solo los tiene quien los consiguió antes.", [
+    ["Tung Tung Sahur", "rare", "$100/s", "img/tung-tung-sahur-egg.png", "img/tung-tung-sahur-pet.png"], ["Bananita Dolphinita", "epic", "$400/s", "img/bananita-dolphinita-egg.png", "img/bananita-dolphinita-pet.png"], ["Belula Beluga", "mythic", "$40k/s", "img/belula-beluga-egg.png", "img/belula-beluga-pet.png"],
+    ["Mangolini Parrochini", "cosmic", "$800k/s", "img/mangolini-parrochini-egg.png", "img/mangolini-parrochini-pet.png"], ["Bomboclat Crocolat", "secret", "$20M/s", "img/bomboclat-crocolat-egg.png", "img/bomboclat-crocolat-pet.png"], ["Strawberry Elephant", "eternal", "$110M/s", "img/strawberry-elephant-egg.png", "img/strawberry-elephant-pet.png"],
+  ]],
+];
+
+// --- Dibujar la página ---
+const main = document.getElementById("main");
+const nav = document.getElementById("nav");
+const legend = document.getElementById("legend");
+
+for (const [k, [es]] of Object.entries(RAREZAS)) {
+  legend.insertAdjacentHTML("beforeend", `<span class="chip" style="--rc: var(--r-${k})${k === "secret" ? ";color:#fff" : ""}">${es}</span>`);
+}
+
+ZONAS.forEach(([es, en, emoji, nota, huevos], i) => {
+  const id = "zona-" + i;
+  nav.insertAdjacentHTML("beforeend", `<a href="#${id}">${emoji} ${es}</a>`);
+  const cards = huevos.map(([nombre, rareza, dinero, fotoHuevo, fotoPet]) => `
+    <div class="egg ${rareza}" style="--rc: var(--r-${rareza})" data-busca="${(nombre + " " + RAREZAS[rareza][0] + " " + RAREZAS[rareza][1]).toLowerCase()}">
+      <div class="fotos">
+        <img src="${fotoHuevo}" alt="Huevo de ${nombre}" loading="lazy">
+        <span class="flecha">→</span>
+        <img src="${fotoPet}" alt="${nombre}" loading="lazy">
+      </div>
+      <div class="name">${nombre}</div>
+      <div class="meta">
+        <span class="chip"${rareza === "secret" ? ' style="color:#fff"' : ""}>${RAREZAS[rareza][0]}</span>
+        <span class="money ${dinero ? "" : "unknown"}">${dinero ?? "sin datos aún"}</span>
+      </div>
+    </div>`).join("");
+  main.insertAdjacentHTML("beforeend", `
+    <section class="zone" id="${id}">
+      <div class="zone-head">
+        <h2>${emoji} ${es}</h2>
+        <span class="en">${en} · ${huevos.length} huevos</span>
+        ${nota ? `<p class="note">${nota}</p>` : ""}
+      </div>
+      <div class="eggs">${cards}</div>
+    </section>`);
+});
+
+// --- Buscador ---
+const buscar = document.getElementById("buscar");
+const empty = document.getElementById("empty");
+buscar.addEventListener("input", () => {
+  const q = buscar.value.trim().toLowerCase();
+  let total = 0;
+  document.querySelectorAll("section.zone").forEach(sec => {
+    let vivos = 0;
+    sec.querySelectorAll(".egg").forEach(egg => {
+      const ok = !q || egg.dataset.busca.includes(q);
+      egg.hidden = !ok;
+      if (ok) vivos++;
+    });
+    sec.hidden = vivos === 0;
+    total += vivos;
+  });
+  empty.style.display = total ? "none" : "block";
+});
+</script>
+</body>
+</html>
