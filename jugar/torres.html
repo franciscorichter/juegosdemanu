@@ -644,7 +644,10 @@ function prepararTubo(c) {
   conexion = c;
   c.on('open', () => {
     enLinea = true;
-    creativo = false; panel.hidden = true; pintarModo();   // en línea se juega en serio
+    // en línea se juega en Normal (el récord es de verdad), pero tu panel no se cierra
+    creativo = false; pintarModo();
+    if (!panelDesbloqueado) panel.hidden = true;
+    pintarPanel();
     avisoSala(soyAnfitrion ? '2 jugadores — eres el anfitrión' : '2 jugadores — eres el invitado');
     // el invitado se presenta; el anfitrión manda su nombre dentro del estado
     yoSoy = soyAnfitrion ? 0 : 1;
@@ -761,8 +764,12 @@ panel.addEventListener('click', (e) => {
   const boton = e.target.closest('button[data-truco]');
   if (!boton) return;
   const t = { que: 'truco', truco: boton.dataset.truco, n: boton.dataset.n };
-  if (enLinea && !soyAnfitrion) mandarAlAnfitrion(t);
-  else aplicarTruco(t, yoSoy);
+  if (enLinea && !soyAnfitrion) {
+    mandarAlAnfitrion(t);
+    avisar('Truco pedido al anfitrión (él decide si lo acepta)');
+  } else {
+    aplicarTruco(t, yoSoy);
+  }
 });
 
 function aplicarTruco(t, quien = yoSoy) {
@@ -794,17 +801,17 @@ function pintarModo() {
 botonModo.onclick = () => {
   if (enLinea) { avisoSala('En línea se juega en Normal'); return; }
   creativo = !creativo;
-  if (!creativo) panel.hidden = true;
-  pintarModo();
+  if (!creativo && !panelDesbloqueado) panel.hidden = true;
+  pintarModo(); pintarPanel();
   avisar(creativo ? 'Creativo: P abre el panel. El récord no se guarda.'
                   : 'Normal: el récord se guarda.');
 };
 
 // ---- Qué parte del panel se ve ----
-//  "Esta partida" -> solo en Creativo (cambia ESTA partida y nada más)
+//  "Esta partida" -> en Creativo, o siempre si desbloqueaste el panel (es tuyo)
 //  "Global"       -> solo si desbloqueaste con ?panel=1 (cambia LAS REGLAS, para siempre)
 function pintarPanel() {
-  document.getElementById('seccionPartida').hidden = !creativo;
+  document.getElementById('seccionPartida').hidden = !(creativo || panelDesbloqueado);
   document.getElementById('seccionGlobal').hidden = !panelDesbloqueado;
 }
 
