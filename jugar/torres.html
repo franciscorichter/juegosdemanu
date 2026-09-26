@@ -80,6 +80,11 @@
     <button data-truco="monedas" data-n="1000">+1000 $</button>
     <button data-truco="vidas" data-n="5">+5 vidas</button>
   </div>
+  <div class="fila" id="filaAmigo" hidden>
+    Para tu duo:
+    <button data-truco="monedas" data-n="100" data-para="otro">+100 $</button>
+    <button data-truco="monedas" data-n="1000" data-para="otro">+1000 $</button>
+  </div>
   <div class="fila">Espaunear:<br>
     <button data-truco="spawn" data-n="normal">normal</button>
     <button data-truco="spawn" data-n="rapido">r&aacute;pido</button>
@@ -654,7 +659,9 @@ function prepararTubo(c) {
     if (!soyAnfitrion) mandarAlAnfitrion({ que: 'hola', nombre: miNombre });
   });
   c.on('data', (d) => { if (soyAnfitrion) aplicarMensaje(d); else aplicarEstado(d); });
-  c.on('close', () => { enLinea = false; conexion = null; avisoSala('Se cortó la conexión'); });
+  c.on('close', () => {
+    enLinea = false; conexion = null; pintarPanel(); avisoSala('Se cortó la conexión');
+  });
   c.on('error', () => avisoSala('Se cortó la conexión'));
 }
 
@@ -763,7 +770,8 @@ document.getElementById('trucosInvitado').addEventListener('change', (e) => {
 panel.addEventListener('click', (e) => {
   const boton = e.target.closest('button[data-truco]');
   if (!boton) return;
-  const t = { que: 'truco', truco: boton.dataset.truco, n: boton.dataset.n };
+  const t = { que: 'truco', truco: boton.dataset.truco, n: boton.dataset.n,
+              para: boton.dataset.para };   // 'otro' = para el compañero
   if (enLinea && !soyAnfitrion) {
     mandarAlAnfitrion(t);
     avisar('Truco pedido al anfitrión (él decide si lo acepta)');
@@ -773,8 +781,12 @@ panel.addEventListener('click', (e) => {
 });
 
 function aplicarTruco(t, quien = yoSoy) {
+  // normalmente la plata es para el que apretó; con data-para="otro" es para el compañero
+  const destino = (t.para === 'otro' && enLinea) ? 1 - quien : quien;
   if (t.truco === 'monedas') {
-    plata[quien] += Number(t.n); avisar('Truco: +' + t.n + ' monedas');
+    plata[destino] += Number(t.n);
+    avisar(destino === quien ? 'Truco: +' + t.n + ' monedas'
+                             : 'Regalo: +' + t.n + ' monedas para el compañero');
   } else if (t.truco === 'vidas') {
     vidas += Number(t.n); avisar('Truco: +' + t.n + ' vidas');
   } else if (t.truco === 'spawn') {
@@ -812,6 +824,7 @@ botonModo.onclick = () => {
 //  "Global"       -> solo si desbloqueaste con ?panel=1 (cambia LAS REGLAS, para siempre)
 function pintarPanel() {
   document.getElementById('seccionPartida').hidden = !(creativo || panelDesbloqueado);
+  document.getElementById('filaAmigo').hidden = !enLinea;   // sin duo no hay a quién regalarle
   document.getElementById('seccionGlobal').hidden = !panelDesbloqueado;
 }
 
