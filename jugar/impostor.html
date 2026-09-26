@@ -29,15 +29,66 @@
     color: var(--texto); text-decoration: none; text-shadow: 2px 2px 0 #000;
   }
   .boton:hover { background: #4a82e0; }
+  #sala { margin-bottom: 10px; font-size: 10px; }
+  #sala button, #sala input {
+    font-family: inherit; font-size: 10px; padding: 8px 10px; margin: 2px;
+    background: #3c6ec9; border: 3px solid #244a8c; color: #fff; cursor: pointer;
+  }
+  #sala input { background: #000; border-color: #555; width: 90px; cursor: text; }
+  #aviso { color: var(--diamante); margin-left: 8px; }
+  #panel {
+    position: fixed; top: 10px; right: 10px; z-index: 9; width: 200px;
+    background: #14141c; border: 3px solid #ff5555; padding: 10px; font-size: 9px;
+    box-shadow: 4px 4px 0 #000; line-height: 1.5;
+  }
+  #panel b { color: #ff8888; }
+  #panel .fila { margin-top: 8px; }
+  #panel button {
+    font-family: inherit; font-size: 9px; padding: 5px 6px; margin: 2px 1px;
+    background: #2a2a38; border: 2px solid #555; color: #fff; cursor: pointer;
+  }
+  #panel button:hover { background: #ff5555; }
   .boton:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
 </style>
 </head>
 <body>
 <h1>IMPOSTOR</h1>
+<div id="sala">
+  <input id="nombre" placeholder="tu nombre" size="10" maxlength="12">
+  <button id="crear">Crear sala</button>
+  <input id="codigo" placeholder="codigo" size="8">
+  <button id="entrar">Entrar</button>
+  <span id="aviso">1 impostor</span>
+</div>
 <canvas id="juego" width="900" height="650"></canvas>
-<p class="ayuda">Flechas: moverte &middot; ESPACIO: matar &middot; S: apagar las luces &middot; V: ventilación &middot; D: dificultad &middot; ENTER: empezar &middot; R: de nuevo &middot; M: menú</p>
+
+<div id="panel" hidden>
+  <b>Panel</b> &middot; <span style="color:#aaa">P para cerrar</span>
+  <div class="fila">
+    <button data-truco="kill">KILL ya</button>
+    <button data-truco="tp">ir al bot&oacute;n</button>
+  </div>
+  <div class="fila">
+    <button data-truco="matarTodos">matar a todos</button>
+    <button data-truco="calmar">calmar a los bots</button>
+  </div>
+  <div class="fila">
+    <button data-truco="tareas0">borrar sus tareas</button>
+    <button data-truco="luces">apagar luces ya</button>
+  </div>
+  <div class="fila">
+    <button data-truco="ganar">ganar</button>
+    <button data-truco="perder">perder</button>
+  </div>
+  <div class="fila" style="border-top:1px solid #444; padding-top:6px">
+    <label><input type="checkbox" id="trucosInvitado"> aceptar trucos del duo</label>
+  </div>
+</div>
+<p class="ayuda">Flechas: moverte &middot; ESPACIO: matar &middot; S: apagar las luces &middot; V: ventilación &middot; D: dificultad &middot; ENTER: empezar &middot; R: de nuevo &middot; M: menú &middot; P: panel</p>
 <a class="boton" href="../index.html">&larr; Volver a la página</a>
 
+<!-- PeerJS: conecta dos navegadores directo, sin servidor nuestro -->
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 // ============================================================
 //  Impostor — versión web del impostor.py de Manu (Nave chica)
@@ -46,7 +97,7 @@
 // ============================================================
 
 // ---------- Ajustes del juego (los mismos que en impostor.py) ----------
-const ANCHO = 900, ALTO = 650;
+let ANCHO = 900, ALTO = 650;      // cambian si se juega en la nave grande
 const FPS = 60, PASO = 1000 / FPS, DT = 1 / FPS;
 
 const VEL_JUGADOR = 3.6;
@@ -99,6 +150,14 @@ const COLORES_BOTS = [
   'rgb(60,120,230)', 'rgb(50,190,80)', 'rgb(250,140,30)', 'rgb(240,220,60)',
   'rgb(200,80,220)', 'rgb(60,210,210)', 'rgb(245,120,180)', 'rgb(150,100,60)',
 ];
+
+// ---------- De a dos impostores ----------
+let enLinea = false;               // ¿hay alguien conectado?
+let soyAnfitrion = false;          // el anfitrión es el único que PIENSA el juego
+let conexion = null;               // el tubo por donde viajan los mensajes
+let yoSoy = 0;                     // 0 = anfitrión (o solo);  1 = invitado
+let teclasInvitado = {};           // las flechas que aprieta el otro
+let miNombre = '', nombreAmigo = '';
 
 const canvas = document.getElementById('juego');
 const ctx = canvas.getContext('2d');
@@ -306,6 +365,40 @@ function mapaChico() {
   return new Mapa('Nave chica', 900, 650, salas, pasillos, puertas, tareas, vents, [450, 325]);
 }
 
+function mapaGrande() {
+  // Nave 2 (solo de a dos): 6 salas en dos filas, un pasillo largo de lado a
+  // lado y dos verticales, para que cada sala tenga dos salidas.
+  const SW = 350, SH = 250;
+  const cols = [40, 525, 1010];
+  const filas = [40, 440];
+  const nombres = [['Cafetería', 'Navegación', 'Armas'],
+                   ['Electricidad', 'Escudos', 'Reactor']];
+  const salas = [];
+  for (let f = 0; f < 2; f++) for (let c = 0; c < 3; c++) {
+    salas.push({ nombre: nombres[f][c], r: R(cols[c], filas[f], SW, SH) });
+  }
+  const pasillos = [
+    R(40, 330, 1320, 70),    // el pasillo largo
+    R(430, 40, 65, 650),     // vertical izquierdo
+    R(915, 40, 65, 650),     // vertical derecho
+  ];
+  const puertas = [
+    R(200, 290, 60, 40), R(670, 290, 60, 40), R(1155, 290, 60, 40),
+    R(200, 400, 60, 40), R(670, 400, 60, 40), R(1155, 400, 60, 40),
+    R(390, 130, 40, 60), R(495, 130, 30, 60),
+    R(875, 130, 40, 60), R(980, 130, 30, 60),
+    R(390, 530, 40, 60), R(495, 530, 30, 60),
+    R(875, 530, 40, 60), R(980, 530, 30, 60),
+  ];
+  const tareas = [];
+  for (const oy of filas) for (const ox of cols) {
+    tareas.push([ox + 50, oy + 50], [ox + 300, oy + 50],
+                [ox + 50, oy + 200], [ox + 300, oy + 200]);
+  }
+  const vents = [[75, 265], [550, 265], [1325, 265], [1325, 465], [850, 465], [75, 465]];
+  return new Mapa('Nave grande', 1400, 730, salas, pasillos, puertas, tareas, vents, [697, 365]);
+}
+
 // ---------- Personajes ----------
 class Jugador {
   constructor(mapa) {
@@ -401,12 +494,24 @@ class Juego {
     this.sombra = document.createElement('canvas');
     this.sombra.width = ANCHO; this.sombra.height = ALTO;
   }
+  // "this.jugador" es SIEMPRE el tuyo: así el dibujo y el HUD no cambian.
+  get jugador() { return this.jugadores[yoSoy]; }
+  // los que están jugando de verdad (solo = uno; en línea = los dos)
+  get activos() { return enLinea ? this.jugadores : [this.jugadores[0]]; }
+
   empezar() {
     aplicarDificultad(this.dificultad);
-    this.mapa = mapaChico();
-    this.jugador = new Jugador(this.mapa);
+    // De a dos impostores: nave grande y el doble de bots y de tareas.
+    if (enLinea) { CANTIDAD_BOTS *= 2; TAREAS_TOTALES *= 2; }
+    this.mapa = enLinea ? mapaGrande() : mapaChico();
+    ANCHO = this.mapa.ancho; ALTO = this.mapa.alto;
+    canvas.width = ANCHO; canvas.height = ALTO;
+    this.sombra.width = ANCHO; this.sombra.height = ALTO;
+    // jugadores[0] = anfitrión, jugadores[1] = invitado
+    this.jugadores = [new Jugador(this.mapa), new Jugador(this.mapa)];
     const posiciones = mezclarLista(this.mapa.tareas).slice(0, CANTIDAD_BOTS);
-    this.bots = posiciones.map((p, i) => new Bot(this.mapa, COLORES_BOTS[i], p));
+    // el % es por si hay más bots que colores: vuelve a empezar la lista
+    this.bots = posiciones.map((p, i) => new Bot(this.mapa, COLORES_BOTS[i % COLORES_BOTS.length], p));
     this.cuerpos = [];            // [[x, y, color]]
     this.luces = 0;               // segundos que quedan sin luz
     this.cooldownLuces = 0;
@@ -423,26 +528,28 @@ class Juego {
   }
 
   // --- acciones del impostor ---
-  intentarKill() {
-    if (this.jugador.cooldown > 0) return;
-    const cerca = this.bots.filter((b) => b.vivo && distancia(b.pos, this.jugador.pos) <= ALCANCE_KILL);
+  intentarKill(quien = yoSoy) {
+    const j = this.jugadores[quien];          // cada impostor tiene SU cooldown
+    if (j.cooldown > 0) return;
+    const cerca = this.bots.filter((b) => b.vivo && distancia(b.pos, j.pos) <= ALCANCE_KILL);
     if (!cerca.length) return;
     let victima = cerca[0];
-    for (const b of cerca) if (distancia(b.pos, this.jugador.pos) < distancia(victima.pos, this.jugador.pos)) victima = b;
+    for (const b of cerca) if (distancia(b.pos, j.pos) < distancia(victima.pos, j.pos)) victima = b;
     victima.vivo = false;
     this.cuerpos.push([victima.pos[0], victima.pos[1], victima.color]);
-    this.jugador.cooldown = COOLDOWN_KILL;
+    j.cooldown = COOLDOWN_KILL;
     this.flashKill = 0.5;
     this.posKill = [victima.pos[0], victima.pos[1]];
     sonar('kill');
   }
-  usarVent() {
-    const i = this.jugador.ventCercana();
+  usarVent(quien = yoSoy) {
+    const j = this.jugadores[quien];
+    const i = j.ventCercana();
     if (i < 0) return;
     this.flashVent = 0.5;
-    this.posVent = [this.jugador.pos[0], this.jugador.pos[1]];
+    this.posVent = [j.pos[0], j.pos[1]];
     const destino = this.mapa.vents[(i + 1) % this.mapa.vents.length];
-    this.jugador.pos = [destino[0], destino[1]];
+    j.pos = [destino[0], destino[1]];
     sonar('vent');
   }
   sabotearLuces() {
@@ -475,7 +582,7 @@ class Juego {
       b.alarma = false; b.sospecha = false; b.desdeQueTeVio = 999;
       if (b.vivo) b.nuevaTarea();
     }
-    this.jugador.cooldown = COOLDOWN_KILL;
+    for (const j of this.jugadores) j.cooldown = COOLDOWN_KILL;
     this.flashKill = 0; this.flashVent = 0;
   }
   terminar(estado, mensaje) {
@@ -494,8 +601,10 @@ class Juego {
   actualizar(dt, teclas) {
     if (this.estado !== 'jugando') return;
     this.tiempo += dt;
-    this.jugador.mover(teclas);
-    this.jugador.cooldown = Math.max(0, this.jugador.cooldown - dt);
+    // cada impostor se mueve con SUS flechas; las del invitado llegan por el tubo
+    this.jugadores[0].mover(teclas);
+    if (enLinea) this.jugadores[1].mover(teclasInvitado);
+    for (const j of this.jugadores) j.cooldown = Math.max(0, j.cooldown - dt);
     this.cooldownLuces = Math.max(0, this.cooldownLuces - dt);
     this.luces = Math.max(0, this.luces - dt);
     this.flashKill = Math.max(0, this.flashKill - dt);
@@ -507,7 +616,7 @@ class Juego {
       if (bot.actualizar(dt)) { this.tareasHechas += 1; sonar('tarea'); }
       if (!bot.vivo || bot.alarma) continue;
       // ¿Te está viendo ahora? Lo recuerda un rato.
-      if (bot.ve(this.jugador.pos, alcance)) bot.desdeQueTeVio = 0;
+      if (this.activos.some((j) => bot.ve(j.pos, alcance))) bot.desdeQueTeVio = 0;
       else bot.desdeQueTeVio += dt;
       // ¿Te vio matar? Eso sí es prueba: sospecha de ti y corre al botón.
       if (this.flashKill > 0 && bot.ve(this.posKill, alcance)) { bot.sospecha = true; bot.alarmar(); continue; }
@@ -516,7 +625,7 @@ class Juego {
       for (const c of this.cuerpos) {
         if (bot.ve(c, alcance)) {
           // ¿Estabas al lado del cuerpo, o te vio hace poquito? Sospechoso.
-          const cerca = distancia(this.jugador.pos, c) <= RADIO_SOSPECHA && bot.ve(this.jugador.pos, alcance);
+          const cerca = this.activos.some((j) => distancia(j.pos, c) <= RADIO_SOSPECHA && bot.ve(j.pos, alcance));
           if (cerca || bot.desdeQueTeVio < MEMORIA_BOT) bot.sospecha = true;
           bot.alarmar();
           break;
@@ -590,6 +699,14 @@ class Juego {
       }
     }
 
+    if (enLinea) {   // tu duo: naranjo, con su nombre encima
+      const o = this.jugadores[1 - yoSoy];
+      const q = [Math.floor(o.pos[0]), Math.floor(o.pos[1])];
+      circulo('rgb(255,140,60)', q[0], q[1], RADIO);
+      circulo(NEGRO, q[0], q[1], RADIO, 2);
+      ctx.font = '11px ' + FUENTE; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillStyle = 'rgb(255,190,120)'; ctx.fillText(nombreAmigo || 'tu duo', q[0], q[1] - RADIO - 6);
+    }
     const p = [Math.floor(this.jugador.pos[0]), Math.floor(this.jugador.pos[1])];
     circulo(ROJO, p[0], p[1], RADIO);
     circulo(NEGRO, p[0], p[1], RADIO, 2);
@@ -696,32 +813,222 @@ function texto(msg, y, tam, color, x) {
 // ---------- Teclado ----------
 const juego = new Juego();
 const teclas = {};
+
+// ============================================================
+//  DE A DOS IMPOSTORES (cooperativo, por internet)
+//  EL ANFITRIÓN PIENSA, EL INVITADO PINTA. Un solo navegador
+//  corre juego.actualizar(); el otro recibe el resumen y dibuja.
+// ============================================================
+function avisoSala(t) { document.getElementById('aviso').textContent = t; }
+function avisar(txt) { juego.aviso = txt; juego.avisoT = DURACION_AVISO; }
+
+const cajaNombre = document.getElementById('nombre');
+try { cajaNombre.value = localStorage.getItem('impostor-nombre') || ''; } catch (e) {}
+miNombre = cajaNombre.value;
+cajaNombre.addEventListener('input', () => {
+  miNombre = cajaNombre.value.trim();
+  try { localStorage.setItem('impostor-nombre', miNombre); } catch (e) {}
+});
+
+function mandarAlAnfitrion(m) { if (conexion) conexion.send(m); }
+
+function mandarTeclas() {
+  if (!enLinea || soyAnfitrion) return;
+  mandarAlAnfitrion({ que: 'teclas', t: {
+    ArrowLeft: !!teclas.ArrowLeft, ArrowRight: !!teclas.ArrowRight,
+    ArrowUp: !!teclas.ArrowUp, ArrowDown: !!teclas.ArrowDown } });
+}
+
+// El invitado no actúa: pide. El anfitrión es el que hace.
+function pedir(cual) {
+  if (enLinea && !soyAnfitrion) { mandarAlAnfitrion({ que: 'accion', cual }); return; }
+  hacerAccion(cual, yoSoy);
+}
+function hacerAccion(cual, quien) {
+  if (cual === 'kill') juego.intentarKill(quien);
+  else if (cual === 'vent') juego.usarVent(quien);
+  else if (cual === 'luces') juego.sabotearLuces();
+  else if (cual === 'empezar') juego.empezar();
+  else if (cual === 'menu') juego.estado = 'inicio';
+}
+
+function prepararTubo(c) {
+  conexion = c;
+  c.on('open', () => {
+    enLinea = true;
+    yoSoy = soyAnfitrion ? 0 : 1;
+    avisoSala(soyAnfitrion ? '2 impostores — eres el anfitrión' : '2 impostores — eres el invitado');
+    pintarPanel();
+    if (!soyAnfitrion) mandarAlAnfitrion({ que: 'hola', nombre: miNombre });
+  });
+  c.on('data', (d) => { if (soyAnfitrion) aplicarMensaje(d); else aplicarEstado(d); });
+  c.on('close', () => {
+    enLinea = false; conexion = null; pintarPanel(); avisoSala('Se cortó la conexión');
+  });
+  c.on('error', () => avisoSala('Se cortó la conexión'));
+}
+
+// ---- ANFITRIÓN: el resumen de la partida (la nave NO va: los dos la arman igual) ----
+function estadoParaMandar() {
+  const j = juego;
+  const base = { estado: j.estado, nombre: miNombre, dificultad: j.dificultad, total: TAREAS_TOTALES };
+  if (!j.jugadores) return base;                       // todavía en el menú
+  base.jugadores = j.jugadores.map((p) => ({ x: p.pos[0], y: p.pos[1], cooldown: p.cooldown }));
+  base.bots = j.bots.map((b) => ({ x: b.pos[0], y: b.pos[1], color: b.color,
+                                   vivo: b.vivo, alarma: b.alarma, esperando: b.esperando }));
+  base.cuerpos = j.cuerpos;
+  base.tareasHechas = j.tareasHechas;
+  base.luces = j.luces; base.cooldownLuces = j.cooldownLuces;
+  base.tiempo = j.tiempo; base.mensaje = j.mensaje;
+  base.aviso = j.aviso; base.avisoT = j.avisoT;
+  base.nuevoRecord = j.nuevoRecord;
+  return base;
+}
+
+// ---- INVITADO: mete el resumen en sus variables ----
+function aplicarEstado(d) {
+  const j = juego;
+  nombreAmigo = d.nombre || '';
+  j.dificultad = d.dificultad;
+  if (!d.jugadores) { j.estado = d.estado; return; }   // el anfitrión sigue en el menú
+  if (!j.jugadores) j.empezar();                       // empezó: armo mi nave igual que él
+  TAREAS_TOTALES = d.total;
+  d.jugadores.forEach((p, i) => { j.jugadores[i].pos = [p.x, p.y]; j.jugadores[i].cooldown = p.cooldown; });
+  // los bots llegan pelados: para dibujarlos basta con sus números
+  j.bots = d.bots.map((b) => ({ pos: [b.x, b.y], color: b.color, vivo: b.vivo,
+                                alarma: b.alarma, esperando: b.esperando }));
+  j.cuerpos = d.cuerpos;
+  j.tareasHechas = d.tareasHechas;
+  j.luces = d.luces; j.cooldownLuces = d.cooldownLuces;
+  j.tiempo = d.tiempo; j.mensaje = d.mensaje;
+  j.aviso = d.aviso; j.avisoT = d.avisoT;
+  j.nuevoRecord = d.nuevoRecord;
+  j.estado = d.estado;
+}
+
+// ---- ANFITRIÓN: hace caso a lo que le pide el invitado ----
+function aplicarMensaje(m) {
+  if (m.que === 'teclas') teclasInvitado = m.t;
+  else if (m.que === 'accion') hacerAccion(m.cual, 1);
+  else if (m.que === 'hola') { nombreAmigo = m.nombre; avisar((m.nombre || 'Tu duo') + ' entró a la nave'); }
+  else if (m.que === 'truco') {
+    if (trucosInvitado) aplicarTruco(m, 1);
+    else avisar((nombreAmigo || 'Tu duo') + ' intentó un truco y no lo dejaste');
+  }
+}
+
+// ---- Los dos botones ----
+document.getElementById('crear').onclick = () => {
+  if (!miNombre) { avisoSala('Escribe tu nombre para jugar online'); cajaNombre.focus(); return; }
+  soyAnfitrion = true;
+  const codigo = String(Math.floor(1000 + Math.random() * 9000));
+  const yo = new Peer('impostor-manu-' + codigo);
+  yo.on('open', () => avisoSala('Sala ' + codigo + ' — dile el código a tu duo'));
+  yo.on('connection', prepararTubo);
+  yo.on('error', (e) => avisoSala('error: ' + e.type));
+};
+
+document.getElementById('entrar').onclick = () => {
+  if (!miNombre) { avisoSala('Escribe tu nombre para jugar online'); cajaNombre.focus(); return; }
+  soyAnfitrion = false;
+  const codigo = document.getElementById('codigo').value.trim();
+  if (!codigo) { avisoSala('Escribe el código primero'); return; }
+  const yo = new Peer();
+  yo.on('open', () => {
+    avisoSala('Llamando a la sala ' + codigo + '…');
+    prepararTubo(yo.connect('impostor-manu-' + codigo));
+  });
+  yo.on('error', (e) => avisoSala('error: ' + e.type));
+};
+
+// ============================================================
+//  PANEL  (tecla P; se desbloquea una vez con ?panel=1)
+// ============================================================
+const panel = document.getElementById('panel');
+let panelDesbloqueado = false;
+try {
+  if (new URLSearchParams(location.search).has('panel')) localStorage.setItem('manu-panel', '1');
+  panelDesbloqueado = localStorage.getItem('manu-panel') === '1'
+                   || localStorage.getItem('torres-panel') === '1';   // el de Torres también sirve
+} catch (e) {}
+
+let trucosInvitado = false;
+document.getElementById('trucosInvitado').addEventListener('change', (e) => {
+  trucosInvitado = e.target.checked;
+});
+
+function pintarPanel() { /* por ahora no hay secciones que esconder */ }
+
+panel.addEventListener('click', (e) => {
+  const boton = e.target.closest('button[data-truco]');
+  if (!boton) return;
+  const t = { que: 'truco', truco: boton.dataset.truco };
+  if (enLinea && !soyAnfitrion) {
+    mandarAlAnfitrion(t);
+    avisar('Truco pedido al anfitrión (él decide si lo acepta)');
+  } else {
+    aplicarTruco(t, yoSoy);
+  }
+});
+
+function aplicarTruco(t, quien = yoSoy) {
+  const j = juego;
+  if (!j.jugadores) { avisar('Empieza la partida primero'); return; }
+  if (t.truco === 'kill') { j.jugadores[quien].cooldown = 0; avisar('Truco: KILL listo'); }
+  else if (t.truco === 'tp') {
+    j.jugadores[quien].pos = [j.mapa.boton[0], j.mapa.boton[1]];
+    avisar('Truco: al botón');
+  } else if (t.truco === 'matarTodos') {
+    for (const b of j.bots) if (b.vivo) { b.vivo = false; j.cuerpos.push([b.pos[0], b.pos[1], b.color]); }
+    avisar('Truco: no queda nadie');
+  } else if (t.truco === 'calmar') {
+    j.cuerpos = [];
+    for (const b of j.bots) { b.alarma = false; b.sospecha = false; b.desdeQueTeVio = 999; if (b.vivo) b.nuevaTarea(); }
+    avisar('Truco: los bots se calmaron');
+  } else if (t.truco === 'tareas0') {
+    j.tareasHechas = 0; avisar('Truco: tareas a cero');
+  } else if (t.truco === 'luces') {
+    j.cooldownLuces = 0; j.luces = DURACION_LUCES; avisar('Truco: luces apagadas');
+  } else if (t.truco === 'ganar') {
+    j.terminar('ganaste', 'Truco: ganaste.');
+  } else if (t.truco === 'perder') {
+    j.terminar('perdiste', 'Truco: perdiste.');
+  }
+}
+
 window.addEventListener('keydown', (e) => {
+  // si estás escribiendo tu nombre o el código, las teclas son de la casilla
+  if (e.target.tagName === 'INPUT') return;
   const k = e.key;
   if (k.startsWith('Arrow') || k === ' ') e.preventDefault();
   teclas[k] = true;
+  mandarTeclas();
   prepararAudio();
   if (e.repeat) return;
+  if (k === 'p' || k === 'P') {
+    if (panelDesbloqueado) { pintarPanel(); panel.hidden = !panel.hidden; }
+    return;
+  }
   if (juego.estado === 'inicio') {
     if (k === 'd' || k === 'D') {
+      if (enLinea && !soyAnfitrion) return;          // la dificultad la pone el anfitrión
       const i = ORDEN_DIFICULTAD.indexOf(juego.dificultad);
       juego.dificultad = ORDEN_DIFICULTAD[(i + 1) % ORDEN_DIFICULTAD.length];
-    } else if (k === 'Enter') juego.empezar();
+    } else if (k === 'Enter') pedir('empezar');
   } else if (juego.estado === 'jugando') {
-    if (k === ' ') juego.intentarKill();
-    else if (k === 's' || k === 'S') juego.sabotearLuces();
-    else if (k === 'v' || k === 'V') juego.usarVent();
+    if (k === ' ') pedir('kill');
+    else if (k === 's' || k === 'S') pedir('luces');
+    else if (k === 'v' || k === 'V') pedir('vent');
   } else {
-    if (k === 'r' || k === 'R') juego.empezar();
-    else if (k === 'm' || k === 'M') juego.estado = 'inicio';
+    if (k === 'r' || k === 'R') pedir('empezar');
+    else if (k === 'm' || k === 'M') pedir('menu');
   }
 });
-window.addEventListener('keyup', (e) => { teclas[e.key] = false; });
-window.addEventListener('blur', () => { for (const k in teclas) teclas[k] = false; });
+window.addEventListener('keyup', (e) => { teclas[e.key] = false; mandarTeclas(); });
+window.addEventListener('blur', () => { for (const k in teclas) teclas[k] = false; mandarTeclas(); });
 canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault(); prepararAudio();
-  if (juego.estado === 'inicio') juego.empezar();
-  else if (juego.estado !== 'jugando') juego.empezar();
+  if (juego.estado !== 'jugando') pedir('empezar');
 });
 
 // ---------- El bucle: 60 cuadros por segundo ----------
@@ -731,7 +1038,12 @@ function bucle(ahora) {
   ultimoTiempo = ahora;
   if (dt > 250) dt = 250;
   acumulado += dt;
-  while (acumulado >= PASO) { juego.actualizar(DT, teclas); acumulado -= PASO; }
+  while (acumulado >= PASO) {
+    // EL INVITADO NO PIENSA: si los dos pensaran, el azar los separaría
+    if (!enLinea || soyAnfitrion) juego.actualizar(DT, teclas);
+    acumulado -= PASO;
+  }
+  if (enLinea && soyAnfitrion && conexion) conexion.send(estadoParaMandar());
   juego.dibujar();
   requestAnimationFrame(bucle);
 }
