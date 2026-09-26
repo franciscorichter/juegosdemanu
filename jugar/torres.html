@@ -69,7 +69,7 @@
   <button id="entrar">Entrar</button>
   <span id="aviso">1 jugador</span>
 </div>
-<canvas id="juego" width="800" height="610"></canvas>
+<canvas id="juego" width="1040" height="730"></canvas>
 
 <div id="panel" hidden>
   <b>Panel</b> &middot; <span style="color:#aaa">P para cerrar</span>
@@ -185,7 +185,7 @@ function armarOleada(n) {
   if (n >= 4) lista.push(...Array(Math.floor(n / 2)).fill('blindado'));
   if (n >= 5) lista.push(...Array(Math.floor(n / 3)).fill('tanque'));
   if (n >= 7) lista.push(...Array(Math.floor((n - 5) / 2)).fill('curandero'));
-  // de a dos jugadores: el doble de enemigos (comparten las monedas)
+  // de a dos jugadores: el doble de enemigos (y cada enemigo paga la mitad a cada uno)
   if (enLinea) lista.push(...lista);
   // se revuelven, para que no vengan todos los del mismo tipo juntos
   for (let i = lista.length - 1; i > 0; i--) {
@@ -212,19 +212,22 @@ const NEGRO = 'rgb(15,15,20)';
 //   S  donde salen los enemigos           B  tu base
 //   #  roca (no se puede construir)
 const MAPA_TXT = `
-......#.............
-.S=================.
-....#.............=.
-.==================.
-.=......#...........
-.=================..
-.#..............=...
-.================...
-.=.........#........
-.==================.
-...#..............=.
-.=================B.
-......#.......#.....
+......#............#......
+.S=======================.
+....#...................=.
+............#...........=.
+.========================.
+.=..................#.....
+.=......#.................
+.========================.
+.................#......=.
+...#....................=.
+.========================.
+.=....................#...
+.=........#...............
+.=======================B.
+......#..............#....
+...............#..........
 `;
 
 class Mapa {
@@ -361,7 +364,8 @@ class Enemigo {
 
 // ---------- Torre y bala ----------
 class Torre {
-  constructor(tipo, cx, cy) {
+  constructor(tipo, cx, cy, dueno = 0) {
+    this.dueno = dueno;             // 0 = anfitrión, 1 = invitado
     this.tipo = tipo;
     this.datos = TORRES[tipo];
     this.cx = cx; this.cy = cy;
@@ -400,6 +404,10 @@ class Torre {
     ctx.strokeStyle = NEGRO; ctx.lineWidth = this.tipo !== 1 ? 6 : 3;
     ctx.beginPath(); ctx.moveTo(x, y);
     ctx.lineTo(x + Math.cos(this.angulo) * 16, y + Math.sin(this.angulo) * 16); ctx.stroke();
+    if (enLinea) {   // blanco = anfitrión, amarillo = invitado (igual que las sombras)
+      ctx.fillStyle = this.dueno === 0 ? 'rgb(255,255,255)' : 'rgb(255,220,90)';
+      ctx.beginPath(); ctx.arc(x - 10, y - 10, 3, 0, Math.PI * 2); ctx.fill();
+    }
     if (seleccionada) {
       ctx.strokeStyle = BLANCO; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(x, y, this.datos.alcance, 0, Math.PI * 2); ctx.stroke();
@@ -449,7 +457,20 @@ const mapa = new Mapa(MAPA_TXT);
 const ANCHO = mapa.ancho * TILE, ALTO = mapa.alto * TILE + ALTO_BARRA;
 canvas.width = ANCHO; canvas.height = ALTO;
 
-let torres, enemigos, balas, explosiones, monedas, vidas, oleada, porSalir, esperaAparecer, vistos;
+let torres, enemigos, balas, explosiones, vidas, oleada, porSalir, esperaAparecer, vistos;
+
+// Cada jugador tiene SU billetera.  plata[0] = anfitrión, plata[1] = invitado.
+// Jugando solo usas la [0] y la otra no le importa a nadie.
+let plata = [0, 0];
+let yoSoy = 0;                     // 0 = anfitrión (o solo);  1 = invitado
+
+// Lo que paga un enemigo se parte entre los que estén jugando.
+// Así el juego no se hace más fácil por ser dos.
+function repartir(total) {
+  if (!enLinea) { plata[0] += total; return; }
+  plata[0] += total / 2;
+  plata[1] += total / 2;
+}
 let cuentaRegresiva, tipoElegido, estado, mensaje, mensajeHasta, tiempo;
 let mouse = [-100, -100];          // dónde está el mouse (en píxeles del canvas)
 let modoVender = false;            // para celular: el botón "Vender" de la barra
@@ -467,7 +488,7 @@ let creativo = false;              // 1 jugador: modo Creativo (panel sí, réco
 function reiniciar() {
   torres = new Map();              // "cx,cy" -> Torre
   enemigos = []; balas = []; explosiones = [];
-  monedas = MONEDAS_INICIO;
+  plata = [MONEDAS_INICIO, MONEDAS_INICIO];
   vidas = VIDAS;
   oleada = 0;                      // la última que salió
   porSalir = [];                   // enemigos que faltan por aparecer en esta oleada
@@ -506,20 +527,26 @@ function lanzarOleada() {
   avisar('¡Oleada ' + oleada + '! Vienen ' + porSalir.length + ' enemigos');
 }
 
-function construir(cx, cy, tipo = tipoElegido) {
+// 'quien' es el número del jugador que hizo el clic: paga él, y la torre es suya.
+function construir(cx, cy, tipo = tipoElegido, quien = yoSoy) {
   const precio = TORRES[tipo].precio;
   if (torres.has(cx + ',' + cy)) avisar('Ahí ya hay una torre (clic derecho para venderla)');
   else if (!mapa.sePuedeConstruir(cx, cy)) avisar('Solo puedes construir en el pasto');
-  else if (monedas < precio) avisar('Te faltan ' + (precio - monedas) + ' monedas');
-  else { monedas -= precio; torres.set(cx + ',' + cy, new Torre(tipo, cx, cy)); }
+  else if (plata[quien] < precio) avisar('Te faltan ' + Math.ceil(precio - plata[quien]) + ' monedas');
+  else {
+    plata[quien] -= precio;
+    torres.set(cx + ',' + cy, new Torre(tipo, cx, cy, quien));
+  }
 }
 
-function vender(cx, cy) {
+function vender(cx, cy, quien = yoSoy) {
   const torre = torres.get(cx + ',' + cy);
   if (!torre) return;
+  // con billeteras separadas, cada uno vende lo suyo: si no, te vendo tus torres y me quedo la plata
+  if (enLinea && torre.dueno !== quien) { avisar('Esa torre no es tuya'); return; }
   torres.delete(cx + ',' + cy);
   const devuelto = Math.floor(torre.datos.precio / 2);
-  monedas += devuelto;
+  plata[quien] += devuelto;
   avisar('Torre vendida: +' + devuelto + ' monedas');
 }
 
@@ -620,6 +647,7 @@ function prepararTubo(c) {
     creativo = false; panel.hidden = true; pintarModo();   // en línea se juega en serio
     avisoSala(soyAnfitrion ? '2 jugadores — eres el anfitrión' : '2 jugadores — eres el invitado');
     // el invitado se presenta; el anfitrión manda su nombre dentro del estado
+    yoSoy = soyAnfitrion ? 0 : 1;
     if (!soyAnfitrion) mandarAlAnfitrion({ que: 'hola', nombre: miNombre });
   });
   c.on('data', (d) => { if (soyAnfitrion) aplicarMensaje(d); else aplicarEstado(d); });
@@ -635,10 +663,10 @@ function estadoParaMandar() {
       x: e.x, y: e.y, tipo: e.tipo, color: e.color, radio: e.radio,
       armadura: e.armadura, brillo: e.brillo, vida: e.vida, vidaMax: e.vidaMax })),
     torres: [...torres.values()].map(t => ({
-      x: t.x, y: t.y, cx: t.cx, cy: t.cy, tipo: t.tipo, angulo: t.angulo })),
+      x: t.x, y: t.y, cx: t.cx, cy: t.cy, tipo: t.tipo, angulo: t.angulo, dueno: t.dueno })),
     balas: balas.map(b => ({ x: b.x, y: b.y, color: b.color, area: b.area })),
     explosiones: explosiones.map(e => ({ x: e.x, y: e.y, radio: e.radio, frames: e.frames })),
-    monedas, vidas, oleada, estado, cuentaRegresiva,
+    plata, vidas, oleada, estado, cuentaRegresiva,
     porSalir: porSalir.length,
     mensaje: (tiempo < mensajeHasta && mensaje) ? mensaje : '',
     mouse, torre: tipoElegido, nombre: miNombre,
@@ -656,7 +684,7 @@ function aplicarEstado(d) {
     o.datos = TORRES[o.tipo];               // los datos de la torre están en el archivo
     return [o.cx + ',' + o.cy, Object.setPrototypeOf(o, Torre.prototype)];
   }));
-  monedas = d.monedas; vidas = d.vidas; oleada = d.oleada; estado = d.estado;
+  plata = d.plata; vidas = d.vidas; oleada = d.oleada; estado = d.estado;
   cuentaRegresiva = d.cuentaRegresiva;
   porSalir = new Array(d.porSalir);         // solo importa cuántos faltan
   mensaje = d.mensaje; mensajeHasta = 1e9; tiempo = 0;
@@ -668,8 +696,8 @@ function aplicarEstado(d) {
 function aplicarMensaje(m) {
   if (m.que === 'clic') {
     if (estado !== 'jugando') return;
-    if (m.vender) vender(m.cx, m.cy);
-    else construir(m.cx, m.cy, m.torre);    // con LA TORRE QUE ELIGIÓ ÉL, no la mía
+    if (m.vender) vender(m.cx, m.cy, 1);          // el invitado es el jugador 1
+    else construir(m.cx, m.cy, m.torre, 1);       // con LA TORRE QUE ELIGIÓ ÉL, y paga ÉL
   } else if (m.que === 'oleada') {
     lanzarOleada();
   } else if (m.que === 'mouse') {
@@ -678,7 +706,7 @@ function aplicarMensaje(m) {
     nombreAmigo = m.nombre;
     avisar((m.nombre || 'Tu amigo') + ' entró a la partida');
   } else if (m.que === 'truco') {
-    if (trucosInvitado) aplicarTruco(m);
+    if (trucosInvitado) aplicarTruco(m, 1);
     else avisar((nombreAmigo || 'Tu amigo') + ' intentó un truco y no lo dejaste');
   }
 }
@@ -734,12 +762,12 @@ panel.addEventListener('click', (e) => {
   if (!boton) return;
   const t = { que: 'truco', truco: boton.dataset.truco, n: boton.dataset.n };
   if (enLinea && !soyAnfitrion) mandarAlAnfitrion(t);
-  else aplicarTruco(t);
+  else aplicarTruco(t, yoSoy);
 });
 
-function aplicarTruco(t) {
+function aplicarTruco(t, quien = yoSoy) {
   if (t.truco === 'monedas') {
-    monedas += Number(t.n); avisar('Truco: +' + t.n + ' monedas');
+    plata[quien] += Number(t.n); avisar('Truco: +' + t.n + ' monedas');
   } else if (t.truco === 'vidas') {
     vidas += Number(t.n); avisar('Truco: +' + t.n + ' vidas');
   } else if (t.truco === 'spawn') {
@@ -866,7 +894,7 @@ function actualizar() {
   } else if (!enemigos.length && oleada > 0 && oleada < OLEADAS) {
     // oleada terminada: cuenta regresiva para la siguiente
     if (cuentaRegresiva === ESPERA_OLEADA * FPS) {
-      monedas += BONO_OLEADA;
+      repartir(BONO_OLEADA);
       avisar('Oleada ' + oleada + ' superada: +' + BONO_OLEADA + ' monedas. ESPACIO o espera...', 6);
     }
     cuentaRegresiva -= 1;
@@ -883,7 +911,7 @@ function actualizar() {
   // enemigos muertos dan monedas; los que llegan quitan vidas
   const quedan = [];
   for (const e of enemigos) {
-    if (!e.vivo) monedas += e.monedas;
+    if (!e.vivo) repartir(e.monedas);
     else if (e.llego) vidas -= e.quita;
     else quedan.push(e);
   }
@@ -952,7 +980,7 @@ function dibujar() {
   const cx = Math.floor(mx / TILE), cy = Math.floor(my / TILE);
   if (estado === 'jugando' && my >= 0 && my < m.alto * TILE && !modoVender) {
     const datos = TORRES[tipoElegido];
-    const ok = m.sePuedeConstruir(cx, cy) && !torres.has(cx + ',' + cy) && monedas >= datos.precio;
+    const ok = m.sePuedeConstruir(cx, cy) && !torres.has(cx + ',' + cy) && plata[yoSoy] >= datos.precio;
     sombra(cx, cy, datos.alcance, ok ? 'rgb(255,255,255)' : 'rgb(255,80,80)');
   }
   // la sombra del compañero, en amarillo, para no pisarse
@@ -1012,7 +1040,12 @@ function dibujarBarra() {
   texto(puede ? '¡lanzar ya!' : 'en camino', ro.x + ro.w / 2, ro.y + 40, 12, 'rgb(200,200,210)', 'centro');
   // marcador a la derecha
   const x = ANCHO - 10;
-  texto('Monedas: ' + monedas, x, y0 + 8, 18, 'rgb(255,220,90)', 'derecha');
+  texto('Monedas: ' + Math.floor(plata[yoSoy]), x, y0 + 8, 18, 'rgb(255,220,90)', 'derecha');
+  if (enLinea) {
+    const otro = 1 - yoSoy;
+    texto((nombreAmigo || 'tu amigo') + ': ' + Math.floor(plata[otro]) + ' $',
+          x, y0 + 74, 12, 'rgb(190,190,130)', 'derecha');
+  }
   texto('Vidas: ' + vidas, x, y0 + 32, 18, 'rgb(255,120,120)', 'derecha');
   texto('Oleada: ' + oleada + '/' + OLEADAS, x, y0 + 56, 18, BLANCO, 'derecha');
   // mensaje
