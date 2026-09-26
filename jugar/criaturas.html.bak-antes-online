@@ -42,25 +42,10 @@
   }
   .tactil button:active { background: var(--piedra); }
   .tactil .grande { width: 80px; }
-  /* La barra de la sala (solo para el modo de 2 jugadores) */
-  #sala { margin-bottom: 10px; font-size: 10px; text-align: center; }
-  #sala button, #sala input {
-    font-family: inherit; font-size: 10px; padding: 8px 10px; margin: 2px;
-    background: #3c6ec9; border: 3px solid #244a8c; color: #fff; cursor: pointer;
-  }
-  #sala input { background: #000; border-color: #555; width: 90px; cursor: text; }
-  #aviso { color: var(--diamante); margin-left: 8px; }
 </style>
 </head>
 <body>
 <h1>CRIATURAS</h1>
-<div id="sala">
-  <input id="nombre" placeholder="tu nombre" size="10" maxlength="12">
-  <button id="crear">Crear sala</button>
-  <input id="codigo" placeholder="codigo" size="8">
-  <button id="entrar">Entrar</button>
-  <span id="aviso">1 jugador</span>
-</div>
 <canvas id="juego" width="960" height="640"></canvas>
 <div class="tactil">
   <div class="cruz">
@@ -68,16 +53,10 @@
     <button data-tecla="ArrowLeft">◀</button><span></span><button data-tecla="ArrowRight">▶</button>
     <span></span><button data-tecla="ArrowDown">▼</button><span></span>
   </div>
-  <div style="display:flex;gap:10px"><button class="grande" data-tecla="p">GUÍA</button><button class="grande" data-tecla="Escape">ESC</button><button class="grande" data-tecla="Enter">OK</button></div>
+  <div style="display:flex;gap:10px"><button class="grande" data-tecla="Escape">ESC</button><button class="grande" data-tecla="Enter">OK</button></div>
 </div>
-<p class="ayuda">flechas: caminar / moverse por los menús &middot; ENTER: aceptar / hablar &middot; ESC: cancelar / menú &middot;
-<b>P: guía de qué sale en cada pasto</b> &middot; SHIFT: correr &middot; G / L: guardar / cargar</p>
-<p class="ayuda">Para jugar con un amigo: uno aprieta <b>Crear sala</b> y le pasa el código; el otro lo escribe y aprieta <b>Entrar</b>.
-Se ven caminando en el mismo mapa y si se chocan empieza un duelo.</p>
+<p class="ayuda">flechas: caminar / moverse por los menús &middot; ENTER: aceptar / hablar &middot; ESC: cancelar / menú &middot; SHIFT: correr &middot; G / L: guardar / cargar</p>
 <a class="boton" href="../index.html">&larr; Volver a la página</a>
-
-<!-- PeerJS: conecta dos navegadores directo, sin servidor nuestro -->
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
 <script>
 // ============================================================
@@ -194,32 +173,11 @@ const MAPA_TXT = `
 `;
 
 // ================= LÓGICA (logica.py) =================
-// El "dado" del juego. Normalmente es el azar del navegador. En las batallas
-// en línea los dos computadores usan un dado con semilla: así los dos sacan
-// los mismos números y ven exactamente la misma pelea sin mandarse el
-// resultado de cada golpe.
-let dado = Math.random;
-function dadoConSemilla(semilla) {
-  let a = semilla >>> 0;
-  return () => {
-    a = (a + 0x6D2B79F5) >>> 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-// Corre cuerpo() usando otro dado y después deja el de siempre.
-function conDado(otro, cuerpo) {
-  const antes = dado;
-  dado = otro;
-  try { return cuerpo(); } finally { dado = antes; }
-}
-
 const MAX_EQUIPO = 6;
 const expParaNivel = (nivel) => nivel ** 3;
-const azarEntre = (a, b) => a + dado() * (b - a);
+const azarEntre = (a, b) => a + Math.random() * (b - a);
 const azarEntero = (a, b) => Math.floor(azarEntre(a, b + 1));
-const elegir = (l) => l[Math.floor(dado() * l.length)];
+const elegir = (l) => l[Math.floor(Math.random() * l.length)];
 const trunc = Math.trunc;
 
 class Criatura {
@@ -287,7 +245,7 @@ function calcularDano(atacante, defensor, nombreAtaque) {
   const base = (2 * atacante.nivel / 5 + 2) * at.poder * atacante.ataque / Math.max(1, defensor.defensa) / 50 + 2;
   const mismoTipo = at.tipo === atacante.tipo ? 1.5 : 1;
   const efe = efectividad(at.tipo, defensor.tipo);
-  const critico = dado() < 1 / 16;
+  const critico = Math.random() < 1 / 16;
   const ventaja = Math.max(0.6, Math.min(1.6, Math.sqrt(atacante.nivel / Math.max(1, defensor.nivel))));
   const dano = base * mismoTipo * efe * ventaja * (critico ? 1.5 : 1) * azarEntre(0.85, 1);
   return [Math.max(1, trunc(dano)), efe, critico];
@@ -347,7 +305,7 @@ class Batalla {
       if (!this.salvaje) { ev.push(['msg', '¡No puedes huir de un entrenador!']); return ev; }
       this.intentosHuir += 1;
       const prob = 0.5 + 0.1 * this.intentosHuir + (this.mia.velocidad >= this.enemiga.velocidad ? 0.2 : 0);
-      if (dado() < prob) { ev.push(['msg', '¡Escapaste sin problemas!']); return ev.concat(this.terminar('huida')); }
+      if (Math.random() < prob) { ev.push(['msg', '¡Escapaste sin problemas!']); return ev.concat(this.terminar('huida')); }
       ev.push(['msg', '¡No pudiste escapar!']);
     } else if (tipo === 'objeto') {
       const [evObj, gastaTurno] = this.usarObjeto(accion[1], accion.length > 2 ? accion[2] : this.activa);
@@ -358,7 +316,7 @@ class Batalla {
     } else if (tipo === 'atacar') {
       const nombre = this.mia.ataques[accion[1]];
       const atEnemigo = this.elegirAtaqueEnemigo();
-      const yoPrimero = this.mia.velocidad > this.enemiga.velocidad || (this.mia.velocidad === this.enemiga.velocidad && dado() < 0.5);
+      const yoPrimero = this.mia.velocidad > this.enemiga.velocidad || (this.mia.velocidad === this.enemiga.velocidad && Math.random() < 0.5);
       const orden = [['jugador', nombre], ['enemigo', atEnemigo]];
       if (!yoPrimero) orden.reverse();
       const enemigoAntes = this.enemigoI;
@@ -386,7 +344,7 @@ class Batalla {
   // El enemigo elige: 7 de cada 10 veces el ataque que más daño haría.
   elegirAtaqueEnemigo() {
     const e = this.enemiga;
-    if (dado() < 0.3) return elegir(e.ataques);
+    if (Math.random() < 0.3) return elegir(e.ataques);
     const puntaje = (nombre) => {
       const at = ATAQUES[nombre];
       if (at.poder === 0) {
@@ -408,7 +366,7 @@ class Batalla {
     }
     const at = ATAQUES[nombre];
     ev.push(['msg', atacante.nombre + ' usa ' + nombre + '.'], ['sacudida', lado]);
-    if (dado() * 100 >= at.precision) { ev.push(['msg', '...pero falló.']); return ev; }
+    if (Math.random() * 100 >= at.precision) { ev.push(['msg', '...pero falló.']); return ev; }
     if (at.poder > 0) {
       const [dano, efe, critico] = calcularDano(atacante, defensor, nombre);
       defensor.danar(dano);
@@ -499,7 +457,7 @@ class Batalla {
       const prob = probabilidadCaptura(this.enemiga, nombre);
       let sacudidas = 0;
       const porSacudida = Math.cbrt(prob);
-      for (let i = 0; i < 3; i++) { if (dado() < porSacudida) sacudidas += 1; else break; }
+      for (let i = 0; i < 3; i++) { if (Math.random() < porSacudida) sacudidas += 1; else break; }
       const atrapada = sacudidas === 3;
       ev.push(['esfera', sacudidas, atrapada]);
       if (atrapada) {
@@ -519,232 +477,6 @@ class Batalla {
     this.terminada = true; this.resultado = resultado;
     for (const c of this.equipo) c.terminarBatalla();
     return [['fin', resultado]];
-  }
-}
-
-// Un duelo entre dos jugadores por internet.
-//
-// La regla de oro: LOS DOS PIENSAN LO MISMO.
-// Los dos navegadores tienen los mismos equipos y el mismo dado con semilla,
-// así que solo se mandan "qué eligió cada uno" y los dos calculan la misma
-// pelea. No se manda la vida ni el daño: sale igual en las dos pantallas.
-//
-// Adentro los dos lados se llaman A (el anfitrión) y B (el invitado), porque
-// eso es igual en los dos computadores. Al final se traduce a "jugador" y
-// "enemigo" según quién eres tú, que es lo que entiende PantallaBatalla.
-class BatallaPvP {
-  constructor(datos, miLado) {
-    this.lados = {};
-    for (const lado of ['A', 'B']) {
-      const d = datos[lado];
-      const equipo = d.equipo.map(Criatura.desdeDict);
-      this.lados[lado] = { equipo, mochila: new Mochila(d.mochila), nombre: d.nombre, activa: Math.max(0, equipo.findIndex(c => !c.ko)) };
-    }
-    this.miLado = miLado;
-    this.suLado = miLado === 'A' ? 'B' : 'A';
-    this.dado = dadoConSemilla(datos.semilla);
-    this.salvaje = false;
-    this.entrenador = null;
-    this.terminada = false;
-    this.resultado = null;
-    this.ganador = null;
-    this.acciones = { A: null, B: null };
-    this.pendientes = null;     // eventos ya calculados, esperando que la pantalla los muestre
-    this.faseKO = false;        // turno especial: solo el que se quedó sin criatura elige
-    this.enviarAccion = () => {};   // lo pone la parte de internet
-    this.enviarRendirse = () => {};
-  }
-  // ---- lo que PantallaBatalla necesita, igual que en Batalla ----
-  get yo() { return this.lados[this.miLado]; }
-  get rival() { return this.lados[this.suLado]; }
-  get equipo() { return this.yo.equipo; }
-  get mochila() { return this.yo.mochila; }
-  get activa() { return this.yo.activa; }
-  get mia() { return this.yo.equipo[this.yo.activa]; }
-  get enemiga() { return this.rival.equipo[this.rival.activa]; }
-  get nombreRival() { return this.rival.nombre; }
-  criatura(lado) { return lado === 'jugador' ? this.mia : this.enemiga; }
-  otro(lado) { return lado === 'A' ? 'B' : 'A'; }
-  activaDe(lado) { const L = this.lados[lado]; return L.equipo[L.activa]; }
-  necesitaCambio() { return this.mia.ko && this.equipo.some(c => !c.ko); }
-  eventosInicio() {
-    return [
-      ['msg', '¡' + this.rival.nombre + ' te desafía a un duelo!'],
-      ['sale', 'enemigo'], ['msg', this.rival.nombre + ' saca a ' + this.enemiga.nombre + '.'],
-      ['sale', 'jugador'], ['msg', '¡Adelante, ' + this.mia.nombre + '!'],
-    ];
-  }
-  // ---- turnos ----
-  // Qué toca hacer ahora: elegir en el menú, cambiar de criatura, o esperar al rival.
-  queHacer() {
-    if (this.terminada) return 'fin';
-    if (this.acciones[this.miLado] !== null) return 'esperar';
-    if (this.mia.ko) return 'cambiar';
-    if (this.faseKO) { this.registrarMia(['nada']); return 'esperar'; }
-    return 'elegir';
-  }
-  // PantallaBatalla llama a esto cuando elegiste algo.
-  // Si la jugada no se puede hacer, contesta al tiro y no gasta el turno.
-  turno(accion) {
-    if (this.terminada) return [];
-    if (accion[0] === 'huir') { this.enviarRendirse(); return this.rendirse(this.miLado); }
-    if (accion[0] === 'objeto') {
-      const nombre = accion[1], obj = OBJETOS[nombre], objetivo = this.equipo[accion[2]];
-      if (obj.tipo === 'esfera') return [['msg', '¡No puedes atrapar la criatura de otro jugador!']];
-      if (!this.mochila.tiene(nombre)) return [['msg', 'No te quedan ' + nombre + '.']];
-      if (obj.tipo === 'curar' && (objetivo.ko || objetivo.hp >= objetivo.hpMax)) return [['msg', 'No le hace falta.']];
-      if (obj.tipo === 'estado' && objetivo.estado === null) return [['msg', 'No le hace falta.']];
-    }
-    if (accion[0] === 'cambiar') {
-      const c = this.equipo[accion[1]];
-      if (accion[1] === this.activa || !c || c.ko) return [['msg', 'Esa no puede salir ahora.']];
-    }
-    this.registrarMia(accion);
-    return [];
-  }
-  registrarMia(accion) { this.enviarAccion(accion); this.acciones[this.miLado] = accion; this.probarResolver(); }
-  recibirAccion(accion) { this.acciones[this.suLado] = accion; this.probarResolver(); }
-  recibirRendirse() { this.pendientes = (this.pendientes || []).concat(this.rendirse(this.suLado)); }
-  // La pantalla viene a buscar los eventos ya calculados.
-  tomarEventos() { const p = this.pendientes; this.pendientes = null; return p || []; }
-  probarResolver() {
-    if (this.terminada || this.acciones.A === null || this.acciones.B === null) return;
-    const aA = this.acciones.A, aB = this.acciones.B;
-    this.acciones = { A: null, B: null };
-    const ev = conDado(this.dado, () => this.resolver(aA, aB));
-    this.pendientes = (this.pendientes || []).concat(ev.map(e => this.traducir(e)));
-  }
-  // Pasa los lados A/B a "jugador"/"enemigo", que es como tú lo ves.
-  traducir(e) {
-    if (e[0] === 'fin') return ['fin', this.resultado];
-    if (e.length > 1 && (e[1] === 'A' || e[1] === 'B')) return [e[0], e[1] === this.miLado ? 'jugador' : 'enemigo'];
-    return e;
-  }
-  rendirse(lado) {
-    if (this.terminada) return [];
-    const ev = [['msg', this.lados[lado].nombre + ' se rindió.']].concat(this.terminar(this.otro(lado)));
-    return ev.map(e => this.traducir(e));
-  }
-  // El corazón: con las dos jugadas arma la lista de eventos del turno.
-  resolver(aA, aB) {
-    const acc = { A: aA, B: aB };
-    let ev = [];
-    for (const lado of ['A', 'B']) {
-      if (acc[lado][0] === 'huir') {
-        ev.push(['msg', this.lados[lado].nombre + ' se rindió.']);
-        return ev.concat(this.terminar(this.otro(lado)));
-      }
-    }
-    // primero los cambios y los objetos (como en los juegos de verdad)
-    for (const lado of ['A', 'B']) {
-      const a = acc[lado];
-      if (a[0] === 'cambiar') ev = ev.concat(this.cambiarLado(lado, a[1]));
-      else if (a[0] === 'objeto') ev = ev.concat(this.objetoLado(lado, a[1], a[2]));
-    }
-    if (this.faseKO) { this.faseKO = this.algunoKO(); return ev; }
-    // después los ataques, el más rápido primero
-    let atacan = ['A', 'B'].filter(l => acc[l][0] === 'atacar');
-    if (atacan.length === 2) {
-      const vA = this.activaDe('A').velocidad, vB = this.activaDe('B').velocidad;
-      const primero = vA > vB ? 'A' : vB > vA ? 'B' : (dado() < 0.5 ? 'A' : 'B');
-      atacan = [primero, this.otro(primero)];
-    }
-    for (const lado of atacan) {
-      if (this.terminada) return ev;
-      if (this.activaDe(lado).ko || this.activaDe(this.otro(lado)).ko) continue;
-      const nombre = this.activaDe(lado).ataques[acc[lado][1]];
-      if (!nombre) continue;
-      ev = ev.concat(this.atacarLado(lado, nombre));
-    }
-    // el veneno pica al final del turno
-    for (const lado of ['A', 'B']) {
-      if (this.terminada) break;
-      const c = this.activaDe(lado);
-      if (!c.ko && c.estado === 'envenenado') {
-        c.danar(Math.max(1, trunc(c.hpMax / 8)));
-        ev.push(['parpadeo', lado], ['hp', lado], ['msg', c.nombre + ' sufre por el veneno.']);
-        if (c.ko) ev = ev.concat(this.cayoLado(lado));
-      }
-    }
-    if (!this.terminada) this.faseKO = this.algunoKO();
-    return ev;
-  }
-  algunoKO() { return ['A', 'B'].some(l => this.activaDe(l).ko); }
-  atacarLado(lado, nombre) {
-    const ev = [];
-    const atacante = this.activaDe(lado), defensor = this.activaDe(this.otro(lado)), rival = this.otro(lado);
-    if (atacante.estado === 'dormido') {
-      atacante.turnosDormido -= 1;
-      if (atacante.turnosDormido > 0) { ev.push(['msg', atacante.nombre + ' está dormida... zZz']); return ev; }
-      atacante.estado = null;
-      ev.push(['hp', lado], ['msg', '¡' + atacante.nombre + ' se despertó!']);
-    }
-    const at = ATAQUES[nombre];
-    ev.push(['msg', atacante.nombre + ' usa ' + nombre + '.'], ['sacudida', lado]);
-    if (dado() * 100 >= at.precision) { ev.push(['msg', '...pero falló.']); return ev; }
-    if (at.poder > 0) {
-      const [dano, efe, critico] = calcularDano(atacante, defensor, nombre);
-      defensor.danar(dano);
-      ev.push(['parpadeo', rival], ['hp', rival]);
-      if (critico) ev.push(['msg', '¡Golpe crítico!']);
-      if (efe >= 2) ev.push(['msg', '¡Es súper efectivo!']); else if (efe < 1) ev.push(['msg', 'No es muy efectivo...']);
-      if (defensor.ko) return ev.concat(this.cayoLado(rival));
-    }
-    const efecto = at.efecto;
-    if (efecto === 'subir_ataque') {
-      if (atacante.etapaAtaque < 6) { atacante.etapaAtaque += 1; ev.push(['msg', '¡El ataque de ' + atacante.nombre + ' subió!']); }
-      else ev.push(['msg', 'El ataque de ' + atacante.nombre + ' no puede subir más.']);
-    } else if (efecto === 'dormir') {
-      if (defensor.estado === null) { defensor.estado = 'dormido'; defensor.turnosDormido = azarEntero(2, 4); ev.push(['hp', rival], ['msg', '¡' + defensor.nombre + ' se quedó dormida!']); }
-      else ev.push(['msg', 'No pasó nada.']);
-    } else if (efecto === 'veneno') {
-      if (defensor.estado === null) { defensor.estado = 'envenenado'; ev.push(['hp', rival], ['msg', '¡' + defensor.nombre + ' quedó envenenada!']); }
-      else ev.push(['msg', 'No pasó nada.']);
-    }
-    return ev;
-  }
-  cayoLado(lado) {
-    const L = this.lados[lado];
-    const ev = [['ko', lado], ['msg', '¡' + this.activaDe(lado).nombre + ' cayó!']];
-    if (!L.equipo.some(c => !c.ko)) {
-      ev.push(['msg', 'A ' + L.nombre + ' no le quedan criaturas...']);
-      return ev.concat(this.terminar(this.otro(lado)));
-    }
-    ev.push(['msg', L.nombre + ' tiene que sacar otra.']);
-    return ev;
-  }
-  cambiarLado(lado, i) {
-    const L = this.lados[lado], c = L.equipo[i];
-    if (i === L.activa || !c || c.ko) return [['msg', 'Esa no puede salir ahora.']];
-    const ev = [], antes = L.equipo[L.activa];
-    if (!antes.ko) ev.push(['msg', '¡Vuelve, ' + antes.nombre + '!']);
-    antes.terminarBatalla();
-    L.activa = i;
-    ev.push(['sale', lado], ['msg', L.nombre + ' saca a ' + c.nombre + '.']);
-    return ev;
-  }
-  objetoLado(lado, nombre, objetivoI) {
-    const L = this.lados[lado], obj = OBJETOS[nombre], objetivo = L.equipo[objetivoI];
-    if (!obj || !objetivo || !L.mochila.tiene(nombre)) return [['msg', 'No pasó nada.']];
-    if (obj.tipo === 'curar') {
-      if (objetivo.ko || objetivo.hp >= objetivo.hpMax) return [['msg', 'No pasó nada.']];
-      L.mochila.quitar(nombre);
-      const curado = objetivo.curar(obj.valor);
-      return [['hp', lado], ['msg', L.nombre + ' usa ' + nombre + ': ' + objetivo.nombre + ' recupera ' + curado + ' de vida.']];
-    }
-    if (obj.tipo === 'estado') {
-      if (objetivo.estado === null) return [['msg', 'No pasó nada.']];
-      L.mochila.quitar(nombre); objetivo.estado = null; objetivo.turnosDormido = 0;
-      return [['hp', lado], ['msg', L.nombre + ' usa ' + nombre + ': ¡' + objetivo.nombre + ' se siente mejor!']];
-    }
-    return [['msg', 'Eso no se puede usar en un duelo.']];
-  }
-  terminar(ganador) {
-    this.terminada = true;
-    this.ganador = ganador;
-    this.resultado = ganador === this.miLado ? 'victoria' : 'derrota';
-    for (const lado of ['A', 'B']) for (const c of this.lados[lado].equipo) c.terminarBatalla();
-    return [['fin', ganador]];
   }
 }
 

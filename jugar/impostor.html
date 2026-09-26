@@ -58,6 +58,7 @@
   <button id="crear">Crear sala</button>
   <input id="codigo" placeholder="codigo" size="8">
   <button id="entrar">Entrar</button>
+  <button id="botonPanel" hidden>Panel</button>
   <span id="aviso">1 impostor</span>
 </div>
 <canvas id="juego" width="900" height="650"></canvas>
@@ -405,6 +406,7 @@ class Jugador {
     this.mapa = mapa;
     this.pos = [mapa.boton[0], mapa.boton[1]];
     this.cooldown = 0;
+    this.expulsado = false;    // te echaron en una reunión: miras, pero ya no juegas
   }
   mover(teclas) {
     let dx = 0, dy = 0;
@@ -441,7 +443,9 @@ class Bot {
     this.pos = [pos[0], pos[1]];
     this.vivo = true;
     this.alarma = false;          // ¿vio algo y corre al botón?
-    this.sospecha = false;        // ¿te vio matar, al lado de un cuerpo o entrando a una vent?
+    this.sospecha = false;        // ¿vio matar, un cuerpo al lado de alguien, o una vent?
+    this.sospechaDe = -1;         // de CUÁL impostor sospecha (0 o 1)
+    this.vioA = -1;               // a cuál vio pasar por última vez
     this.desdeQueTeVio = 999;     // segundos desde la última vez que te vio
     this.ruta = [];
     this.esperando = 0;           // segundos que le faltan en la tarea actual
@@ -497,7 +501,12 @@ class Juego {
   // "this.jugador" es SIEMPRE el tuyo: así el dibujo y el HUD no cambian.
   get jugador() { return this.jugadores[yoSoy]; }
   // los que están jugando de verdad (solo = uno; en línea = los dos)
-  get activos() { return enLinea ? this.jugadores : [this.jugadores[0]]; }
+  get activos() { return this.indices().map((i) => this.jugadores[i]); }
+  // los números de los impostores que siguen jugando
+  indices() {
+    const todos = enLinea ? [0, 1] : [0];
+    return todos.filter((i) => !this.jugadores[i].expulsado);
+  }
 
   empezar() {
     aplicarDificultad(this.dificultad);
@@ -519,6 +528,7 @@ class Juego {
     this.posKill = null;
     this.flashVent = 0;
     this.posVent = null;
+    this.quienKill = 0; this.quienVent = 0;
     this.tareasHechas = 0;
     this.tiempo = 0;
     this.estado = 'jugando';
@@ -530,7 +540,7 @@ class Juego {
   // --- acciones del impostor ---
   intentarKill(quien = yoSoy) {
     const j = this.jugadores[quien];          // cada impostor tiene SU cooldown
-    if (j.cooldown > 0) return;
+    if (j.expulsado || j.cooldown > 0) return;
     const cerca = this.bots.filter((b) => b.vivo && distancia(b.pos, j.pos) <= ALCANCE_KILL);
     if (!cerca.length) return;
     let victima = cerca[0];
@@ -540,49 +550,87 @@ class Juego {
     j.cooldown = COOLDOWN_KILL;
     this.flashKill = 0.5;
     this.posKill = [victima.pos[0], victima.pos[1]];
+    this.quienKill = quien;                 // si lo ven, sospechan de ÉL
     sonar('kill');
   }
   usarVent(quien = yoSoy) {
     const j = this.jugadores[quien];
+    if (j.expulsado) return;
     const i = j.ventCercana();
     if (i < 0) return;
     this.flashVent = 0.5;
     this.posVent = [j.pos[0], j.pos[1]];
+    this.quienVent = quien;
     const destino = this.mapa.vents[(i + 1) % this.mapa.vents.length];
     j.pos = [destino[0], destino[1]];
     sonar('vent');
   }
-  sabotearLuces() {
+  sabotearLuces(quien = yoSoy) {
+    if (this.jugadores[quien].expulsado) return;
     if (this.cooldownLuces > 0 || this.luces > 0) return;
     this.luces = DURACION_LUCES;
     this.cooldownLuces = COOLDOWN_LUCES;
     sonar('luces');
   }
+  // Cómo se llama cada impostor (el anfitrión es el 0). Sirve para los avisos,
+  // que viajan ya escritos y tienen que leerse bien en las dos pantallas.
+  nombreDe(i) {
+    const n = i === 0 ? miNombre : nombreAmigo;
+    return n || ('Impostor ' + (i + 1));
+  }
+
+  expulsar(i, porque) {
+    this.jugadores[i].expulsado = true;
+    if (this.indices().length === 0) {          // no queda ninguno: se acabó
+      this.terminar('perdiste', '¡Reunión! ' + porque + ' Los expulsaron a todos.');
+      return;
+    }
+    this.aviso = '¡Reunión! Expulsaron a ' + this.nombreDe(i) + '. ' + porque;
+    this.avisoT = DURACION_AVISO;
+  }
+
   reunion() {
-    // Un bot llegó al botón. Si alguno sospecha de ti, te expulsan.
-    // Si nadie sabe nada, votan al azar (un bot, nadie... o tú).
+    // Un bot llegó al botón. Ahora se expulsa a UN impostor, no a los dos:
+    // el que siga libre puede seguir jugando (y ganar solo).
     sonar('reunion');
     const vivos = this.bots.filter((b) => b.vivo);
-    if (vivos.some((b) => b.sospecha)) {
-      this.terminar('perdiste', '¡Reunión! Un tripulante te vio. Te expulsaron.');
-      return;
+    const quedan = this.indices();
+
+    // ¿De quién sospechan? Gana el más acusado.
+    const votos = {};
+    for (const b of vivos) {
+      if (b.sospecha && quedan.includes(b.sospechaDe)) votos[b.sospechaDe] = (votos[b.sospechaDe] || 0) + 1;
     }
-    const candidatos = vivos.concat(['tu', null]);
-    const voto = elegir(candidatos);
-    if (voto === 'tu') {
-      this.terminar('perdiste', '¡Reunión! Nadie tenía pruebas... pero votaron por ti.');
-      return;
+    const acusados = Object.keys(votos).map(Number);
+    if (acusados.length) {
+      let quien = acusados[0];
+      for (const i of acusados) if (votos[i] > votos[quien]) quien = i;
+      this.expulsar(quien, 'Un tripulante lo vio.');
+    } else {
+      // Nadie sabe nada: votan al azar entre los bots, nadie, o un impostor.
+      const voto = elegir(vivos.concat(['impostor', null]));
+      if (voto === 'impostor') {
+        this.expulsar(elegir(quedan), 'Nadie tenía pruebas... pero votaron por él.');
+      } else if (voto === null) {
+        this.aviso = 'Reunión: nadie sabe nada. Empate, nadie fue expulsado.';
+        this.avisoT = DURACION_AVISO;
+      } else {
+        voto.vivo = false;
+        this.aviso = 'Reunión: nadie sabe nada... ¡expulsaron a un inocente!';
+        this.avisoT = DURACION_AVISO;
+      }
     }
-    if (voto === null) this.aviso = 'Reunión: nadie sabe nada. Empate, nadie fue expulsado.';
-    else { voto.vivo = false; this.aviso = 'Reunión: nadie sabe nada... ¡expulsaron a un inocente!'; }
-    this.avisoT = DURACION_AVISO;
-    // Después de la reunión todo se limpia: cuerpos, alarmas y cooldown.
+    if (this.estado !== 'jugando') return;
+
+    // Después de la reunión se limpia todo: cuerpos y alarmas.
     this.cuerpos = [];
     for (const b of this.bots) {
-      b.alarma = false; b.sospecha = false; b.desdeQueTeVio = 999;
+      b.alarma = false; b.sospecha = false; b.sospechaDe = -1; b.desdeQueTeVio = 999;
       if (b.vivo) b.nuevaTarea();
     }
-    for (const j of this.jugadores) j.cooldown = COOLDOWN_KILL;
+    // Jugando solo, la reunión te reinicia el cooldown (como siempre).
+    // De a dos NO: cada cooldown es tuyo, si no parecen una sola persona.
+    if (!enLinea) this.jugadores[0].cooldown = COOLDOWN_KILL;
     this.flashKill = 0; this.flashVent = 0;
   }
   terminar(estado, mensaje) {
@@ -616,17 +664,27 @@ class Juego {
       if (bot.actualizar(dt)) { this.tareasHechas += 1; sonar('tarea'); }
       if (!bot.vivo || bot.alarma) continue;
       // ¿Te está viendo ahora? Lo recuerda un rato.
-      if (this.activos.some((j) => bot.ve(j.pos, alcance))) bot.desdeQueTeVio = 0;
+      const visto = this.indices().find((i) => bot.ve(this.jugadores[i].pos, alcance));
+      if (visto !== undefined) { bot.desdeQueTeVio = 0; bot.vioA = visto; }
       else bot.desdeQueTeVio += dt;
-      // ¿Te vio matar? Eso sí es prueba: sospecha de ti y corre al botón.
-      if (this.flashKill > 0 && bot.ve(this.posKill, alcance)) { bot.sospecha = true; bot.alarmar(); continue; }
-      // ¿Te vio meterte a una ventilación? Solo los impostores hacen eso...
-      if (this.flashVent > 0 && bot.ve(this.posVent, alcance)) bot.sospecha = true;
+      // ¿Vio matar? Eso sí es prueba: sospecha de QUIEN mató y corre al botón.
+      if (this.flashKill > 0 && bot.ve(this.posKill, alcance)) {
+        bot.sospecha = true; bot.sospechaDe = this.quienKill; bot.alarmar(); continue;
+      }
+      // ¿Vio a alguien meterse a una ventilación? Solo los impostores hacen eso...
+      if (this.flashVent > 0 && bot.ve(this.posVent, alcance)) {
+        bot.sospecha = true; bot.sospechaDe = this.quienVent;
+      }
       for (const c of this.cuerpos) {
         if (bot.ve(c, alcance)) {
           // ¿Estabas al lado del cuerpo, o te vio hace poquito? Sospechoso.
-          const cerca = this.activos.some((j) => distancia(j.pos, c) <= RADIO_SOSPECHA && bot.ve(j.pos, alcance));
-          if (cerca || bot.desdeQueTeVio < MEMORIA_BOT) bot.sospecha = true;
+          // ¿alguno estaba al lado del cuerpo, a la vista? Ese es el sospechoso.
+          const cerca = this.indices().find((i) =>
+            distancia(this.jugadores[i].pos, c) <= RADIO_SOSPECHA && bot.ve(this.jugadores[i].pos, alcance));
+          if (cerca !== undefined) { bot.sospecha = true; bot.sospechaDe = cerca; }
+          else if (bot.desdeQueTeVio < MEMORIA_BOT && bot.vioA >= 0) {
+            bot.sospecha = true; bot.sospechaDe = bot.vioA;   // "te vi pasar por aquí hace nada"
+          }
           bot.alarmar();
           break;
         }
@@ -699,18 +757,25 @@ class Juego {
       }
     }
 
-    if (enLinea) {   // tu duo: naranjo, con su nombre encima
+    if (enLinea) {   // tu duo: naranjo con su nombre; gris si lo expulsaron
       const o = this.jugadores[1 - yoSoy];
       const q = [Math.floor(o.pos[0]), Math.floor(o.pos[1])];
-      circulo('rgb(255,140,60)', q[0], q[1], RADIO);
+      ctx.globalAlpha = o.expulsado ? 0.35 : 1;
+      circulo(o.expulsado ? GRIS : 'rgb(255,140,60)', q[0], q[1], RADIO);
       circulo(NEGRO, q[0], q[1], RADIO, 2);
       ctx.font = '11px ' + FUENTE; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-      ctx.fillStyle = 'rgb(255,190,120)'; ctx.fillText(nombreAmigo || 'tu duo', q[0], q[1] - RADIO - 6);
+      ctx.fillStyle = o.expulsado ? GRIS : 'rgb(255,190,120)';
+      ctx.fillText((nombreAmigo || 'tu duo') + (o.expulsado ? ' (fuera)' : ''), q[0], q[1] - RADIO - 6);
+      ctx.globalAlpha = 1;
     }
-    const p = [Math.floor(this.jugador.pos[0]), Math.floor(this.jugador.pos[1])];
-    circulo(ROJO, p[0], p[1], RADIO);
+    const yo = this.jugador;
+    const p = [Math.floor(yo.pos[0]), Math.floor(yo.pos[1])];
+    ctx.globalAlpha = yo.expulsado ? 0.35 : 1;
+    circulo(yo.expulsado ? GRIS : ROJO, p[0], p[1], RADIO);
     circulo(NEGRO, p[0], p[1], RADIO, 2);
-    if (this.jugador.cooldown === 0) circulo(BLANCO, p[0], p[1], ALCANCE_KILL, 1);   // anillo: listo para matar
+    ctx.globalAlpha = 1;
+    // anillo: listo para matar (los fantasmas no matan)
+    if (!yo.expulsado && yo.cooldown === 0) circulo(BLANCO, p[0], p[1], ALCANCE_KILL, 1);
   }
 
   _dibujarOscuridad() {
@@ -727,14 +792,22 @@ class Juego {
 
   _dibujarHud() {
     const vivos = this.bots.filter((b) => b.vivo).length;
-    const kill = this.jugador.cooldown > 0 ? 'KILL en ' + this.jugador.cooldown.toFixed(1) + ' s' : 'KILL listo (ESPACIO)';
+    const kill = this.jugador.expulsado ? 'TE EXPULSARON — solo miras'
+               : this.jugador.cooldown > 0 ? 'KILL en ' + this.jugador.cooldown.toFixed(1) + ' s'
+               : 'KILL listo (ESPACIO)';
+    let suyo = '';
+    if (enLinea) {
+      const o = this.jugadores[1 - yoSoy];
+      suyo = '   [' + (nombreAmigo || 'duo') + ': ' +
+             (o.expulsado ? 'fuera' : o.cooldown > 0 ? o.cooldown.toFixed(1) + ' s' : 'listo') + ']';
+    }
     let luz;
     if (this.luces > 0) luz = 'LUCES apagadas ' + this.luces.toFixed(1) + ' s';
     else if (this.cooldownLuces > 0) luz = 'Sabotaje en ' + this.cooldownLuces.toFixed(1) + ' s';
     else luz = 'Sabotaje listo (S)';
     if (this.jugador.ventCercana() >= 0) luz += '   VENT (V)';
     ctx.font = '13px ' + FUENTE; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = NEGRO; ctx.fillText('Tripulantes: ' + vivos + '   ' + kill + '   ' + luz, 14, ALTO - 14);
+    ctx.fillStyle = NEGRO; ctx.fillText('Tripulantes: ' + vivos + '   ' + kill + suyo + '   ' + luz, 14, ALTO - 14);
     ctx.fillStyle = BLANCO; ctx.fillText('Tripulantes: ' + vivos + '   ' + kill + '   ' + luz, 12, ALTO - 16);
 
     // Barra de tareas de la tripulación: si se llena, perdiste.
@@ -847,7 +920,7 @@ function pedir(cual) {
 function hacerAccion(cual, quien) {
   if (cual === 'kill') juego.intentarKill(quien);
   else if (cual === 'vent') juego.usarVent(quien);
-  else if (cual === 'luces') juego.sabotearLuces();
+  else if (cual === 'luces') juego.sabotearLuces(quien);
   else if (cual === 'empezar') juego.empezar();
   else if (cual === 'menu') juego.estado = 'inicio';
 }
@@ -859,7 +932,7 @@ function prepararTubo(c) {
     yoSoy = soyAnfitrion ? 0 : 1;
     avisoSala(soyAnfitrion ? '2 impostores — eres el anfitrión' : '2 impostores — eres el invitado');
     pintarPanel();
-    if (!soyAnfitrion) mandarAlAnfitrion({ que: 'hola', nombre: miNombre });
+    mandarAlAnfitrion({ que: 'hola', nombre: miNombre });
   });
   c.on('data', (d) => { if (soyAnfitrion) aplicarMensaje(d); else aplicarEstado(d); });
   c.on('close', () => {
@@ -873,7 +946,8 @@ function estadoParaMandar() {
   const j = juego;
   const base = { estado: j.estado, nombre: miNombre, dificultad: j.dificultad, total: TAREAS_TOTALES };
   if (!j.jugadores) return base;                       // todavía en el menú
-  base.jugadores = j.jugadores.map((p) => ({ x: p.pos[0], y: p.pos[1], cooldown: p.cooldown }));
+  base.jugadores = j.jugadores.map((p) => ({ x: p.pos[0], y: p.pos[1], cooldown: p.cooldown,
+                                             expulsado: p.expulsado }));
   base.bots = j.bots.map((b) => ({ x: b.pos[0], y: b.pos[1], color: b.color,
                                    vivo: b.vivo, alarma: b.alarma, esperando: b.esperando }));
   base.cuerpos = j.cuerpos;
@@ -893,7 +967,11 @@ function aplicarEstado(d) {
   if (!d.jugadores) { j.estado = d.estado; return; }   // el anfitrión sigue en el menú
   if (!j.jugadores) j.empezar();                       // empezó: armo mi nave igual que él
   TAREAS_TOTALES = d.total;
-  d.jugadores.forEach((p, i) => { j.jugadores[i].pos = [p.x, p.y]; j.jugadores[i].cooldown = p.cooldown; });
+  d.jugadores.forEach((p, i) => {
+    j.jugadores[i].pos = [p.x, p.y];
+    j.jugadores[i].cooldown = p.cooldown;
+    j.jugadores[i].expulsado = p.expulsado;
+  });
   // los bots llegan pelados: para dibujarlos basta con sus números
   j.bots = d.bots.map((b) => ({ pos: [b.x, b.y], color: b.color, vivo: b.vivo,
                                 alarma: b.alarma, esperando: b.esperando }));
@@ -910,7 +988,7 @@ function aplicarEstado(d) {
 function aplicarMensaje(m) {
   if (m.que === 'teclas') teclasInvitado = m.t;
   else if (m.que === 'accion') hacerAccion(m.cual, 1);
-  else if (m.que === 'hola') { nombreAmigo = m.nombre; avisar((m.nombre || 'Tu duo') + ' entró a la nave'); }
+  else if (m.que === 'hola') { nombreAmigo = m.nombre || ''; avisar((m.nombre || 'Tu duo') + ' entró a la nave'); }
   else if (m.que === 'truco') {
     if (trucosInvitado) aplicarTruco(m, 1);
     else avisar((nombreAmigo || 'Tu duo') + ' intentó un truco y no lo dejaste');
@@ -957,7 +1035,10 @@ document.getElementById('trucosInvitado').addEventListener('change', (e) => {
   trucosInvitado = e.target.checked;
 });
 
-function pintarPanel() { /* por ahora no hay secciones que esconder */ }
+const botonPanel = document.getElementById('botonPanel');
+botonPanel.hidden = !panelDesbloqueado;
+botonPanel.onclick = () => { panel.hidden = !panel.hidden; };
+function pintarPanel() { botonPanel.hidden = !panelDesbloqueado; }
 
 panel.addEventListener('click', (e) => {
   const boton = e.target.closest('button[data-truco]');
