@@ -30,19 +30,98 @@
     color: var(--texto); text-decoration: none; text-shadow: 2px 2px 0 #000;
   }
   .boton:hover { background: #4a82e0; }
+  #sala { margin-bottom: 10px; font-size: 10px; }
+  #sala button, #sala input {
+    font-family: inherit; font-size: 10px; padding: 8px 10px; margin: 2px;
+    background: #3c6ec9; border: 3px solid #244a8c; color: #fff; cursor: pointer;
+  }
+  #sala input { background: #000; border-color: #555; width: 90px; cursor: text; }
+  #modo.creativo { background: #2a8c4a; border-color: #186030; }
+  #aviso { color: var(--diamante); margin-left: 8px; }
+  #panel {
+    position: fixed; top: 10px; right: 10px; z-index: 9; width: 210px;
+    background: #14141c; border: 3px solid #3c6ec9; padding: 10px; font-size: 9px;
+    box-shadow: 4px 4px 0 #000; line-height: 1.5;
+  }
+  #panel b { color: var(--diamante); }
+  #panel .fila { margin-top: 8px; }
+  #panel button {
+    font-family: inherit; font-size: 9px; padding: 5px 6px; margin: 2px 1px;
+    background: #2a2a38; border: 2px solid #555; color: #fff; cursor: pointer;
+  }
+  #panel button:hover { background: #3c6ec9; }
+  #panel input[type=number] {
+    width: 54px; background: #000; color: #fff; border: 2px solid #555;
+    font-family: inherit; font-size: 9px; padding: 3px; margin-left: 4px;
+  }
+  #panel .ajuste { display: flex; justify-content: space-between; align-items: center; margin: 3px 0; }
+  #seccionGlobal b { color: #ffdc5a; }
   .boton:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
 </style>
 </head>
 <body>
 <h1>TORRES</h1>
+<div id="sala">
+  <button id="modo">Modo: Normal</button>
+  <input id="nombre" placeholder="tu nombre" size="10" maxlength="12">
+  <button id="crear">Crear sala</button>
+  <input id="codigo" placeholder="codigo" size="8">
+  <button id="entrar">Entrar</button>
+  <span id="aviso">1 jugador</span>
+</div>
 <canvas id="juego" width="800" height="610"></canvas>
-<p class="ayuda">1 / 2 / 3: elegir torre &middot; clic: poner torre &middot; clic derecho (o botón Vender): vender &middot; ESPACIO (o botón Oleada): lanzar oleada &middot; R: reiniciar</p>
+
+<div id="panel" hidden>
+  <b>Panel</b> &middot; <span style="color:#aaa">P para cerrar</span>
+  <div id="seccionPartida">
+  <div class="fila" style="color:#aaa">Esta partida (Creativo)</div>
+  <div class="fila">
+    <button data-truco="monedas" data-n="100">+100 $</button>
+    <button data-truco="monedas" data-n="1000">+1000 $</button>
+    <button data-truco="vidas" data-n="5">+5 vidas</button>
+  </div>
+  <div class="fila">Espaunear:<br>
+    <button data-truco="spawn" data-n="normal">normal</button>
+    <button data-truco="spawn" data-n="rapido">r&aacute;pido</button>
+    <button data-truco="spawn" data-n="blindado">blindado</button>
+    <button data-truco="spawn" data-n="tanque">tanque</button>
+    <button data-truco="spawn" data-n="curandero">curandero</button>
+    <button data-truco="spawn" data-n="jefe">JEFE</button>
+  </div>
+  <div class="fila">
+    <button data-truco="matar">matar a todos</button>
+    <button data-truco="oleada">siguiente oleada</button>
+    <button data-truco="reiniciar">reiniciar</button>
+  </div>
+  <div class="fila" style="border-top:1px solid #444; padding-top:6px">
+    <label><input type="checkbox" id="trucosInvitado"> aceptar trucos del invitado</label>
+  </div>
+  </div><!-- fin seccionPartida -->
+
+  <div id="seccionGlobal" class="fila" hidden style="border-top:2px solid #ffdc5a; padding-top:6px">
+    <b>Global</b><br>
+    <span style="color:#aaa">cambia las reglas y queda guardado</span>
+    <div class="ajuste">monedas al empezar <input type="number" id="gMonedas" min="0" max="99999"></div>
+    <div class="ajuste">vidas al empezar <input type="number" id="gVidas" min="1" max="999"></div>
+    <div class="ajuste">n&uacute;mero de oleadas <input type="number" id="gOleadas" min="1" max="99"></div>
+    <div class="ajuste">dureza por oleada % <input type="number" id="gDureza" min="0" max="300"></div>
+    <div class="fila">
+      <button id="gGuardar">Guardar y reiniciar</button>
+      <button id="gFabrica">Volver a lo normal</button>
+      <button id="gRecords">Borrar r&eacute;cords</button>
+    </div>
+  </div>
+</div>
+<p class="ayuda">1 / 2 / 3: elegir torre &middot; clic: poner torre &middot; clic derecho (o botón Vender): vender &middot; ESPACIO (o botón Oleada): lanzar oleada &middot; R: reiniciar &middot; P: panel de pruebas</p>
 <a class="boton" href="../index.html">&larr; Volver a la página</a>
 
+<!-- PeerJS: conecta dos navegadores directo, sin servidor nuestro -->
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 // ============================================================
 //  Torres — versión web del torres.py de Manu
-//  Todo se dibuja con canvas. Sin imágenes, sin internet.
+//  Todo se dibuja con canvas. Sin imágenes.
+//  Internet SOLO para el modo de 2 jugadores (PeerJS).
 // ============================================================
 
 // ---------- Ajustes del juego (los mismos que en torres.py) ----------
@@ -50,12 +129,26 @@ const TILE = 40;
 const ALTO_BARRA = 90;              // la barra de abajo con las torres
 const FPS = 60;
 const PASO = 1000 / FPS;
-const VIDAS = 10;
-const MONEDAS_INICIO = 120;
-const OLEADAS = 15;
+// Estos cuatro son 'let' y no 'const' porque el PANEL GLOBAL los cambia,
+// y quedan guardados en este navegador para las próximas partidas.
+let VIDAS = 10;
+let MONEDAS_INICIO = 120;
+let OLEADAS = 15;
 const BONO_OLEADA = 25;             // monedas de regalo al terminar una oleada
 const ESPERA_OLEADA = 15;           // segundos hasta que la siguiente oleada sale sola
-const VIDA_EXTRA_POR_OLEADA = 0.19; // cada oleada los enemigos tienen 19% más vida que la anterior (se multiplica)
+let VIDA_EXTRA_POR_OLEADA = 0.19;   // cada oleada los enemigos tienen 19% más vida que la anterior (se multiplica)
+
+// Copia de los valores originales, para el botón "volver a lo normal".
+const AJUSTES_DE_FABRICA = { VIDAS, MONEDAS_INICIO, OLEADAS, VIDA_EXTRA_POR_OLEADA };
+
+// Si el panel global guardó reglas distintas, se cargan ANTES de empezar la partida.
+try {
+  const g = JSON.parse(localStorage.getItem('torres-ajustes') || '{}');
+  if (g.VIDAS) VIDAS = g.VIDAS;
+  if (g.MONEDAS_INICIO) MONEDAS_INICIO = g.MONEDAS_INICIO;
+  if (g.OLEADAS) OLEADAS = g.OLEADAS;
+  if (typeof g.VIDA_EXTRA_POR_OLEADA === 'number') VIDA_EXTRA_POR_OLEADA = g.VIDA_EXTRA_POR_OLEADA;
+} catch (e) {}
 const FRAMES_ENTRE_ENEMIGOS = 20;   // cada cuánto sale un enemigo en la oleada 1 (60 = 1 s); después salen más seguido
 const VEL_BALA = 9;
 
@@ -92,6 +185,8 @@ function armarOleada(n) {
   if (n >= 4) lista.push(...Array(Math.floor(n / 2)).fill('blindado'));
   if (n >= 5) lista.push(...Array(Math.floor(n / 3)).fill('tanque'));
   if (n >= 7) lista.push(...Array(Math.floor((n - 5) / 2)).fill('curandero'));
+  // de a dos jugadores: el doble de enemigos (comparten las monedas)
+  if (enLinea) lista.push(...lista);
   // se revuelven, para que no vengan todos los del mismo tipo juntos
   for (let i = lista.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -359,6 +454,16 @@ let cuentaRegresiva, tipoElegido, estado, mensaje, mensajeHasta, tiempo;
 let mouse = [-100, -100];          // dónde está el mouse (en píxeles del canvas)
 let modoVender = false;            // para celular: el botón "Vender" de la barra
 
+// ---------- Modo 2 jugadores ----------
+let enLinea = false;               // ¿estamos jugando de a dos?
+let soyAnfitrion = false;          // el anfitrión es el único que PIENSA el juego
+let conexion = null;               // el tubo por donde viajan los mensajes
+let mouseAmigo = [-100, -100];     // dónde apunta el compañero
+let torreAmigo = 1;                // qué torre tiene elegida el compañero
+let miNombre = '';                 // cómo te llamas (se guarda en este navegador)
+let nombreAmigo = '';              // cómo se llama el compañero
+let creativo = false;              // 1 jugador: modo Creativo (panel sí, récord no)
+
 function reiniciar() {
   torres = new Map();              // "cx,cy" -> Torre
   enemigos = []; balas = []; explosiones = [];
@@ -382,7 +487,12 @@ function avisar(txt, segundos = 3) { mensaje = txt; mensajeHasta = tiempo + segu
 
 // ---------- Progreso: lo lee la página de Juegos de la casa (localStorage) ----------
 function leerProgreso(clave) { try { return JSON.parse(localStorage.getItem(clave)) || {}; } catch (e) { return {}; } }
-function guardarProgreso(clave, r) { try { localStorage.setItem(clave, JSON.stringify(r)); } catch (e) {} }
+function guardarProgreso(clave, r) {
+  // En Creativo el récord NO se guarda: si te das +1000 monedas, la oleada 15 no es tuya.
+  // (Es lo mismo que hace Minecraft: en creativo no hay logros.)
+  if (creativo) return;
+  try { localStorage.setItem(clave, JSON.stringify(r)); } catch (e) {}
+}
 
 // ---------- Acciones del jugador ----------
 function lanzarOleada() {
@@ -396,12 +506,12 @@ function lanzarOleada() {
   avisar('¡Oleada ' + oleada + '! Vienen ' + porSalir.length + ' enemigos');
 }
 
-function construir(cx, cy) {
-  const precio = TORRES[tipoElegido].precio;
+function construir(cx, cy, tipo = tipoElegido) {
+  const precio = TORRES[tipo].precio;
   if (torres.has(cx + ',' + cy)) avisar('Ahí ya hay una torre (clic derecho para venderla)');
   else if (!mapa.sePuedeConstruir(cx, cy)) avisar('Solo puedes construir en el pasto');
   else if (monedas < precio) avisar('Te faltan ' + (precio - monedas) + ' monedas');
-  else { monedas -= precio; torres.set(cx + ',' + cy, new Torre(tipoElegido, cx, cy)); }
+  else { monedas -= precio; torres.set(cx + ',' + cy, new Torre(tipo, cx, cy)); }
 }
 
 function vender(cx, cy) {
@@ -431,20 +541,29 @@ function clic(x, y, boton) {
     for (const [tipo, r] of Object.entries(rectsBarra())) {
       if (!dentro(r, x, y)) continue;
       if (tipo === 'vender') modoVender = !modoVender;
-      else if (tipo === 'oleada') lanzarOleada();
+      else if (tipo === 'oleada') pedirOleada();
       else { tipoElegido = Number(tipo); modoVender = false; }
     }
     return;
   }
   const cx = Math.floor(x / TILE), cy = Math.floor(y / TILE);
+  // si soy el invitado, yo no construyo: le pido al anfitrión que lo haga
+  if (enLinea && !soyAnfitrion) {
+    mandarAlAnfitrion({ que: 'clic', cx, cy, vender: (boton === 2 || modoVender), torre: tipoElegido });
+    return;
+  }
   if (boton === 2 || modoVender) vender(cx, cy);
   else construir(cx, cy);
 }
 
 function tecla(k) {
-  if (k === 'r' || k === 'R') reiniciar();
+  if (k === 'p' || k === 'P') {
+    if (creativo || panelDesbloqueado) { pintarPanel(); panel.hidden = !panel.hidden; }
+    return;
+  }
+  if (k === 'r' || k === 'R') { if (!(enLinea && !soyAnfitrion)) reiniciar(); }
   else if (estado !== 'jugando') return;
-  else if (k === ' ') lanzarOleada();
+  else if (k === ' ') pedirOleada();
   else if (k === '1' || k === '2' || k === '3') { tipoElegido = Number(k); modoVender = false; }
 }
 
@@ -453,14 +572,282 @@ function posCanvas(e) {
   const r = canvas.getBoundingClientRect();
   return [(e.clientX - r.left) * ANCHO / r.width, (e.clientY - r.top) * ALTO / r.height];
 }
-document.addEventListener('keydown', (e) => { if (e.key === ' ') e.preventDefault(); tecla(e.key); });
-canvas.addEventListener('pointermove', (e) => { mouse = posCanvas(e); });
+document.addEventListener('keydown', (e) => {
+  // si estás escribiendo tu nombre o el código, las teclas son para la casilla, no para el juego
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === ' ') e.preventDefault();
+  tecla(e.key);
+});
+canvas.addEventListener('pointermove', (e) => {
+  mouse = posCanvas(e);
+  // el invitado le cuenta al anfitrión dónde apunta, para que salga su sombra
+  if (enLinea && !soyAnfitrion) {
+    mandarAlAnfitrion({ que: 'mouse', x: mouse[0], y: mouse[1], torre: tipoElegido });
+  }
+});
 canvas.addEventListener('pointerleave', () => { mouse = [-100, -100]; });
 canvas.addEventListener('pointerdown', (e) => {
   mouse = posCanvas(e);
   clic(mouse[0], mouse[1], e.button);
 });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());   // el clic derecho es para vender
+
+// ============================================================
+//  MODO 2 JUGADORES (cooperativo, por internet)
+//
+//  La regla de oro:  EL ANFITRIÓN PIENSA, EL INVITADO PINTA.
+//  Un solo navegador corre actualizar(). El otro recibe el
+//  resumen y lo dibuja. Si los dos pensaran, el azar de las
+//  oleadas los separaría en dos partidas distintas.
+// ============================================================
+
+function avisoSala(t) { document.getElementById('aviso').textContent = t; }
+
+// El nombre se recuerda en ESTE navegador, para no escribirlo cada vez.
+const cajaNombre = document.getElementById('nombre');
+try { cajaNombre.value = localStorage.getItem('torres-nombre') || ''; } catch (e) {}
+miNombre = cajaNombre.value;
+cajaNombre.addEventListener('input', () => {
+  miNombre = cajaNombre.value.trim();
+  try { localStorage.setItem('torres-nombre', miNombre); } catch (e) {}
+});
+
+// ---- El tubo: lo que llega por aquí depende de quién seas ----
+function prepararTubo(c) {
+  conexion = c;
+  c.on('open', () => {
+    enLinea = true;
+    creativo = false; panel.hidden = true; pintarModo();   // en línea se juega en serio
+    avisoSala(soyAnfitrion ? '2 jugadores — eres el anfitrión' : '2 jugadores — eres el invitado');
+    // el invitado se presenta; el anfitrión manda su nombre dentro del estado
+    if (!soyAnfitrion) mandarAlAnfitrion({ que: 'hola', nombre: miNombre });
+  });
+  c.on('data', (d) => { if (soyAnfitrion) aplicarMensaje(d); else aplicarEstado(d); });
+  c.on('close', () => { enLinea = false; conexion = null; avisoSala('Se cortó la conexión'); });
+  c.on('error', () => avisoSala('Se cortó la conexión'));
+}
+
+// ---- ANFITRIÓN: arma el resumen de la partida ----
+// Solo números y texto. El mapa NO va: ya está en MAPA_TXT, los dos lo tienen.
+function estadoParaMandar() {
+  return {
+    enemigos: enemigos.map(e => ({
+      x: e.x, y: e.y, tipo: e.tipo, color: e.color, radio: e.radio,
+      armadura: e.armadura, brillo: e.brillo, vida: e.vida, vidaMax: e.vidaMax })),
+    torres: [...torres.values()].map(t => ({
+      x: t.x, y: t.y, cx: t.cx, cy: t.cy, tipo: t.tipo, angulo: t.angulo })),
+    balas: balas.map(b => ({ x: b.x, y: b.y, color: b.color, area: b.area })),
+    explosiones: explosiones.map(e => ({ x: e.x, y: e.y, radio: e.radio, frames: e.frames })),
+    monedas, vidas, oleada, estado, cuentaRegresiva,
+    porSalir: porSalir.length,
+    mensaje: (tiempo < mensajeHasta && mensaje) ? mensaje : '',
+    mouse, torre: tipoElegido, nombre: miNombre,
+  };
+}
+
+// ---- INVITADO: recibe el resumen y lo mete en sus variables ----
+function aplicarEstado(d) {
+  // Lo que llega por el tubo son objetos PELADOS: números sin sus recetas.
+  // setPrototypeOf les pega la receta de vuelta, para que e.dibujar() funcione.
+  enemigos = d.enemigos.map(o => Object.setPrototypeOf(o, Enemigo.prototype));
+  balas    = d.balas.map(o => Object.setPrototypeOf(o, Bala.prototype));
+  explosiones = d.explosiones;
+  torres = new Map(d.torres.map(o => {
+    o.datos = TORRES[o.tipo];               // los datos de la torre están en el archivo
+    return [o.cx + ',' + o.cy, Object.setPrototypeOf(o, Torre.prototype)];
+  }));
+  monedas = d.monedas; vidas = d.vidas; oleada = d.oleada; estado = d.estado;
+  cuentaRegresiva = d.cuentaRegresiva;
+  porSalir = new Array(d.porSalir);         // solo importa cuántos faltan
+  mensaje = d.mensaje; mensajeHasta = 1e9; tiempo = 0;
+  mouseAmigo = d.mouse; torreAmigo = d.torre; nombreAmigo = d.nombre;
+  // tipoElegido y modoVender NO se tocan: esos son tuyos.
+}
+
+// ---- ANFITRIÓN: hace caso a lo que le pide el invitado ----
+function aplicarMensaje(m) {
+  if (m.que === 'clic') {
+    if (estado !== 'jugando') return;
+    if (m.vender) vender(m.cx, m.cy);
+    else construir(m.cx, m.cy, m.torre);    // con LA TORRE QUE ELIGIÓ ÉL, no la mía
+  } else if (m.que === 'oleada') {
+    lanzarOleada();
+  } else if (m.que === 'mouse') {
+    mouseAmigo = [m.x, m.y]; torreAmigo = m.torre;
+  } else if (m.que === 'hola') {
+    nombreAmigo = m.nombre;
+    avisar((m.nombre || 'Tu amigo') + ' entró a la partida');
+  } else if (m.que === 'truco') {
+    if (trucosInvitado) aplicarTruco(m);
+    else avisar((nombreAmigo || 'Tu amigo') + ' intentó un truco y no lo dejaste');
+  }
+}
+
+// Lanzar oleada: el anfitrión la lanza, el invitado la pide.
+function pedirOleada() {
+  if (enLinea && !soyAnfitrion) mandarAlAnfitrion({ que: 'oleada' });
+  else lanzarOleada();
+}
+
+// ============================================================
+//  ===== PASO 3, HUECO 1 — LO ESCRIBE MANU =====
+//
+//  Esta función manda el mensaje m por el tubo al anfitrión.
+//  Es UNA línea. Acuérdate de que a veces no hay tubo todavía
+//  (conexion vale null): si mandas por un tubo que no existe,
+//  la página se cae.
+//
+//  El anfitrión ya sabe escuchar estos tres mensajes (míralos
+//  arriba, en aplicarMensaje):
+//      { que: 'clic', cx, cy, vender, torre }
+//      { que: 'oleada' }
+//      { que: 'mouse', x, y, torre }
+// ============================================================
+function mandarAlAnfitrion(m) {
+  if (conexion) conexion.send(m);
+}
+
+// ============================================================
+//  PANEL DE PRUEBAS  (se abre y cierra con la tecla P)
+//  Los trucos los aplica SIEMPRE el anfitrión, igual que los clics:
+//  él es el único que piensa la partida.
+// ============================================================
+const panel = document.getElementById('panel');
+
+// El panel está ESCONDIDO, no protegido: se abre una vez con ?panel=1 al final
+// de la dirección, y este navegador se acuerda. En el navegador de tu amigo,
+// la tecla P no hace nada. No es un candado — es que no sabe dónde está la puerta.
+let panelDesbloqueado = false;
+try {
+  if (new URLSearchParams(location.search).has('panel')) localStorage.setItem('torres-panel', '1');
+  panelDesbloqueado = localStorage.getItem('torres-panel') === '1';
+} catch (e) {}
+
+// Esto SÍ es protección de verdad: corre en TU computador, el invitado no lo puede tocar.
+let trucosInvitado = false;
+document.getElementById('trucosInvitado').addEventListener('change', (e) => {
+  trucosInvitado = e.target.checked;
+});
+
+panel.addEventListener('click', (e) => {
+  const boton = e.target.closest('button[data-truco]');
+  if (!boton) return;
+  const t = { que: 'truco', truco: boton.dataset.truco, n: boton.dataset.n };
+  if (enLinea && !soyAnfitrion) mandarAlAnfitrion(t);
+  else aplicarTruco(t);
+});
+
+function aplicarTruco(t) {
+  if (t.truco === 'monedas') {
+    monedas += Number(t.n); avisar('Truco: +' + t.n + ' monedas');
+  } else if (t.truco === 'vidas') {
+    vidas += Number(t.n); avisar('Truco: +' + t.n + ' vidas');
+  } else if (t.truco === 'spawn') {
+    enemigos.push(new Enemigo(t.n, mapa.camino, Math.max(1, oleada)));
+    avisar('Truco: apareció un ' + t.n);
+  } else if (t.truco === 'matar') {
+    for (const e of enemigos) e.vivo = false;   // así los cuenta como muertos y te paga
+    avisar('Truco: todos muertos');
+  } else if (t.truco === 'oleada') {
+    lanzarOleada();
+  } else if (t.truco === 'reiniciar') {
+    reiniciar();
+  }
+}
+
+// ---- Normal / Creativo (solo en 1 jugador) ----
+const botonModo = document.getElementById('modo');
+
+function pintarModo() {
+  botonModo.textContent = 'Modo: ' + (creativo ? 'Creativo' : 'Normal');
+  botonModo.classList.toggle('creativo', creativo);
+}
+
+botonModo.onclick = () => {
+  if (enLinea) { avisoSala('En línea se juega en Normal'); return; }
+  creativo = !creativo;
+  if (!creativo) panel.hidden = true;
+  pintarModo();
+  avisar(creativo ? 'Creativo: P abre el panel. El récord no se guarda.'
+                  : 'Normal: el récord se guarda.');
+};
+
+// ---- Qué parte del panel se ve ----
+//  "Esta partida" -> solo en Creativo (cambia ESTA partida y nada más)
+//  "Global"       -> solo si desbloqueaste con ?panel=1 (cambia LAS REGLAS, para siempre)
+function pintarPanel() {
+  document.getElementById('seccionPartida').hidden = !creativo;
+  document.getElementById('seccionGlobal').hidden = !panelDesbloqueado;
+}
+
+// ---- PANEL GLOBAL ----
+const gM = document.getElementById('gMonedas'), gV = document.getElementById('gVidas');
+const gO = document.getElementById('gOleadas'), gD = document.getElementById('gDureza');
+
+function pintarGlobal() {
+  gM.value = MONEDAS_INICIO; gV.value = VIDAS; gO.value = OLEADAS;
+  gD.value = Math.round(VIDA_EXTRA_POR_OLEADA * 100);
+}
+pintarGlobal();
+
+function guardarAjustes() {
+  try {
+    localStorage.setItem('torres-ajustes',
+      JSON.stringify({ VIDAS, MONEDAS_INICIO, OLEADAS, VIDA_EXTRA_POR_OLEADA }));
+  } catch (e) {}
+}
+
+document.getElementById('gGuardar').onclick = () => {
+  MONEDAS_INICIO = Number(gM.value) || MONEDAS_INICIO;
+  VIDAS = Number(gV.value) || VIDAS;
+  OLEADAS = Number(gO.value) || OLEADAS;
+  const d = Number(gD.value);
+  if (!Number.isNaN(d)) VIDA_EXTRA_POR_OLEADA = d / 100;
+  guardarAjustes();
+  reiniciar(); pintarGlobal();
+  avisar('Reglas nuevas guardadas: ' + MONEDAS_INICIO + ' $, ' + VIDAS + ' vidas, ' + OLEADAS + ' oleadas');
+};
+
+document.getElementById('gFabrica').onclick = () => {
+  VIDAS = AJUSTES_DE_FABRICA.VIDAS;
+  MONEDAS_INICIO = AJUSTES_DE_FABRICA.MONEDAS_INICIO;
+  OLEADAS = AJUSTES_DE_FABRICA.OLEADAS;
+  VIDA_EXTRA_POR_OLEADA = AJUSTES_DE_FABRICA.VIDA_EXTRA_POR_OLEADA;
+  try { localStorage.removeItem('torres-ajustes'); } catch (e) {}
+  reiniciar(); pintarGlobal();
+  avisar('Reglas de fábrica');
+};
+
+document.getElementById('gRecords').onclick = () => {
+  try { localStorage.removeItem('torres-record'); } catch (e) {}
+  avisar('Récords borrados');
+};
+
+// ---- Los dos botones ----
+document.getElementById('crear').onclick = () => {
+  // Para jugar online hay que tener nombre: es tu "cuenta".
+  // Sin servidor no hay contraseña posible, así que el nombre es solo para reconocerse.
+  if (!miNombre) { avisoSala('Escribe tu nombre para jugar online'); cajaNombre.focus(); return; }
+  soyAnfitrion = true;
+  const codigo = String(Math.floor(1000 + Math.random() * 9000));
+  const yo = new Peer('torres-manu-' + codigo);
+  yo.on('open', () => avisoSala('Sala ' + codigo + ' — dile el código a tu amigo'));
+  yo.on('connection', prepararTubo);
+  yo.on('error', (e) => avisoSala('error: ' + e.type));
+};
+
+document.getElementById('entrar').onclick = () => {
+  if (!miNombre) { avisoSala('Escribe tu nombre para jugar online'); cajaNombre.focus(); return; }
+  soyAnfitrion = false;
+  const codigo = document.getElementById('codigo').value.trim();
+  if (!codigo) { avisoSala('Escribe el código primero'); return; }
+  const yo = new Peer();
+  yo.on('open', () => {
+    avisoSala('Llamando a la sala ' + codigo + '…');
+    prepararTubo(yo.connect('torres-manu-' + codigo));
+  });
+  yo.on('error', (e) => avisoSala('error: ' + e.type));
+};
 
 // ---------- Lógica ----------
 function actualizar() {
@@ -526,6 +913,14 @@ function texto(cadena, x, y, tam, color, modo, fondo) {
   ctx.fillText(cadena, x, y);
 }
 
+// el cuadrito + el círculo de alcance donde alguien va a poner una torre
+function sombra(cx, cy, alcance, color) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx * TILE + TILE / 2, cy * TILE + TILE / 2, alcance, 0, Math.PI * 2); ctx.stroke();
+  ctx.lineWidth = 2; ctx.strokeRect(cx * TILE + 1, cy * TILE + 1, TILE - 2, TILE - 2);
+}
+
 function dibujar() {
   const m = mapa;
   for (let cy = 0; cy < m.alto; cy++) for (let cx = 0; cx < m.ancho; cx++) {
@@ -558,10 +953,14 @@ function dibujar() {
   if (estado === 'jugando' && my >= 0 && my < m.alto * TILE && !modoVender) {
     const datos = TORRES[tipoElegido];
     const ok = m.sePuedeConstruir(cx, cy) && !torres.has(cx + ',' + cy) && monedas >= datos.precio;
-    ctx.strokeStyle = ok ? 'rgb(255,255,255)' : 'rgb(255,80,80)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(cx * TILE + TILE / 2, cy * TILE + TILE / 2, datos.alcance, 0, Math.PI * 2); ctx.stroke();
-    ctx.lineWidth = 2; ctx.strokeRect(cx * TILE + 1, cy * TILE + 1, TILE - 2, TILE - 2);
+    sombra(cx, cy, datos.alcance, ok ? 'rgb(255,255,255)' : 'rgb(255,80,80)');
+  }
+  // la sombra del compañero, en amarillo, para no pisarse
+  if (enLinea && mouseAmigo[1] >= 0 && mouseAmigo[1] < m.alto * TILE) {
+    const acx = Math.floor(mouseAmigo[0] / TILE), acy = Math.floor(mouseAmigo[1] / TILE);
+    sombra(acx, acy, TORRES[torreAmigo].alcance, 'rgb(255,220,90)');
+    texto(nombreAmigo || 'tu amigo', acx * TILE + TILE / 2, Math.max(2, acy * TILE - 16),
+          13, 'rgb(255,220,90)', 'centro', true);
   }
 
   for (const t of torres.values()) t.dibujar(t.cx === cx && t.cy === cy);
@@ -642,7 +1041,12 @@ function bucle(ahora) {
   ultimoTiempo = ahora;
   if (dt > 250) dt = 250;      // si la pestaña estuvo escondida, no saltamos mil cuadros
   acumulado += dt;
-  while (acumulado >= PASO) { actualizar(); acumulado -= PASO; }
+  while (acumulado >= PASO) {
+    // EL INVITADO NO PIENSA: si los dos pensaran, el azar los desincronizaría
+    if (!enLinea || soyAnfitrion) actualizar();
+    acumulado -= PASO;
+  }
+  if (enLinea && soyAnfitrion && conexion) conexion.send(estadoParaMandar());
   dibujar();
   requestAnimationFrame(bucle);
 }
