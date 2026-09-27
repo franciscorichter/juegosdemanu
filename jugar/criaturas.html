@@ -148,6 +148,7 @@ const OBJETOS = {
 const MOCHILA_INICIAL = { 'Poción': 4, 'Esfera': 6, 'Superesfera': 1, 'Antídoto': 1 };
 // letra del mapa -> [nivel mínimo, nivel máximo, especies]
 const PASTO = { ',': [3, 6, BASICAS], ';': [8, 12, BASICAS], '"': [13, 18, [...BASICAS, ...EVOLUCIONADAS]] };
+const NOMBRE_PASTO = { ',': 'Pasto bajo', ';': 'Pasto medio', '"': 'Pasto alto' };
 const PROB_ENCUENTRO = 0.14;
 
 const ENTRENADORES = {
@@ -317,6 +318,7 @@ class Batalla {
     this.caja = caja || [];
     this.activa = equipo.findIndex(c => !c.ko);
     this.enemigoI = 0; this.terminada = false; this.resultado = null; this.intentosHuir = 0; this.capturada = null;
+    this.esDuelo = false;
   }
   get mia() { return this.equipo[this.activa]; }
   get enemiga() { return this.enemigos[this.enemigoI]; }
@@ -336,6 +338,8 @@ class Batalla {
     return ev;
   }
   necesitaCambio() { return this.mia.ko && this.equipo.some(c => !c.ko); }
+  // Qué toca ahora. Aquí siempre te toca a ti; en un duelo hay que esperar al otro.
+  queHacer() { return this.necesitaCambio() ? 'cambiar' : 'elegir'; }
   // accion: ['atacar', i] / ['objeto', nombre, indiceCriatura] / ['cambiar', i] / ['huir']
   turno(accion) {
     if (this.terminada) return [];
@@ -545,6 +549,7 @@ class BatallaPvP {
     this.dado = dadoConSemilla(datos.semilla);
     this.salvaje = false;
     this.entrenador = null;
+    this.esDuelo = true;
     this.terminada = false;
     this.resultado = null;
     this.ganador = null;
@@ -1124,7 +1129,7 @@ class PantallaBatalla {
     this.cola = batalla.eventosInicio();
     this.actual = null; this.tiempoEv = 0; this.texto = '';
     this.modo = 'eventos';      // eventos / menu / ataques / mochila / equipo
-    this.menu = new Menu(['Pelear', 'Mochila', 'Criaturas', 'Huir'], 2);
+    this.menu = new Menu(['Pelear', 'Mochila', 'Criaturas', batalla.esDuelo ? 'Rendirse' : 'Huir'], 2);
     this.menuAtaques = new Menu([], 2); this.menuMochila = new Menu([]); this.menuEquipo = new Menu([]);
     this.objetoElegido = null;
     // una "foto" de cada criatura que solo cambia con los eventos
@@ -1147,8 +1152,10 @@ class PantallaBatalla {
     if (this.cola.length) { this.actual = this.cola.shift(); this.tiempoEv = 0; this.empezarEvento(this.actual); }
     else {
       this.actual = null;
-      if (this.b.terminada) this.terminado = true;
-      else if (this.b.necesitaCambio()) this.abrirEquipo(true);
+      if (this.b.terminada) { this.terminado = true; return; }
+      const que = this.b.queHacer();
+      if (que === 'esperar') { this.modo = 'espera'; this.texto = 'Esperando a ' + this.b.nombreRival + '…'; }
+      else if (que === 'cambiar') this.abrirEquipo(true);
       else { this.modo = 'menu'; this.texto = '¿Qué hará ' + this.b.mia.nombre + '?'; }
     }
   }
@@ -1178,6 +1185,14 @@ class PantallaBatalla {
     }
     const objetivo = this.expFrac();
     if (Math.abs(this.expVisual - objetivo) > 0.002) this.expVisual += (objetivo - this.expVisual) * Math.min(1, dt * 5);
+    // en un duelo, los eventos del turno llegan cuando el rival también eligió
+    if (this.b.tomarEventos) {
+      const nuevos = this.b.tomarEventos();
+      if (nuevos.length) {
+        this.cola = this.cola.concat(nuevos);
+        this.modo = 'eventos'; this.actual = null; this.objetoElegido = null;
+      }
+    }
     if (this.modo !== 'eventos') return;
     if (this.actual === null) { this.siguienteEvento(); return; }
     this.tiempoEv += dt;
@@ -1195,6 +1210,7 @@ class PantallaBatalla {
     } else if (this.tiempoEv >= this.duracion(ev)) this.siguienteEvento();
   }
   tecla(k) {
+    if (this.modo === 'espera') return;
     if (this.modo === 'eventos') {
       if (k === 'Enter' && this.actual && this.actual[0] === 'msg' && this.tiempoEv > 0.15) this.siguienteEvento();
       return;
@@ -1207,7 +1223,7 @@ class PantallaBatalla {
         if (op === 'Pelear') { this.menuAtaques = new Menu([...this.b.mia.ataques], 2); this.modo = 'ataques'; }
         else if (op === 'Mochila') this.abrirMochila();
         else if (op === 'Criaturas') this.abrirEquipo();
-        else if (op === 'Huir') this.ejecutar(['huir']);
+        else if (op === 'Huir' || op === 'Rendirse') this.ejecutar(['huir']);
       }
     } else if (this.modo === 'ataques') {
       this.menuAtaques.mover(k);
@@ -1245,7 +1261,7 @@ class PantallaBatalla {
     if (this.esferaAnim) this.dibujarEsfera(g);
     this.panel(g, 'enemigo', 40, 40); this.panel(g, 'jugador', ANCHO - 340, 330);
     caja(g, 20, ALTO - 150, ANCHO - 40, 130);
-    if (this.modo === 'eventos' || this.modo === 'menu') this.dibujarTexto(g, this.texto, 40, ALTO - 135, this.modo === 'menu' ? ANCHO - 400 : ANCHO - 80);
+    if (this.modo === 'eventos' || this.modo === 'menu' || this.modo === 'espera') this.dibujarTexto(g, this.texto, 40, ALTO - 135, this.modo === 'menu' ? ANCHO - 400 : ANCHO - 80);
     if (this.modo === 'menu') this.dibujarMenu(g, this.menu, ANCHO - 360, ALTO - 140, 160, 2);
     else if (this.modo === 'ataques') this.dibujarAtaques(g);
     else if (this.modo === 'mochila') this.dibujarMochila(g);
@@ -1284,6 +1300,7 @@ class PantallaBatalla {
   panel(g, lado, x, y) {
     if (!this.visible[lado]) return;
     const f = this.foto[lado], alto = lado === 'jugador' ? 100 : 80;
+    if (this.b.esDuelo && lado === 'enemigo') texto(g, 'Equipo de ' + this.b.nombreRival, x + 4, y - 26, 20, BLANCO, false, NEGRO);
     caja(g, x, y, 300, alto);
     texto(g, f.nombre, x + 15, y + 10, 24); texto(g, 'Nv ' + f.nivel, x + 220, y + 10, 22);
     if (f.estado) { rectRedondo(g, x + 160, y + 12, 44, 20, 4, f.estado === 'ZZZ' ? 'rgb(120,80,200)' : 'rgb(140,60,160)'); texto(g, f.estado, x + 165, y + 13, 16, BLANCO); }
@@ -1367,6 +1384,10 @@ class Juego {
     this.mirando = [0, 1]; this.pasoTimer = 0; this.mensajes = [];
     this.batalla = null; this.batallaLetra = null; this.transicion = 0; this.batallaPendiente = null;
     this.t = 0; this.aviso = ['', 0];
+    this.guiaPagina = 0;            // qué hoja de la guía (tecla P) se está mirando
+    this.red = null;                // la parte de internet; la enciende el botón "Crear sala"
+    this.rival = null;              // el otro jugador en el mapa, cuando están conectados
+    this.latido = 0;                // cada tanto le cuenta al otro dónde estás
     this.puntoCuracion = this.mapa.centros.length ? this.mapa.centros[0] : this.mapa.inicio;
     this.fondos = {};
   }
@@ -1412,9 +1433,11 @@ class Juego {
       if (this.mensajes.length) { if (k === 'Enter') { this.mensajes.shift(); sonar('seleccion'); } return; }
       if (kk === 'g') this.guardar();
       else if (kk === 'l') this.cargar();
+      else if (kk === 'p') { this.estado = 'guia'; this.guiaPagina = 0; sonar('seleccion'); }
       else if (k === 'Escape' || kk === 'm') { this.estado = 'pausa'; this.menuPausa.i = 0; sonar('seleccion'); }
       else if (k === 'Enter') this.interactuar();
-    } else if (this.estado === 'pausa') this.manejarPausa(k);
+    } else if (this.estado === 'guia') this.manejarGuia(k);
+    else if (this.estado === 'pausa') this.manejarPausa(k);
     else if (this.estado === 'equipo') this.manejarEquipo(k);
     else if (this.estado === 'mochila') this.manejarMochila(k);
     else if (this.estado === 'batalla') { if (this.batalla) this.batalla.tecla(k); }
@@ -1485,12 +1508,18 @@ class Juego {
   mover(dx, dy, corriendo) {
     this.mirando = [dx, dy];
     const nx = this.x + dx, ny = this.y + dy, ch = this.mapa.casilla(nx, ny);
+    // si en esa casilla está tu amigo, no pasas por encima: empieza un duelo
+    if (this.rival && this.rival.x === nx && this.rival.y === ny) {
+      if (this.pasoTimer <= 0) { this.red.chocar(); this.pasoTimer = 0.6; }
+      return;
+    }
     if (this.mapa.solida(nx, ny)) {
       if (this.mapa.letreros.has(nx + ',' + ny) || '123K'.includes(ch)) { if (this.pasoTimer <= 0) { this.interactuar(); this.pasoTimer = 0.4; } }
       return;
     }
     this.x = nx; this.y = ny;
     this.pasoTimer = corriendo ? PASO_CORRER : PASO_SEG;
+    if (this.red) this.red.enviarPos();
     if (ch === '+') this.curarEnCentro();
     else if (ch in PASTO && this.partida.tieneVivas() && Math.random() < PROB_ENCUENTRO) {
       const [nmin, nmax, especies] = PASTO[ch];
@@ -1510,7 +1539,7 @@ class Juego {
     if (!this.fondos[clave]) {
       const s = document.createElement('canvas'); s.width = ANCHO; s.height = ALTO;
       const g = s.getContext('2d');
-      const [arriba, abajo] = { ',': [[170, 220, 250], [130, 200, 110]], ';': [[150, 200, 240], [80, 160, 80]], '"': [[110, 150, 200], [50, 110, 60]], '.': [[230, 210, 170], [190, 160, 110]] }[clave];
+      const [arriba, abajo] = { ',': [[170, 220, 250], [130, 200, 110]], ';': [[150, 200, 240], [80, 160, 80]], '"': [[110, 150, 200], [50, 110, 60]], '.': [[230, 210, 170], [190, 160, 110]], 'vs': [[150, 120, 210], [70, 60, 120]] }[clave];
       const grad = g.createLinearGradient(0, 0, 0, ALTO);
       grad.addColorStop(0, rgb(arriba)); grad.addColorStop(1, rgb(abajo));
       g.fillStyle = grad; g.fillRect(0, 0, ANCHO, ALTO);
@@ -1521,6 +1550,13 @@ class Juego {
   terminarBatalla() {
     const b = this.batalla.b, letra = this.batallaLetra;
     this.batalla = null; this.estado = 'mapa';
+    if (b.esDuelo) {
+      if (b.resultado === 'victoria') { this.mensajes.push('¡Le ganaste el duelo a ' + b.nombreRival + '!'); sonar('curar'); }
+      else this.mensajes.push(b.nombreRival + ' te ganó el duelo. La revancha es chocándolo otra vez.');
+      this.mensajes.push('Los duelos son de práctica: tu equipo queda con la misma vida y la misma experiencia que antes.');
+      if (this.red) this.red.enviarPos();
+      return;
+    }
     if (b.resultado === 'victoria' && letra) {
       if (!this.partida.vencidos.includes(letra)) this.partida.vencidos.push(letra);
       if (letra === 'K') { this.partida.campeon = true; this.estado = 'final'; }
@@ -1534,6 +1570,15 @@ class Juego {
   actualizar(dt) {
     this.t += dt;
     if (this.aviso[1] > 0) this.aviso[1] -= dt;
+    if (this.red && this.red.enLinea) {
+      this.latido += dt;
+      if (this.latido > 0.5) { this.latido = 0; this.red.enviarPos(); }
+    }
+    // el amigo se dibuja deslizándose a su casilla, para que no se vea saltón
+    if (this.rival) {
+      const r = this.rival, k = Math.min(1, dt * 12);
+      r.px += (r.x - r.px) * k; r.py += (r.y - r.py) * k;
+    }
     if (this.transicion > 0) {
       this.transicion += dt;
       if (this.transicion > 0.7 && this.batallaPendiente) {
@@ -1562,9 +1607,10 @@ class Juego {
     const s = ctx;
     if (this.estado === 'titulo') this.dibujarTitulo(s);
     else if (this.estado === 'elegir') this.dibujarElegir(s);
-    else if (['mapa', 'pausa', 'equipo', 'mochila'].includes(this.estado)) {
+    else if (['mapa', 'pausa', 'equipo', 'mochila', 'guia'].includes(this.estado)) {
       this.dibujarMapa(s);
-      if (this.estado === 'pausa') this.dibujarPausa(s);
+      if (this.estado === 'guia') this.dibujarGuia(s);
+      else if (this.estado === 'pausa') this.dibujarPausa(s);
       else if (this.estado === 'equipo') this.dibujarEquipo(s);
       else if (this.estado === 'mochila') this.dibujarMochila(s);
     } else if (this.estado === 'batalla' && this.batalla) this.batalla.dibujar(s);
@@ -1578,6 +1624,115 @@ class Juego {
       k = Math.max(0, Math.min(1, k));
       rect(s, 0, 0, ANCHO, ALTO, `rgba(25,25,35,${k})`);
       if (this.transicion < 0.7) for (let i = 0; i < trunc(k * 12); i++) rect(s, 0, i * ALTO / 12, ANCHO, ALTO / 24, NEGRO);   // rayas que se cierran
+    }
+  }
+  // ---------- La guía (tecla P): qué sale en cada pasto y qué hace cada objeto ----------
+  manejarGuia(k) {
+    const kk = k.length === 1 ? k.toLowerCase() : k;
+    if (kk === 'p' || k === 'Escape' || k === 'Enter') { this.estado = 'mapa'; sonar('seleccion'); }
+    else if (k === 'ArrowLeft' || k === 'ArrowRight') { this.guiaPagina = 1 - this.guiaPagina; sonar('seleccion'); }
+  }
+  // Las especies que ya tuviste: si tienes la evolucionada, es porque tuviste la básica.
+  especiesQueTengo() {
+    const tengo = new Set();
+    for (const c of [...this.partida.equipo, ...this.partida.caja]) {
+      tengo.add(c.especie);
+      for (const [nombre, d] of Object.entries(ESPECIES)) if (d.evoluciona && d.evoluciona[0] === c.especie) tengo.add(nombre);
+    }
+    return tengo;
+  }
+  dibujarGuia(s) {
+    rect(s, 0, 0, ANCHO, ALTO, 'rgba(18,24,18,0.72)');
+    caja(s, 20, 20, ANCHO - 40, ALTO - 40, 'rgb(243,247,240)');
+    if (this.guiaPagina === 0) this.dibujarGuiaPastos(s); else this.dibujarGuiaObjetos(s);
+    const pie = '←  →  cambiar de página        P o ESC: volver al juego';
+    texto(s, pie, ANCHO / 2, ALTO - 52, 18, GRIS, true);
+  }
+  dibujarGuiaPastos(s) {
+    const aqui = this.mapa.casilla(this.x, this.y), enPasto = aqui in PASTO;
+    texto(s, 'QUÉ SALE EN CADA PASTO', ANCHO / 2, 34, 30, NEGRO, true);
+    const sub = enPasto ? '★ Estás parado en ' + NOMBRE_PASTO[aqui].toLowerCase() + ': es la columna marcada.'
+                        : 'No estás en pasto. Camina a uno de estos tres y ahí salen criaturas.';
+    texto(s, sub, ANCHO / 2, 70, 19, enPasto ? 'rgb(30,115,50)' : AZUL_CAJA, true);
+    texto(s, 'Cada paso dentro del pasto tiene ' + trunc(PROB_ENCUENTRO * 100) + '% de encuentro.   ✓ = ya la tuviste.',
+      ANCHO / 2, 94, 16, GRIS, true);
+    const tengo = this.especiesQueTengo();
+    Object.keys(PASTO).forEach((ch, i) => {
+      const [nmin, nmax, especies] = PASTO[ch];
+      const px = 40 + i * 295, py = 120, w = 280, h = 452, esAqui = ch === aqui;
+      rectRedondo(s, px, py, w, h, 10, esAqui ? 'rgb(223,241,221)' : 'rgb(252,252,250)');
+      rectRedondo(s, px, py, w, h, 10, esAqui ? 'rgb(40,140,60)' : GRIS, esAqui ? 5 : 3);
+      rect(s, px + 14, py + 14, 22, 22, COLOR_TILE[ch]);
+      texto(s, NOMBRE_PASTO[ch], px + 46, py + 13, 22, NEGRO);
+      if (esAqui) texto(s, '★ AQUÍ', px + 205, py + 16, 17, 'rgb(40,140,60)');
+      texto(s, 'Nivel ' + nmin + ' a ' + nmax + '  ·  ' + Math.round(100 / especies.length) + '% cada una',
+        px + 14, py + 44, 16, GRIS);
+      especies.forEach((esp, j) => {
+        const ey = py + 72 + j * 30;
+        dibujarCriatura(s, esp, px + 26, ey + 14, 26, this.t);
+        texto(s, (tengo.has(esp) ? '✓ ' : '') + esp, px + 46, ey + 3, 17, NEGRO);
+        const tipo = ESPECIES[esp].tipo;
+        texto(s, NOMBRE_TIPO[tipo], px + 185, ey + 5, 15, rgb(COLOR_TIPO[tipo]));
+      });
+    });
+  }
+  dibujarGuiaObjetos(s) {
+    texto(s, 'LOS OBJETOS', ANCHO / 2, 34, 30, NEGRO, true);
+    texto(s, 'Qué tienes en la mochila y para qué sirve cada cosa.', ANCHO / 2, 72, 19, AZUL_CAJA, true);
+    Object.keys(OBJETOS).forEach((nombre, i) => {
+      const py = 108 + i * 72, obj = OBJETOS[nombre], cuantos = this.partida.mochila.objetos[nombre] || 0;
+      rectRedondo(s, 60, py, ANCHO - 120, 62, 8, cuantos ? 'rgb(252,252,250)' : 'rgb(238,238,236)');
+      rectRedondo(s, 60, py, ANCHO - 120, 62, 8, cuantos ? AZUL_CAJA : GRIS, 3);
+      this.dibujarIconoObjeto(s, nombre, 98, py + 31);
+      texto(s, nombre, 132, py + 9, 23, NEGRO);
+      texto(s, obj.descripcion, 132, py + 37, 18, GRIS);
+      texto(s, cuantos ? 'tienes ' + cuantos : 'no tienes', ANCHO - 280, py + 20, 20, cuantos ? 'rgb(40,140,60)' : GRIS);
+    });
+    texto(s, 'Los objetos los regalan los entrenadores cuando les ganas. Las esferas solo se usan en batalla y', ANCHO / 2, ALTO - 112, 16, GRIS, true);
+    texto(s, 'atrapan mucho mejor si la criatura salvaje está con poca vida, dormida o envenenada.', ANCHO / 2, ALTO - 90, 16, GRIS, true);
+  }
+  dibujarIconoObjeto(s, nombre, cx, cy) {
+    const obj = OBJETOS[nombre];
+    if (obj.tipo === 'esfera') {
+      const arriba = nombre === 'Superesfera' ? 'rgb(240,190,60)' : 'rgb(220,60,60)';
+      circulo(s, cx, cy, 16, BLANCO);
+      s.save(); s.beginPath(); s.rect(cx - 16, cy - 16, 32, 16); s.clip();
+      circulo(s, cx, cy, 16, arriba); s.restore();
+      s.strokeStyle = NEGRO; s.lineWidth = 2;
+      s.beginPath(); s.arc(cx, cy, 16, 0, Math.PI * 2); s.stroke();
+      linea(s, cx - 16, cy, cx + 16, cy, NEGRO, 2);
+      circulo(s, cx, cy, 5, BLANCO);
+      s.beginPath(); s.arc(cx, cy, 5, 0, Math.PI * 2); s.stroke();
+    } else if (obj.tipo === 'curar') {
+      rectRedondo(s, cx - 11, cy - 8, 22, 22, 5, nombre === 'Superpoción' ? 'rgb(245,120,60)' : 'rgb(240,80,140)');
+      rect(s, cx - 5, cy - 15, 10, 8, 'rgb(220,220,228)');
+      rect(s, cx - 8, cy - 19, 16, 5, 'rgb(150,150,162)');
+    } else {
+      rectRedondo(s, cx - 10, cy - 8, 20, 22, 5, 'rgb(90,190,130)');
+      rect(s, cx - 5, cy - 15, 10, 8, 'rgb(220,220,228)');
+      rect(s, cx - 8, cy - 19, 16, 5, 'rgb(150,150,162)');
+    }
+  }
+  // ---------- Duelo contra otro jugador ----------
+  empezarDuelo(datos, miLado) {
+    if (this.estado !== 'mapa') return;
+    const b = new BatallaPvP(datos, miLado);
+    b.enviarAccion = (a) => { if (this.red) this.red.enviar({ t: 'accion', accion: a }); };
+    b.enviarRendirse = () => { if (this.red) this.red.enviar({ t: 'rendirse' }); };
+    this.batallaPendiente = [b, null, 'vs'];
+    this.transicion = 0.01;
+    this.mensajes = [];
+    sonar('encuentro');
+  }
+  seCortoLaRed() {
+    this.rival = null;
+    if (this.batalla && this.batalla.b.esDuelo) {
+      this.batalla = null; this.estado = 'mapa';
+      this.mensajes.push('Se cortó la conexión con tu amigo, así que el duelo terminó. Tu equipo quedó igual que antes.');
+    }
+    if (this.batallaPendiente && this.batallaPendiente[0].esDuelo) {
+      this.batallaPendiente = null; this.transicion = 0;
+      if (this.estado !== 'mapa') this.estado = 'mapa';
     }
   }
   dibujarTitulo(s) {
@@ -1613,6 +1768,12 @@ class Juego {
     camX = Math.max(0, Math.min(this.mapa.ancho * TILE - ANCHO, camX)); camY = Math.max(0, Math.min(this.mapa.alto * TILE - ALTO, camY));
     rect(s, 0, 0, ANCHO, ALTO, 'rgb(30,80,40)');
     this.mapa.dibujar(s, camX, camY, this.t, this.partida.vencidos);
+    if (this.rival) {
+      const r = this.rival, rx = r.px * TILE - camX + TILE / 2, ry = r.py * TILE - camY + TILE / 2;
+      dibujarPersona(s, rx, ry, [225, 135, 55], false, false, this.t, !(r.mirando[0] === 0 && r.mirando[1] === -1));
+      const n = r.nombre || 'tu amigo';
+      texto(s, n, rx - medir(n, 16) / 2, ry - 36, 16, BLANCO, false, NEGRO);
+    }
     const bob = this.pasoTimer > 0 ? trunc(Math.abs(Math.sin(this.t * 12)) * 3) : 0;
     dibujarPersona(s, this.x * TILE - camX + TILE / 2, this.y * TILE - camY + TILE / 2 - bob, [60, 120, 220], false, false, this.t, !(this.mirando[0] === 0 && this.mirando[1] === -1));
     this.partida.equipo.forEach((c, i) => {
@@ -1626,7 +1787,7 @@ class Juego {
       partirTexto(this.mensajes[0], 24, ANCHO - 90).forEach((l, i) => texto(s, l, 40, ALTO - 135 + i * 30, 24));
       if (trunc(this.t * 3) % 2) texto(s, '▼ ENTER', ANCHO - 130, ALTO - 50, 18, AZUL_CAJA);
     } else {
-      const ayuda = 'ESC: menú   G: guardar   L: cargar';
+      const ayuda = 'ESC: menú   P: guía   G: guardar   L: cargar';
       texto(s, ayuda, ANCHO - 15 - medir(ayuda, 16), ALTO - 25, 16, BLANCO, false, NEGRO);
       const insignias = this.partida.vencidos.filter(v => v !== 'K').length;
       const t2 = 'Entrenadores vencidos: ' + insignias + '/3' + (this.partida.campeon ? '   ★ CAMPEÓN' : '');
@@ -1696,6 +1857,8 @@ class Juego {
 const teclas = {};
 const juego = new Juego();
 document.addEventListener('keydown', (e) => {
+  // si estás escribiendo en la caja del nombre o del código, las teclas son para ahí
+  if (e.target && e.target.tagName === 'INPUT') return;
   encenderAudio();
   if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault();
   if (!e.repeat) juego.manejarTecla(e.key);
@@ -1708,6 +1871,155 @@ document.querySelectorAll('.tactil button').forEach(b => {
   for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { teclas[k] = false; });
 });
 canvas.addEventListener('pointerdown', () => { encenderAudio(); if (juego.estado === 'batalla' || juego.mensajes.length || juego.estado === 'final') juego.manejarTecla('Enter'); });
+
+
+// ============================================================
+//  DOS JUGADORES POR INTERNET (PeerJS)
+//
+//  PeerJS conecta los dos navegadores directo, sin servidor nuestro.
+//  Se manda poquita cosa: dónde está cada uno en el mapa, y en el duelo
+//  qué eligió cada uno en su turno. El daño NO se manda: los dos
+//  computadores lo calculan con el mismo dado con semilla y les sale igual.
+// ============================================================
+class Red {
+  constructor(juego) {
+    this.juego = juego;
+    this.conexion = null;
+    this.peer = null;
+    this.soyAnfitrion = false;
+    this.enLinea = false;
+    this.nombre = '';
+    this.pidiendoDuelo = 0;     // momento en que pediste los datos del otro
+  }
+  aviso(t) { document.getElementById('aviso').textContent = t; }
+  enviar(m) { if (this.conexion && this.enLinea) { try { this.conexion.send(m); } catch (e) {} } }
+  // El tubo por donde se hablan los dos navegadores.
+  preparar(c) {
+    this.conexion = c;
+    c.on('open', () => {
+      this.enLinea = true;
+      this.aviso(this.soyAnfitrion ? '2 jugadores — eres el anfitrión' : '2 jugadores — eres el invitado');
+      this.enviar({ t: 'hola', nombre: this.nombre });
+      this.enviarPos();
+      this.juego.aviso = ['¡Conectados! Camina hasta tu amigo y chócalo para pelear.', 4];
+    });
+    c.on('data', (m) => this.recibir(m));
+    c.on('close', () => this.cortar('Se cortó la conexión'));
+    c.on('error', () => this.cortar('Se cortó la conexión'));
+  }
+  cortar(razon) {
+    const estaba = this.enLinea;
+    this.enLinea = false; this.conexion = null;
+    this.aviso(razon);
+    if (estaba) this.juego.seCortoLaRed();
+  }
+  enviarPos() {
+    const j = this.juego;
+    this.enviar({ t: 'pos', x: j.x, y: j.y, mirando: j.mirando, nombre: this.nombre, listo: j.estado === 'mapa' });
+  }
+  // Tu equipo y tu mochila, copiados para el duelo (el duelo no te los cambia).
+  misDatos() {
+    const j = this.juego;
+    return {
+      equipo: j.partida.equipo.map(c => c.aDict()),
+      mochila: { ...j.partida.mochila.objetos },
+      nombre: this.nombre || 'Tu amigo',
+    };
+  }
+  // Chocaste a tu amigo. El anfitrión es el que arma el duelo, para que no salgan dos.
+  chocar() {
+    const j = this.juego;
+    if (!this.enLinea) return;
+    if (!j.partida.tieneVivas()) { j.aviso = ['Tus criaturas están agotadas. Ve al centro de curación.', 2.5]; return; }
+    if (j.rival && j.rival.listo === false) { j.aviso = ['Tu amigo está ocupado en otra pelea.', 2]; return; }
+    if (this.soyAnfitrion) this.armarDuelo();
+    else this.enviar({ t: 'quiero-duelo' });
+  }
+  armarDuelo() {
+    const ahora = performance.now();
+    if (this.juego.estado !== 'mapa') return;
+    if (this.pidiendoDuelo && ahora - this.pidiendoDuelo < 3000) return;   // ya lo pediste, espera
+    this.pidiendoDuelo = ahora;
+    this.juego.aviso = ['Preparando el duelo…', 2];
+    this.enviar({ t: 'dame-datos' });
+  }
+  recibir(m) {
+    const j = this.juego;
+    if (m.t === 'hola') { if (j.rival) j.rival.nombre = m.nombre; this.enviarPos(); }
+    else if (m.t === 'pos') {
+      if (!j.rival) j.rival = { x: m.x, y: m.y, px: m.x, py: m.y, mirando: m.mirando || [0, 1], nombre: m.nombre, listo: m.listo };
+      else { const r = j.rival; r.x = m.x; r.y = m.y; r.mirando = m.mirando || r.mirando; r.nombre = m.nombre; r.listo = m.listo; }
+    }
+    else if (m.t === 'quiero-duelo') { if (this.soyAnfitrion) this.armarDuelo(); }
+    else if (m.t === 'dame-datos') {
+      if (this.soyAnfitrion) return;
+      if (j.estado !== 'mapa' || !j.partida.tieneVivas()) this.enviar({ t: 'ocupado' });
+      else this.enviar({ t: 'mis-datos', datos: this.misDatos() });
+    }
+    else if (m.t === 'ocupado') { this.pidiendoDuelo = 0; j.aviso = ['Tu amigo no puede pelear ahora.', 2.5]; }
+    else if (m.t === 'mis-datos') {
+      // solo el anfitrión junta los dos equipos y reparte el duelo a los dos
+      this.pidiendoDuelo = 0;
+      if (!this.soyAnfitrion || j.estado !== 'mapa') return;
+      const B = m.datos;
+      if (!B || !B.equipo || !B.equipo.length) return;
+      const datos = { semilla: Math.floor(Math.random() * 2147483647), A: this.misDatos(), B };
+      this.enviar({ t: 'duelo', datos });
+      j.empezarDuelo(datos, 'A');
+    }
+    else if (m.t === 'duelo') { if (!this.soyAnfitrion) j.empezarDuelo(m.datos, 'B'); }
+    else if (m.t === 'accion') { const b = j.batalla && j.batalla.b; if (b && b.recibirAccion) b.recibirAccion(m.accion); }
+    else if (m.t === 'rendirse') { const b = j.batalla && j.batalla.b; if (b && b.recibirRendirse) b.recibirRendirse(); }
+  }
+}
+
+const red = new Red(juego);
+juego.red = red;
+
+// El nombre se recuerda en ESTE navegador, para no escribirlo cada vez.
+const cajaNombre = document.getElementById('nombre');
+try { cajaNombre.value = localStorage.getItem('criaturas-nombre') || ''; } catch (e) {}
+red.nombre = cajaNombre.value.trim();
+cajaNombre.addEventListener('input', () => {
+  red.nombre = cajaNombre.value.trim();
+  try { localStorage.setItem('criaturas-nombre', red.nombre); } catch (e) {}
+});
+
+document.getElementById('crear').onclick = () => {
+  if (!red.nombre) { red.aviso('Escribe tu nombre primero'); cajaNombre.focus(); return; }
+  red.soyAnfitrion = true;
+  if (red.peer) { try { red.peer.destroy(); } catch (e) {} }   // por si apretaste dos veces
+  const codigo = String(Math.floor(1000 + Math.random() * 9000));
+  // El código se muestra al tiro, sin esperar al servidor: así nunca parece que el botón no hace nada.
+  red.aviso('Sala ' + codigo + ' — conectando…');
+  const yo = new Peer('criaturas-manu-' + codigo);
+  red.peer = yo;
+  yo.on('open', () => red.aviso('Sala ' + codigo + ' — dile el código a tu amigo'));
+  yo.on('connection', (c) => red.preparar(c));
+  yo.on('error', (e) => red.aviso(
+    e.type === 'unavailable-id' ? 'Ese código estaba ocupado: aprieta Crear sala otra vez'
+    : e.type === 'network' || e.type === 'server-error' ? 'No pude hablar con el servidor de salas. Prueba de nuevo.'
+    : 'error: ' + e.type));
+};
+
+document.getElementById('entrar').onclick = () => {
+  if (!red.nombre) { red.aviso('Escribe tu nombre primero'); cajaNombre.focus(); return; }
+  const codigo = document.getElementById('codigo').value.trim();
+  if (!codigo) { red.aviso('Escribe el código de la sala'); return; }
+  red.soyAnfitrion = false;
+  if (red.peer) { try { red.peer.destroy(); } catch (e) {} }
+  red.aviso('Buscando la sala ' + codigo + '…');
+  const yo = new Peer();
+  red.peer = yo;
+  yo.on('open', () => {
+    red.aviso('Llamando a la sala ' + codigo + '…');
+    red.preparar(yo.connect('criaturas-manu-' + codigo));
+  });
+  yo.on('error', (e) => red.aviso(
+    e.type === 'peer-unavailable' ? 'No existe esa sala. Revisa el código.'
+    : e.type === 'network' || e.type === 'server-error' ? 'No pude hablar con el servidor de salas. Prueba de nuevo.'
+    : 'error: ' + e.type));
+};
 
 let acumulado = 0;
 let ultimoTiempo = performance.now();
