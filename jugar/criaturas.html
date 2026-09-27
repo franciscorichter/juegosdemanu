@@ -1607,7 +1607,21 @@ class Juego {
     if (b.esDuelo) {
       if (b.resultado === 'victoria') { this.mensajes.push('¡Le ganaste el duelo a ' + b.nombreRival + '!'); sonar('curar'); }
       else this.mensajes.push(b.nombreRival + ' te ganó el duelo. La revancha es chocándolo otra vez.');
-      this.mensajes.push('Los duelos son de práctica: tu equipo queda con la misma vida y la misma experiencia que antes.');
+      // Los dos jugadores ganan experiencia: el que gana el doble que el que pierde.
+      // Cada computador calcula la suya con el equipo que vio enfrente.
+      const base = b.enemigos.reduce((t, e) => t + expPorVencer(e, true), 0);
+      const total = trunc(base * (b.resultado === 'victoria' ? 1 : 0.5));
+      const equipo = this.partida.equipo;
+      const cada = Math.max(1, trunc(total / Math.max(1, equipo.length)));
+      for (const c of equipo) {
+        for (const e of c.ganarExp(cada)) {
+          if (e[0] === 'nivel') this.mensajes.push('¡' + c.nombre + ' subió al nivel ' + e[1] + '!');
+          else if (e[0] === 'aprende') this.mensajes.push('¡' + c.nombre + ' aprendió ' + e[1] + '!');
+          else if (e[0] === 'evolucion') this.mensajes.push('¿Qué? ¡' + e[1] + ' evolucionó en ' + e[2] + '!');
+        }
+      }
+      this.mensajes.push('Cada criatura de tu equipo ganó ' + cada + ' puntos de experiencia.');
+      this.mensajes.push('Los duelos no gastan vida: tu equipo queda como estaba, pero con la experiencia ganada.');
       if (this.red) this.red.enviarPos();
       return;
     }
