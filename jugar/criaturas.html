@@ -1684,7 +1684,7 @@ class Juego {
     const s = ctx;
     if (this.estado === 'titulo') this.dibujarTitulo(s);
     else if (this.estado === 'elegir') this.dibujarElegir(s);
-    else if (['mapa', 'pausa', 'equipo', 'mochila', 'guia'].includes(this.estado)) {
+    else if (['mapa', 'pausa', 'equipo', 'mochila', 'guia', 'tienda'].includes(this.estado)) {
       this.dibujarMapa(s);
       if (this.estado === 'guia') this.dibujarGuia(s);
       else if (this.estado === 'pausa') this.dibujarPausa(s);
@@ -1921,27 +1921,28 @@ class Juego {
     texto(s, 'ENTER: usar   ESC: volver', ANCHO / 2, rb - 40, 18, GRIS, true);
   }
   dibujarTienda(s) {
-    const rx = ANCHO / 2 - 260, ry = 80, rb = ry + 450;
-    caja(s, rx, ry, 520, 450);
-    texto(s, 'TIENDA', ANCHO / 2, ry + 15, 30, NEGRO, true);
+    const rx = ANCHO / 2 - 260, ry = 70, h = 380;
+    caja(s, rx, ry, 520, h);
     const dorado = 'rgb(200,150,20)';
-    texto(s, 'Tienes ' + this.partida.monedas + ' monedas', ANCHO / 2, ry + 55, 22, dorado, true);
+    texto(s, 'TIENDA', ANCHO / 2, ry + 12, 30, NEGRO, true);
+    texto(s, 'Tienes ' + this.partida.monedas + ' monedas', ANCHO / 2, ry + 48, 22, dorado, true);
+    // El secreto NO se anuncia: solo se nota cuando ya lo descubriste.
+    if (this.partida.gratis) {
+      texto(s, 'zzz... el tendero duerme. Llévate lo que quieras.',
+            ANCHO / 2, ry + 78, 14, dorado, true);
+    }
     this.menuTienda.opciones.forEach((nombre, i) => {
-      const y = ry + 100 + i * 40;
-      if (i === this.menuTienda.i) texto(s, '▶', rx + 25, y + 3, 22, AZUL_CAJA);
-      texto(s, nombre, rx + 55, y, 24);
+      const y = ry + 108 + i * 36;
+      if (i === this.menuTienda.i) texto(s, '▶', rx + 30, y + 3, 22, AZUL_CAJA);
+      texto(s, nombre, rx + 60, y, 24);
       texto(s, this.partida.gratis ? 'GRATIS' : PRECIOS[nombre] + ' mon.', rx + 300, y, 22,
             this.partida.gratis ? dorado : GRIS);
-      texto(s, 'tienes ' + (this.partida.mochila.objetos[nombre] || 0), rx + 420, y, 18, GRIS);
+      texto(s, 'tienes ' + (this.partida.mochila.objetos[nombre] || 0), rx + 415, y, 18, GRIS);
     });
     const sel = this.menuTienda.opciones[this.menuTienda.i];
-    texto(s, OBJETOS[sel].descripcion, ANCHO / 2, rb - 115, 20, AZUL_CAJA, true);
-    if (this.msgTienda) texto(s, this.msgTienda, ANCHO / 2, rb - 85, 20, NEGRO, true);
-    texto(s, 'ENTER: comprar    ESC: salir', ANCHO / 2, rb - 50, 18, GRIS, true);
-    texto(s, this.partida.gratis
-      ? 'zzz... el tendero duerme. Llévate lo que quieras.'
-      : 'El tendero tararea: ♪ arriba arriba abajo abajo izquierda derecha izquierda derecha ♪',
-      ANCHO / 2, rb - 22, 14, this.partida.gratis ? dorado : GRIS, true);
+    texto(s, OBJETOS[sel].descripcion, ANCHO / 2, ry + 296, 20, AZUL_CAJA, true);
+    if (this.msgTienda) texto(s, this.msgTienda, ANCHO / 2, ry + 324, 20, NEGRO, true);
+    texto(s, 'ENTER: comprar    ESC: salir', ANCHO / 2, ry + 352, 18, GRIS, true);
   }
   dibujarFinal(s) {
     rect(s, 0, 0, ANCHO, ALTO, 'rgb(250,230,120)');
