@@ -76,13 +76,8 @@
 Se ven caminando en el mismo mapa y si se chocan empieza un duelo.</p>
 <a class="boton" href="../index.html">&larr; Volver a la página</a>
 
-<!-- Trystero: conecta dos navegadores directo. Para encontrarse usa muchos
-     servidores de recados a la vez, no uno solo (el de antes se llenaba y fallaba). -->
-<script type="module">
-  import { joinRoom } from 'https://cdn.jsdelivr.net/npm/trystero@0.25.4/nostr/+esm';
-  window.Trystero = { joinRoom };
-  window.dispatchEvent(new Event('trystero-listo'));
-</script>
+<!-- PeerJS: conecta dos navegadores directo, sin servidor nuestro -->
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
 <script>
 // ============================================================
@@ -1879,73 +1874,42 @@ canvas.addEventListener('pointerdown', () => { encenderAudio(); if (juego.estado
 
 
 // ============================================================
-//  DOS JUGADORES POR INTERNET (Trystero)
+//  DOS JUGADORES POR INTERNET (PeerJS)
 //
-//  Los dos navegadores se conectan directo. Para encontrarse se dejan
-//  recados en una pila de servidores publicos: si uno esta caido o lleno,
-//  sirven los otros. Antes habia UNO solo y cuando se llenaba no se podia jugar.
-//
-//  Se manda poquita cosa: donde esta cada uno en el mapa, y en el duelo
-//  que eligio cada uno en su turno. El dano NO se manda: los dos
+//  PeerJS conecta los dos navegadores directo, sin servidor nuestro.
+//  Se manda poquita cosa: dónde está cada uno en el mapa, y en el duelo
+//  qué eligió cada uno en su turno. El daño NO se manda: los dos
 //  computadores lo calculan con el mismo dado con semilla y les sale igual.
 // ============================================================
 class Red {
   constructor(juego) {
     this.juego = juego;
-    this.sala = null;
-    this.enviarMsg = null;
+    this.conexion = null;
+    this.peer = null;
     this.soyAnfitrion = false;
     this.enLinea = false;
     this.nombre = '';
-    this.codigo = '';
     this.pidiendoDuelo = 0;     // momento en que pediste los datos del otro
-    this.esperando = null;      // reloj para avisar si no llega nadie
   }
   aviso(t) { document.getElementById('aviso').textContent = t; }
-  enviar(m) { if (this.enviarMsg && this.enLinea) { try { this.enviarMsg(m); } catch (e) {} } }
-
-  // Entrar a una sala. El que aprieta "Crear sala" es el anfitrión.
-  entrarSala(codigo, soyAnfitrion) {
-    this.salir();
-    this.soyAnfitrion = soyAnfitrion;
-    this.codigo = codigo;
-    const sala = window.Trystero.joinRoom({ appId: 'criaturas-de-manu' }, 'sala-' + codigo);
-    this.sala = sala;
-    const [enviar, alLlegar] = sala.makeAction('msg');
-    this.enviarMsg = enviar;
-    alLlegar((m) => this.recibir(m));
-
-    sala.onPeerJoin(() => {
-      if (this.esperando) { clearTimeout(this.esperando); this.esperando = null; }
+  enviar(m) { if (this.conexion && this.enLinea) { try { this.conexion.send(m); } catch (e) {} } }
+  // El tubo por donde se hablan los dos navegadores.
+  preparar(c) {
+    this.conexion = c;
+    c.on('open', () => {
       this.enLinea = true;
-      this.aviso(soyAnfitrion ? '2 jugadores — eres el anfitrión' : '2 jugadores — eres el invitado');
+      this.aviso(this.soyAnfitrion ? '2 jugadores — eres el anfitrión' : '2 jugadores — eres el invitado');
       this.enviar({ t: 'hola', nombre: this.nombre });
       this.enviarPos();
       this.juego.aviso = ['¡Conectados! Camina hasta tu amigo y chócalo para pelear.', 4];
     });
-    sala.onPeerLeave(() => {
-      if (!Object.keys(sala.getPeers()).length) this.cortar('Tu amigo se fue');
-    });
-
-    // Si en 30 segundos no llega nadie, avisamos en vez de dejarlo mudo.
-    this.esperando = setTimeout(() => {
-      if (!this.enLinea) {
-        this.aviso(soyAnfitrion
-          ? 'Sala ' + codigo + ' — nadie ha entrado todavía'
-          : 'No aparece nadie en la sala ' + codigo + '. ¿Es ese el código?');
-      }
-    }, 30000);
+    c.on('data', (m) => this.recibir(m));
+    c.on('close', () => this.cortar('Se cortó la conexión'));
+    c.on('error', () => this.cortar('Se cortó la conexión'));
   }
-
-  salir() {
-    if (this.esperando) { clearTimeout(this.esperando); this.esperando = null; }
-    if (this.sala) { try { this.sala.leave(); } catch (e) {} }
-    this.sala = null; this.enviarMsg = null; this.enLinea = false;
-  }
-
   cortar(razon) {
     const estaba = this.enLinea;
-    this.salir();
+    this.enLinea = false; this.conexion = null;
     this.aviso(razon);
     if (estaba) this.juego.seCortoLaRed();
   }
@@ -2021,28 +1985,40 @@ cajaNombre.addEventListener('input', () => {
   try { localStorage.setItem('criaturas-nombre', red.nombre); } catch (e) {}
 });
 
-// La libreria se carga aparte y tarda un pelin; si aprietas antes, esperamos.
-function conLibreria(hacer) {
-  if (window.Trystero) { hacer(); return; }
-  red.aviso('Cargando…');
-  window.addEventListener('trystero-listo', hacer, { once: true });
-  setTimeout(() => { if (!window.Trystero) red.aviso('No pude cargar la parte de 2 jugadores. Recarga la página.'); }, 12000);
-}
-
 document.getElementById('crear').onclick = () => {
   if (!red.nombre) { red.aviso('Escribe tu nombre primero'); cajaNombre.focus(); return; }
+  red.soyAnfitrion = true;
+  if (red.peer) { try { red.peer.destroy(); } catch (e) {} }   // por si apretaste dos veces
   const codigo = String(Math.floor(1000 + Math.random() * 9000));
-  document.getElementById('codigo').value = codigo;   // para copiarlo fácil
-  red.aviso('Sala ' + codigo + ' — dile el código a tu amigo');
-  conLibreria(() => red.entrarSala(codigo, true));
+  // El código se muestra al tiro, sin esperar al servidor: así nunca parece que el botón no hace nada.
+  red.aviso('Sala ' + codigo + ' — conectando…');
+  const yo = new Peer('criaturas-manu-' + codigo);
+  red.peer = yo;
+  yo.on('open', () => red.aviso('Sala ' + codigo + ' — dile el código a tu amigo'));
+  yo.on('connection', (c) => red.preparar(c));
+  yo.on('error', (e) => red.aviso(
+    e.type === 'unavailable-id' ? 'Ese código estaba ocupado: aprieta Crear sala otra vez'
+    : e.type === 'network' || e.type === 'server-error' ? 'No pude hablar con el servidor de salas. Prueba de nuevo.'
+    : 'error: ' + e.type));
 };
 
 document.getElementById('entrar').onclick = () => {
   if (!red.nombre) { red.aviso('Escribe tu nombre primero'); cajaNombre.focus(); return; }
   const codigo = document.getElementById('codigo').value.trim();
   if (!codigo) { red.aviso('Escribe el código de la sala'); return; }
+  red.soyAnfitrion = false;
+  if (red.peer) { try { red.peer.destroy(); } catch (e) {} }
   red.aviso('Buscando la sala ' + codigo + '…');
-  conLibreria(() => red.entrarSala(codigo, false));
+  const yo = new Peer();
+  red.peer = yo;
+  yo.on('open', () => {
+    red.aviso('Llamando a la sala ' + codigo + '…');
+    red.preparar(yo.connect('criaturas-manu-' + codigo));
+  });
+  yo.on('error', (e) => red.aviso(
+    e.type === 'peer-unavailable' ? 'No existe esa sala. Revisa el código.'
+    : e.type === 'network' || e.type === 'server-error' ? 'No pude hablar con el servidor de salas. Prueba de nuevo.'
+    : 'error: ' + e.type));
 };
 
 let acumulado = 0;
