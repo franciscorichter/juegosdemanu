@@ -1911,21 +1911,22 @@ class Red {
     this.codigo = codigo;
     const sala = window.Trystero.joinRoom({ appId: 'criaturas-de-manu' }, 'sala-' + codigo);
     this.sala = sala;
-    const [enviar, alLlegar] = sala.makeAction('msg');
-    this.enviarMsg = enviar;
-    alLlegar((m) => this.recibir(m));
+    // Un "canal" por donde se mandan los recados. send manda, onMessage recibe.
+    const canal = sala.makeAction('msg');
+    this.enviarMsg = (m) => canal.send(m);
+    canal.onMessage = (m) => this.recibir(m);
 
-    sala.onPeerJoin(() => {
+    sala.onPeerJoin = () => {
       if (this.esperando) { clearTimeout(this.esperando); this.esperando = null; }
       this.enLinea = true;
       this.aviso(soyAnfitrion ? '2 jugadores — eres el anfitrión' : '2 jugadores — eres el invitado');
       this.enviar({ t: 'hola', nombre: this.nombre });
       this.enviarPos();
       this.juego.aviso = ['¡Conectados! Camina hasta tu amigo y chócalo para pelear.', 4];
-    });
-    sala.onPeerLeave(() => {
+    };
+    sala.onPeerLeave = () => {
       if (!Object.keys(sala.getPeers()).length) this.cortar('Tu amigo se fue');
-    });
+    };
 
     // Si en 30 segundos no llega nadie, avisamos en vez de dejarlo mudo.
     this.esperando = setTimeout(() => {
