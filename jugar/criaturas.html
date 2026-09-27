@@ -767,14 +767,14 @@ class BatallaPvP {
 }
 
 class Partida {
-  constructor() { this.equipo = []; this.caja = []; this.mochila = new Mochila(); this.pos = null; this.vencidos = []; this.nombre = 'Manu'; this.campeon = false; this.monedas = MONEDAS_INICIALES; this.gratis = false; }
-  aDict() { return { version: 1, nombre: this.nombre, pos: this.pos, equipo: this.equipo.map(c => c.aDict()), caja: this.caja.map(c => c.aDict()), mochila: this.mochila.objetos, vencidos: this.vencidos, campeon: this.campeon, monedas: this.monedas, gratis: this.gratis }; }
+  constructor() { this.equipo = []; this.caja = []; this.mochila = new Mochila(); this.pos = null; this.vencidos = []; this.nombre = 'Manu'; this.campeon = false; this.monedas = MONEDAS_INICIALES; this.mitad = false; }
+  aDict() { return { version: 1, nombre: this.nombre, pos: this.pos, equipo: this.equipo.map(c => c.aDict()), caja: this.caja.map(c => c.aDict()), mochila: this.mochila.objetos, vencidos: this.vencidos, campeon: this.campeon, monedas: this.monedas, mitad: this.mitad }; }
   static desdeDict(d) {
     const p = new Partida();
     p.nombre = d.nombre || 'Manu'; p.pos = d.pos || null;
     p.equipo = (d.equipo || []).map(Criatura.desdeDict); p.caja = (d.caja || []).map(Criatura.desdeDict);
     p.mochila = new Mochila(d.mochila || {}); p.vencidos = [...(d.vencidos || [])]; p.campeon = !!d.campeon;
-    p.monedas = d.monedas ?? MONEDAS_INICIALES; p.gratis = !!d.gratis;   // partidas viejas: monedas de regalo
+    p.monedas = d.monedas ?? MONEDAS_INICIALES; p.mitad = !!(d.mitad ?? d.gratis);   // partidas viejas: monedas de regalo
     return p;
   }
   curarEquipo() { for (const c of this.equipo) c.curarTodo(); }
@@ -1526,15 +1526,19 @@ class Juego {
     this.estado = 'tienda';
     sonar('seleccion');
   }
+  // Lo que cuesta algo hoy: la mitad si descubriste el secreto.
+  precio(nombre) {
+    return this.partida.mitad ? Math.ceil(PRECIOS[nombre] / 2) : PRECIOS[nombre];
+  }
   manejarTienda(k) {
     this.menuTienda.mover(k);
     // ¿estás haciendo el truco secreto? (solo con las flechas)
     if (k.startsWith('Arrow')) {
       this.truco.push(k);
       if (this.truco.length > TRUCO.length) this.truco.shift();
-      if (!this.partida.gratis && this.truco.join() === TRUCO.join()) {
-        this.partida.gratis = true;
-        this.msgTienda = '¡El tendero se quedó dormido! zzz...';
+      if (!this.partida.mitad && this.truco.join() === TRUCO.join()) {
+        this.partida.mitad = true;
+        this.msgTienda = 'El tendero te guiña un ojo: "para ti, mitad de precio".';
         sonar('curar');
         return;
       }
@@ -1542,7 +1546,7 @@ class Juego {
     if (k === 'Escape') { this.estado = 'mapa'; sonar('seleccion'); return; }
     if (k !== 'Enter') return;
     const nombre = this.menuTienda.opciones[this.menuTienda.i];
-    const precio = this.partida.gratis ? 0 : PRECIOS[nombre];
+    const precio = this.precio(nombre);
     if (this.partida.monedas < precio) {
       this.msgTienda = 'No te alcanza: te faltan ' + (precio - this.partida.monedas) + ' monedas.';
       sonar('escape'); return;
@@ -1550,7 +1554,7 @@ class Juego {
     this.partida.monedas -= precio;
     this.partida.mochila.agregar(nombre, 1);
     sonar('curar');
-    this.msgTienda = precio === 0 ? '¡Gratis! Te llevaste 1 ' + nombre + '.' : 'Compraste 1 ' + nombre + '.';
+    this.msgTienda = 'Compraste 1 ' + nombre + ' por ' + precio + ' monedas.';
   }
   hablarEntrenador(letra) {
     const datos = ENTRENADORES[letra];
@@ -1927,16 +1931,20 @@ class Juego {
     texto(s, 'TIENDA', ANCHO / 2, ry + 12, 30, NEGRO, true);
     texto(s, 'Tienes ' + this.partida.monedas + ' monedas', ANCHO / 2, ry + 48, 22, dorado, true);
     // El secreto NO se anuncia: solo se nota cuando ya lo descubriste.
-    if (this.partida.gratis) {
-      texto(s, 'zzz... el tendero duerme. Llévate lo que quieras.',
+    if (this.partida.mitad) {
+      texto(s, 'El tendero te hace precio de amigo: todo a mitad.',
             ANCHO / 2, ry + 78, 14, dorado, true);
     }
     this.menuTienda.opciones.forEach((nombre, i) => {
       const y = ry + 108 + i * 36;
       if (i === this.menuTienda.i) texto(s, '▶', rx + 30, y + 3, 22, AZUL_CAJA);
       texto(s, nombre, rx + 60, y, 24);
-      texto(s, this.partida.gratis ? 'GRATIS' : PRECIOS[nombre] + ' mon.', rx + 300, y, 22,
-            this.partida.gratis ? dorado : GRIS);
+      texto(s, this.precio(nombre) + ' mon.', rx + 300, y, 22, this.partida.mitad ? dorado : GRIS);
+      if (this.partida.mitad) {   // el precio viejo, tachadito, a la izquierda del nuevo
+        const v = String(PRECIOS[nombre]), w = medir(v, 16);
+        texto(s, v, rx + 260, y + 4, 16, GRIS);
+        linea(s, rx + 258, y + 13, rx + 262 + w, y + 13, GRIS, 2);
+      }
       texto(s, 'tienes ' + (this.partida.mochila.objetos[nombre] || 0), rx + 415, y, 18, GRIS);
     });
     const sel = this.menuTienda.opciones[this.menuTienda.i];
