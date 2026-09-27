@@ -151,6 +151,14 @@ const OBJETOS = {
   'Antídoto': { tipo: 'estado', valor: 0, descripcion: 'Quita veneno y despierta.' },
 };
 const MOCHILA_INICIAL = { 'Poción': 4, 'Esfera': 6, 'Superesfera': 1, 'Antídoto': 1 };
+// La tienda: qué vende y a cuánto. Las monedas se ganan peleando.
+const PRECIOS = { 'Poción': 15, 'Superpoción': 40, 'Esfera': 20, 'Superesfera': 45, 'Antídoto': 12 };
+const TIENDA = ['Poción', 'Superpoción', 'Esfera', 'Superesfera', 'Antídoto'];
+const MONEDAS_INICIALES = 50;
+const MONEDAS_POR_NIVEL = 3;        // lo que te deja una criatura salvaje por su nivel
+const PREMIO_MONEDAS = { '1': 60, '2': 120, '3': 200, 'K': 500 };
+// El truco secreto del tendero (se hace con las flechas, dentro de la tienda).
+const TRUCO = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight'];
 // letra del mapa -> [nivel mínimo, nivel máximo, especies]
 const PASTO = { ',': [3, 6, BASICAS], ';': [8, 12, BASICAS], '"': [13, 18, [...BASICAS, ...EVOLUCIONADAS]] };
 const NOMBRE_PASTO = { ',': 'Pasto bajo', ';': 'Pasto medio', '"': 'Pasto alto' };
@@ -164,13 +172,13 @@ const ENTRENADORES = {
 };
 
 // El mapa (copiado de mapa.txt). Cada letra es una casilla:
-//   #  árbol   ~  agua   H  casa   .  camino   +  centro de curación   L  letrero
+//   #  árbol   ~  agua   H  casa   T  tienda   .  camino   +  centro de curación   L  letrero
 //   , ; "  pasto bajo / medio / alto   P  donde empiezas   1 2 3  entrenadores   K  el campeón
 const MAPA_TXT = `
 ############################################
 #............#~~~~~~#......................#
-#.HH.........#~~~~~~#..,,,,,,,,,,..HH......#
-#.HH...+.....#~~~~~~#..,,,,,,,,,,..HH......#
+#.TT.........#~~~~~~#..,,,,,,,,,,..HH......#
+#.TT...+.....#~~~~~~#..,,,,,,,,,,..HH......#
 #..L...L.....#~~~~~~#..,,,,,,,,,,....L.....#
 #.P..........#~~~~~~#..,,,,,,,,,,..........#
 #............###..###.......1..............#
@@ -759,13 +767,14 @@ class BatallaPvP {
 }
 
 class Partida {
-  constructor() { this.equipo = []; this.caja = []; this.mochila = new Mochila(); this.pos = null; this.vencidos = []; this.nombre = 'Manu'; this.campeon = false; }
-  aDict() { return { version: 1, nombre: this.nombre, pos: this.pos, equipo: this.equipo.map(c => c.aDict()), caja: this.caja.map(c => c.aDict()), mochila: this.mochila.objetos, vencidos: this.vencidos, campeon: this.campeon }; }
+  constructor() { this.equipo = []; this.caja = []; this.mochila = new Mochila(); this.pos = null; this.vencidos = []; this.nombre = 'Manu'; this.campeon = false; this.monedas = MONEDAS_INICIALES; this.gratis = false; }
+  aDict() { return { version: 1, nombre: this.nombre, pos: this.pos, equipo: this.equipo.map(c => c.aDict()), caja: this.caja.map(c => c.aDict()), mochila: this.mochila.objetos, vencidos: this.vencidos, campeon: this.campeon, monedas: this.monedas, gratis: this.gratis }; }
   static desdeDict(d) {
     const p = new Partida();
     p.nombre = d.nombre || 'Manu'; p.pos = d.pos || null;
     p.equipo = (d.equipo || []).map(Criatura.desdeDict); p.caja = (d.caja || []).map(Criatura.desdeDict);
     p.mochila = new Mochila(d.mochila || {}); p.vencidos = [...(d.vencidos || [])]; p.campeon = !!d.campeon;
+    p.monedas = d.monedas ?? MONEDAS_INICIALES; p.gratis = !!d.gratis;   // partidas viejas: monedas de regalo
     return p;
   }
   curarEquipo() { for (const c of this.equipo) c.curarTodo(); }
@@ -964,10 +973,11 @@ const BLANCO = 'rgb(250,250,245)', NEGRO = 'rgb(25,25,35)', GRIS = 'rgb(120,120,
 const VERDE_HP = 'rgb(80,200,90)', AMARILLO_HP = 'rgb(230,200,60)', ROJO_HP = 'rgb(220,70,60)', AZUL_EXP = 'rgb(90,150,240)';
 const COLOR_TILE = { '.': 'rgb(205,190,140)', ',': 'rgb(120,190,90)', ';': 'rgb(80,160,70)', '"': 'rgb(50,120,60)', '#': 'rgb(40,110,50)',
   '~': 'rgb(70,140,220)', 'H': 'rgb(190,120,80)', '+': 'rgb(240,240,240)', 'P': 'rgb(205,190,140)', 'L': 'rgb(205,190,140)',
-  '1': 'rgb(205,190,140)', '2': 'rgb(205,190,140)', '3': 'rgb(205,190,140)', 'K': 'rgb(205,190,140)' };
-const SOLIDOS = new Set('#~H123KL');
+  '1': 'rgb(205,190,140)', '2': 'rgb(205,190,140)', '3': 'rgb(205,190,140)', 'K': 'rgb(205,190,140)',
+  'T': 'rgb(150,90,70)' };
+const SOLIDOS = new Set('#~H123KLT');
 const LETREROS = [
-  'Bienvenido a Villa Brote. Camina por el pasto alto para encontrar criaturas.',
+  'Bienvenido a Villa Brote. Aquí al lado está la TIENDA: se compra con monedas que ganas peleando.',
   'Centro de curación: entra a la casa blanca con la cruz roja y tu equipo se cura gratis.',
   'Consejo: una criatura con poca vida o dormida es MUCHO más fácil de atrapar.',
   'Al sur hay pasto más peligroso. Fuego quema Planta, Agua apaga Fuego, Planta bebe Agua...',
@@ -1102,6 +1112,10 @@ class Mapa {
       for (let i = 0; i < 3; i++) { const bx = px + 6 + i * 12 + trunc(azar * 5); poligono(g, [[bx, py + TILE - 2], [bx + 4, py + TILE - 2 - altoH], [bx + 8, py + TILE - 2]], color); }
     } else if (ch === 'H') {
       rect(g, px, py, TILE, TILE / 3, 'rgb(150,80,60)'); rect(g, px + 6, py + TILE / 2, 10, 10, 'rgb(230,210,170)'); rect(g, px + TILE - 16, py + TILE / 2, 10, 10, 'rgb(230,210,170)');
+    } else if (ch === 'T') {
+      rect(g, px, py + TILE / 2, TILE, TILE / 2, 'rgb(225,205,165)');            // la pared
+      rect(g, px + 13, py + TILE - 14, 14, 14, 'rgb(110,70,50)');                // la puerta
+      for (let i = 0; i < 4; i++) rect(g, px + i * TILE / 4, py, TILE / 4, TILE / 2, i % 2 ? 'rgb(240,240,235)' : 'rgb(215,60,55)');  // toldo
     } else if (ch === '+') {
       rect(g, cx - 3, cy - 12, 6, 24, 'rgb(220,50,50)'); rect(g, cx - 12, cy - 3, 24, 6, 'rgb(220,50,50)');
     } else if (ch === 'L') {
@@ -1441,7 +1455,8 @@ class Juego {
       else if (kk === 'p') { this.estado = 'guia'; this.guiaPagina = 0; sonar('seleccion'); }
       else if (k === 'Escape' || kk === 'm') { this.estado = 'pausa'; this.menuPausa.i = 0; sonar('seleccion'); }
       else if (k === 'Enter') this.interactuar();
-    } else if (this.estado === 'guia') this.manejarGuia(k);
+    } else if (this.estado === 'tienda') this.manejarTienda(k);
+    else if (this.estado === 'guia') this.manejarGuia(k);
     else if (this.estado === 'pausa') this.manejarPausa(k);
     else if (this.estado === 'equipo') this.manejarEquipo(k);
     else if (this.estado === 'mochila') this.manejarMochila(k);
@@ -1502,6 +1517,40 @@ class Juego {
     const fx = this.x + this.mirando[0], fy = this.y + this.mirando[1], ch = this.mapa.casilla(fx, fy);
     if (this.mapa.letreros.has(fx + ',' + fy)) { this.mensajes.push(this.mapa.letreros.get(fx + ',' + fy)); sonar('seleccion'); }
     else if ('123K'.includes(ch)) this.hablarEntrenador(ch);
+    else if (ch === 'T') this.abrirTienda();
+  }
+  abrirTienda() {
+    this.menuTienda = new Menu([...TIENDA]);
+    this.truco = [];               // lo que vas apretando, por si haces el secreto
+    this.msgTienda = '';
+    this.estado = 'tienda';
+    sonar('seleccion');
+  }
+  manejarTienda(k) {
+    this.menuTienda.mover(k);
+    // ¿estás haciendo el truco secreto? (solo con las flechas)
+    if (k.startsWith('Arrow')) {
+      this.truco.push(k);
+      if (this.truco.length > TRUCO.length) this.truco.shift();
+      if (!this.partida.gratis && this.truco.join() === TRUCO.join()) {
+        this.partida.gratis = true;
+        this.msgTienda = '¡El tendero se quedó dormido! zzz...';
+        sonar('curar');
+        return;
+      }
+    }
+    if (k === 'Escape') { this.estado = 'mapa'; sonar('seleccion'); return; }
+    if (k !== 'Enter') return;
+    const nombre = this.menuTienda.opciones[this.menuTienda.i];
+    const precio = this.partida.gratis ? 0 : PRECIOS[nombre];
+    if (this.partida.monedas < precio) {
+      this.msgTienda = 'No te alcanza: te faltan ' + (precio - this.partida.monedas) + ' monedas.';
+      sonar('escape'); return;
+    }
+    this.partida.monedas -= precio;
+    this.partida.mochila.agregar(nombre, 1);
+    sonar('curar');
+    this.msgTienda = precio === 0 ? '¡Gratis! Te llevaste 1 ' + nombre + '.' : 'Compraste 1 ' + nombre + '.';
   }
   hablarEntrenador(letra) {
     const datos = ENTRENADORES[letra];
@@ -1519,7 +1568,7 @@ class Juego {
       return;
     }
     if (this.mapa.solida(nx, ny)) {
-      if (this.mapa.letreros.has(nx + ',' + ny) || '123K'.includes(ch)) { if (this.pasoTimer <= 0) { this.interactuar(); this.pasoTimer = 0.4; } }
+      if (this.mapa.letreros.has(nx + ',' + ny) || '123KT'.includes(ch)) { if (this.pasoTimer <= 0) { this.interactuar(); this.pasoTimer = 0.4; } }
       return;
     }
     this.x = nx; this.y = ny;
@@ -1561,6 +1610,15 @@ class Juego {
       this.mensajes.push('Los duelos son de práctica: tu equipo queda con la misma vida y la misma experiencia que antes.');
       if (this.red) this.red.enviarPos();
       return;
+    }
+    // Las monedas que dejó la pelea (los duelos entre amigos no dan).
+    if (b.resultado === 'victoria') {
+      let monedas = b.enemigos.filter(e => e.ko).reduce((t, e) => t + e.nivel * MONEDAS_POR_NIVEL, 0);
+      if (letra) monedas += PREMIO_MONEDAS[letra] || 0;
+      if (monedas) {
+        this.partida.monedas += monedas;
+        this.mensajes.push('Ganaste ' + monedas + ' monedas. Ahora tienes ' + this.partida.monedas + '.');
+      }
     }
     if (b.resultado === 'victoria' && letra) {
       if (!this.partida.vencidos.includes(letra)) this.partida.vencidos.push(letra);
@@ -1618,6 +1676,7 @@ class Juego {
       else if (this.estado === 'pausa') this.dibujarPausa(s);
       else if (this.estado === 'equipo') this.dibujarEquipo(s);
       else if (this.estado === 'mochila') this.dibujarMochila(s);
+      else if (this.estado === 'tienda') this.dibujarTienda(s);
     } else if (this.estado === 'batalla' && this.batalla) this.batalla.dibujar(s);
     else if (this.estado === 'final') this.dibujarFinal(s);
     if (this.aviso[1] > 0) {
@@ -1797,6 +1856,8 @@ class Juego {
       const insignias = this.partida.vencidos.filter(v => v !== 'K').length;
       const t2 = 'Entrenadores vencidos: ' + insignias + '/3' + (this.partida.campeon ? '   ★ CAMPEÓN' : '');
       texto(s, t2, ANCHO - 15 - medir('Entrenadores vencidos: 0/3   ★ CAMPEÓN', 18), 15, 18, BLANCO, false, NEGRO);
+      const t3 = this.partida.monedas + ' monedas';
+      texto(s, t3, ANCHO - 15 - medir(t3, 18), 40, 18, 'rgb(255,215,80)', false, NEGRO);
     }
   }
   dibujarPausa(s) {
@@ -1844,6 +1905,29 @@ class Juego {
     });
     if (m.opciones.length) texto(s, OBJETOS[m.opciones[m.i][0]].descripcion, ANCHO / 2, rb - 70, 20, AZUL_CAJA, true);
     texto(s, 'ENTER: usar   ESC: volver', ANCHO / 2, rb - 40, 18, GRIS, true);
+  }
+  dibujarTienda(s) {
+    const rx = ANCHO / 2 - 260, ry = 80, rb = ry + 450;
+    caja(s, rx, ry, 520, 450);
+    texto(s, 'TIENDA', ANCHO / 2, ry + 15, 30, NEGRO, true);
+    const dorado = 'rgb(200,150,20)';
+    texto(s, 'Tienes ' + this.partida.monedas + ' monedas', ANCHO / 2, ry + 55, 22, dorado, true);
+    this.menuTienda.opciones.forEach((nombre, i) => {
+      const y = ry + 100 + i * 40;
+      if (i === this.menuTienda.i) texto(s, '▶', rx + 25, y + 3, 22, AZUL_CAJA);
+      texto(s, nombre, rx + 55, y, 24);
+      texto(s, this.partida.gratis ? 'GRATIS' : PRECIOS[nombre] + ' mon.', rx + 300, y, 22,
+            this.partida.gratis ? dorado : GRIS);
+      texto(s, 'tienes ' + (this.partida.mochila.objetos[nombre] || 0), rx + 420, y, 18, GRIS);
+    });
+    const sel = this.menuTienda.opciones[this.menuTienda.i];
+    texto(s, OBJETOS[sel].descripcion, ANCHO / 2, rb - 115, 20, AZUL_CAJA, true);
+    if (this.msgTienda) texto(s, this.msgTienda, ANCHO / 2, rb - 85, 20, NEGRO, true);
+    texto(s, 'ENTER: comprar    ESC: salir', ANCHO / 2, rb - 50, 18, GRIS, true);
+    texto(s, this.partida.gratis
+      ? 'zzz... el tendero duerme. Llévate lo que quieras.'
+      : 'El tendero tararea: ♪ arriba arriba abajo abajo izquierda derecha izquierda derecha ♪',
+      ANCHO / 2, rb - 22, 14, this.partida.gratis ? dorado : GRIS, true);
   }
   dibujarFinal(s) {
     rect(s, 0, 0, ANCHO, ALTO, 'rgb(250,230,120)');
