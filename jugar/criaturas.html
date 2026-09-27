@@ -1861,9 +1861,18 @@ class Juego {
 // ---------- Teclas y bucle ----------
 const teclas = {};
 const juego = new Juego();
+// Cuando aprietas un botón, el navegador se lo queda "marcado" (con el foco) y
+// despues tu ENTER del juego vuelve a apretarlo solo. Se lo quitamos siempre.
+document.querySelectorAll('button').forEach(b => {
+  b.addEventListener('click', () => b.blur());
+  b.addEventListener('pointerup', () => b.blur());
+});
+
 document.addEventListener('keydown', (e) => {
   // si estás escribiendo en la caja del nombre o del código, las teclas son para ahí
   if (e.target && e.target.tagName === 'INPUT') return;
+  // y si algún botón quedó marcado, ENTER y ESPACIO son del juego, no del botón
+  if (e.target && e.target.tagName === 'BUTTON') { e.target.blur(); if (e.key === 'Enter' || e.key === ' ') e.preventDefault(); }
   encenderAudio();
   if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault();
   if (!e.repeat) juego.manejarTecla(e.key);
@@ -1906,6 +1915,13 @@ class Red {
 
   // Entrar a una sala. El que aprieta "Crear sala" es el anfitrión.
   entrarSala(codigo, soyAnfitrion) {
+    // Si ya estas en esa misma sala, no hagas nada: volver a entrar cortaba la partida.
+    if (this.sala && this.codigo === codigo && this.soyAnfitrion === soyAnfitrion) {
+      this.aviso(this.enLinea
+        ? (soyAnfitrion ? '2 jugadores — eres el anfitrión' : '2 jugadores — eres el invitado')
+        : 'Sala ' + codigo + ' — esperando a tu amigo');
+      return;
+    }
     this.salir();
     this.soyAnfitrion = soyAnfitrion;
     this.codigo = codigo;
@@ -2012,6 +2028,7 @@ class Red {
 
 const red = new Red(juego);
 juego.red = red;
+window.red = red;        // para poder mirarla desde la consola si algo falla
 
 // El nombre se recuerda en ESTE navegador, para no escribirlo cada vez.
 const cajaNombre = document.getElementById('nombre');
